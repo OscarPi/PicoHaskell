@@ -3,4 +3,5 @@ project(PicoHaskell)
 
 set(CMAKE_CXX_STANDARD 14)
 
-add_executable(PicoHaskell main.cpp)
+add_subdirectory(src)
+add_subdirectory(tests)
