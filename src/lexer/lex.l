@@ -9,11 +9,11 @@
 %}
 %option noyywrap nounput noinput batch debug stack
 %{
-yy::parser::symbol_type make_NUMBER (const std::string &s, const yy::parser::location_type& loc);
+yy::parser::symbol_type parse_integer(const std::string &s, const yy::parser::location_type& loc);
 %}
 
-%x comment
-%x string
+%x incomment
+%x instring
 
 /* definitions */
 LARGE       [A-Z]
@@ -37,6 +37,11 @@ COMMENT     "--""-"*(({SMALL}|{LARGE}|{DIGIT}|{SPECIAL}|\"|\'|" "|\t){ANY}*)?{NE
 OPENCOM     "{""-"+
 CLOSECOM    "-"+"}"
 INCOM       {SMALL}|{LARGE}|{DIGIT}|[!#\$%&\*\+\.\/\<=\>\?@\\\^\|~\:\(\)\,\;\[\]\`\"\'\t \v]
+
+DECIMAL     {DIGIT}+
+OCTAL       {OCTIT}+
+HEXADECIMAL {HEXIT}+
+INTEGER     {DECIMAL}|"0"[oO]{OCTAL}|"0"[xX]{HEXADECIMAL}
 %{
 // Code run each time a pattern is matched.
 #define YY_USER_ACTION  loc.columns(yyleng);
@@ -98,17 +103,28 @@ loc.step();
 {CONID}     return yy::parser::make_CONID(yytext, loc);
 {VARSYM}    return yy::parser::make_VARSYM(yytext, loc);
 {CONSYM}    return yy::parser::make_CONSYM(yytext, loc);
-{OPENCOM}   yy_push_state(comment); loc.step();
-<comment>{
-    {OPENCOM}               yy_push_state(comment); loc.step();
+{OPENCOM}   yy_push_state(incomment); loc.step();
+<incomment>{
+    {OPENCOM}               yy_push_state(incomment); loc.step();
     {CLOSECOM}              yy_pop_state(); loc.step();
     {NEWLINE}               loc.lines(1); loc.step();
     ({INCOM}|"}")*          loc.step();
     "-"+{INCOM}*            loc.step();
     "{"+({INCOM}|"}")*      loc.step();
 }
+{INTEGER}   return parse_integer(yytext, loc);
 <<EOF>>     return yy::parser::make_YYEOF(loc);
 %%
+yy::parser::symbol_type parse_integer(const std::string &s, const yy::parser::location_type& loc) {
+    if (s.rfind("0x", 0) == 0 || s.rfind("0X", 0) == 0) {
+        return yy::parser::make_INTEGER(std::stoi(s.substr(2), nullptr, 16), loc);
+    } else if (s.rfind("0o", 0) == 0 || s.rfind("0O", 0) == 0) {
+        return yy::parser::make_INTEGER(std::stoi(s.substr(2), nullptr, 8), loc);
+    } else {
+        return yy::parser::make_INTEGER(std::stoi(s, nullptr, 10), loc);
+    }
+}
+
 void Driver::scan_begin() {
   yy_flex_debug = trace_scanning;
   if (file.empty () || file == "-")

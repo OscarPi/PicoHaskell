@@ -1,20 +1,24 @@
 #include <gtest/gtest.h>
 #include <vector>
+#include <variant>
 #include "lexer/lexer.hpp"
 #include "parser/parser.hpp"
 #include "parser/driver.hpp"
 
 void reset_start_condition();
 
-std::vector<yy::parser::symbol_kind_type> lex_string(const char* str) {
-    std::vector<yy::parser::symbol_kind_type> result;
+std::vector<yy::parser::symbol_type> lex_string(const char* str) {
+    std::vector<yy::parser::symbol_type> result;
     Driver drv;
     YY_BUFFER_STATE buffer = yy_scan_string(str);
     yy_switch_to_buffer(buffer);
     reset_start_condition();
-    yy::parser::symbol_kind_type token;
-    while ((token = yylex(drv).kind()) != yy::parser::symbol_kind_type::S_YYEOF) {
-        result.push_back(token);
+    while (true) {
+        result.push_back(yylex(drv));
+        if (result.back().kind() == yy::parser::symbol_kind_type::S_YYEOF) {
+            result.pop_back();
+            break;
+        }
     }
     yy_delete_buffer(buffer);
     return result;
@@ -23,7 +27,7 @@ std::vector<yy::parser::symbol_kind_type> lex_string(const char* str) {
 #define EXPECT_SYMBOL(str, sym) {  \
     auto result = lex_string(str); \
     ASSERT_EQ(result.size(), 1);   \
-    EXPECT_EQ(result[0], sym);     \
+    EXPECT_EQ(result[0].kind(), sym);     \
 }
 
 TEST(Lexer, RecognisesKeywords) {
@@ -142,73 +146,96 @@ TEST(Lexer, RecognisesCONSYM) {
 TEST(Lexer, HandleIDMixedWithSYM) {
     auto result = lex_string("hello##Goodbye");
     ASSERT_EQ(result.size(), 3);
-    EXPECT_EQ(result[0], yy::parser::symbol_kind_type::S_VARID);
-    EXPECT_EQ(result[1], yy::parser::symbol_kind_type::S_VARSYM);
-    EXPECT_EQ(result[2], yy::parser::symbol_kind_type::S_CONID);
+    EXPECT_EQ(result[0].kind(), yy::parser::symbol_kind_type::S_VARID);
+    EXPECT_EQ(result[1].kind(), yy::parser::symbol_kind_type::S_VARSYM);
+    EXPECT_EQ(result[2].kind(), yy::parser::symbol_kind_type::S_CONID);
 
     result = lex_string("##Goodbye");
     ASSERT_EQ(result.size(), 2);
-    EXPECT_EQ(result[0], yy::parser::symbol_kind_type::S_VARSYM);
-    EXPECT_EQ(result[1], yy::parser::symbol_kind_type::S_CONID);
+    EXPECT_EQ(result[0].kind(), yy::parser::symbol_kind_type::S_VARSYM);
+    EXPECT_EQ(result[1].kind(), yy::parser::symbol_kind_type::S_CONID);
 
     result = lex_string("hello##");
     ASSERT_EQ(result.size(), 2);
-    EXPECT_EQ(result[0], yy::parser::symbol_kind_type::S_VARID);
-    EXPECT_EQ(result[1], yy::parser::symbol_kind_type::S_VARSYM);
+    EXPECT_EQ(result[0].kind(), yy::parser::symbol_kind_type::S_VARID);
+    EXPECT_EQ(result[1].kind(), yy::parser::symbol_kind_type::S_VARSYM);
 
     result = lex_string("Hello##goodbye");
     ASSERT_EQ(result.size(), 3);
-    EXPECT_EQ(result[0], yy::parser::symbol_kind_type::S_CONID);
-    EXPECT_EQ(result[1], yy::parser::symbol_kind_type::S_VARSYM);
-    EXPECT_EQ(result[2], yy::parser::symbol_kind_type::S_VARID);
+    EXPECT_EQ(result[0].kind(), yy::parser::symbol_kind_type::S_CONID);
+    EXPECT_EQ(result[1].kind(), yy::parser::symbol_kind_type::S_VARSYM);
+    EXPECT_EQ(result[2].kind(), yy::parser::symbol_kind_type::S_VARID);
 
     result = lex_string("##goodbye");
     ASSERT_EQ(result.size(), 2);
-    EXPECT_EQ(result[0], yy::parser::symbol_kind_type::S_VARSYM);
-    EXPECT_EQ(result[1], yy::parser::symbol_kind_type::S_VARID);
+    EXPECT_EQ(result[0].kind(), yy::parser::symbol_kind_type::S_VARSYM);
+    EXPECT_EQ(result[1].kind(), yy::parser::symbol_kind_type::S_VARID);
 
     result = lex_string("Hello##");
     ASSERT_EQ(result.size(), 2);
-    EXPECT_EQ(result[0], yy::parser::symbol_kind_type::S_CONID);
-    EXPECT_EQ(result[1], yy::parser::symbol_kind_type::S_VARSYM);
+    EXPECT_EQ(result[0].kind(), yy::parser::symbol_kind_type::S_CONID);
+    EXPECT_EQ(result[1].kind(), yy::parser::symbol_kind_type::S_VARSYM);
 }
 
 TEST(Lexer, IgnoresWhitespace) {
     auto result = lex_string("if     I\n\n\n\n\r\n\r\f\v\v\v\t\tam :$ $$");
     ASSERT_EQ(result.size(), 5);
-    EXPECT_EQ(result[0], yy::parser::symbol_kind_type::S_IF);
-    EXPECT_EQ(result[1], yy::parser::symbol_kind_type::S_CONID);
-    EXPECT_EQ(result[2], yy::parser::symbol_kind_type::S_VARID);
-    EXPECT_EQ(result[3], yy::parser::symbol_kind_type::S_CONSYM);
-    EXPECT_EQ(result[4], yy::parser::symbol_kind_type::S_VARSYM);
+    EXPECT_EQ(result[0].kind(), yy::parser::symbol_kind_type::S_IF);
+    EXPECT_EQ(result[1].kind(), yy::parser::symbol_kind_type::S_CONID);
+    EXPECT_EQ(result[2].kind(), yy::parser::symbol_kind_type::S_VARID);
+    EXPECT_EQ(result[3].kind(), yy::parser::symbol_kind_type::S_CONSYM);
+    EXPECT_EQ(result[4].kind(), yy::parser::symbol_kind_type::S_VARSYM);
 }
 
 TEST(Lexer, IgnoresSingleLineComments) {
     auto result = lex_string("--\n");
-    ASSERT_EQ(result.size(), 0);
+    EXPECT_EQ(result.size(), 0);
 
-    result = lex_string("--a#!2334\nif");
-    ASSERT_EQ(result.size(), 1);
-    ASSERT_EQ(result[0], yy::parser::symbol_kind_type::S_IF);
+    EXPECT_SYMBOL("--a#!2334\nif", yy::parser::symbol_kind_type::S_IF);
 
     result = lex_string("default--a#!2334\nif");
     ASSERT_EQ(result.size(), 2);
-    ASSERT_EQ(result[0], yy::parser::symbol_kind_type::S_DEFAULT);
-    ASSERT_EQ(result[1], yy::parser::symbol_kind_type::S_IF);
+    EXPECT_EQ(result[0].kind(), yy::parser::symbol_kind_type::S_DEFAULT);
+    EXPECT_EQ(result[1].kind(), yy::parser::symbol_kind_type::S_IF);
 
     result = lex_string("default -- a#!\\!@ if 2334\nif");
     ASSERT_EQ(result.size(), 2);
-    ASSERT_EQ(result[0], yy::parser::symbol_kind_type::S_DEFAULT);
-    ASSERT_EQ(result[1], yy::parser::symbol_kind_type::S_IF);
+    EXPECT_EQ(result[0].kind(), yy::parser::symbol_kind_type::S_DEFAULT);
+    EXPECT_EQ(result[1].kind(), yy::parser::symbol_kind_type::S_IF);
 }
 
 TEST(Lexer, IgnoresMultiLineComments) {
-    EXPECT_SYMBOL("{-{}{}{}{}{}{}}}}{{{}-}if", yy::parser::symbol_kind_type::S_IF);
+    EXPECT_SYMBOL("{-{}--{}{}---{}{}-{}}}}{{{}-}if", yy::parser::symbol_kind_type::S_IF);
 
     auto result = lex_string("{-if\nif-}");
-    ASSERT_EQ(result.size(), 0);
+    EXPECT_EQ(result.size(), 0);
 
-    result = lex_string("{- if {- if {- if -} -} if \n\n\n-}default");
+    EXPECT_SYMBOL("{- if {- if {- if -} -} if \n\n\n-}default",  yy::parser::symbol_kind_type::S_DEFAULT);
+}
+
+TEST(Lexer, HandlesIntegerLiterals) {
+    auto result = lex_string("0123456");
     ASSERT_EQ(result.size(), 1);
-    ASSERT_EQ(result[0], yy::parser::symbol_kind_type::S_DEFAULT);
+    EXPECT_EQ(result[0].kind(), yy::parser::symbol_kind_type::S_INTEGER);
+    EXPECT_EQ(result[0].value.as<int>(), 123456);
+
+    result = lex_string("0x123456");
+    ASSERT_EQ(result.size(), 1);
+    EXPECT_EQ(result[0].kind(), yy::parser::symbol_kind_type::S_INTEGER);
+    EXPECT_EQ(result[0].value.as<int>(), 0x123456);
+
+    result = lex_string("0XABCDEF");
+    ASSERT_EQ(result.size(), 1);
+    EXPECT_EQ(result[0].kind(), yy::parser::symbol_kind_type::S_INTEGER);
+    EXPECT_EQ(result[0].value.as<int>(), 0xABCDEF);
+
+    result = lex_string("0o1234567");
+    ASSERT_EQ(result.size(), 1);
+    EXPECT_EQ(result[0].kind(), yy::parser::symbol_kind_type::S_INTEGER);
+    EXPECT_EQ(result[0].value.as<int>(), 01234567);
+
+    result = lex_string("0O12");
+    ASSERT_EQ(result.size(), 1);
+    EXPECT_EQ(result[0].kind(), yy::parser::symbol_kind_type::S_INTEGER);
+    EXPECT_EQ(result[0].value.as<int>(), 012);
 }
