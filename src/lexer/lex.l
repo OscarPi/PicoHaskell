@@ -42,6 +42,8 @@ DECIMAL     {DIGIT}+
 OCTAL       {OCTIT}+
 HEXADECIMAL {HEXIT}+
 INTEGER     {DECIMAL}|"0"[oO]{OCTAL}|"0"[xX]{HEXADECIMAL}
+EXPONENT    [eE][+-]?{DECIMAL}
+FLOAT       {DECIMAL}"."{DECIMAL}{EXPONENT}?|{DECIMAL}{EXPONENT}
 %{
 // Code run each time a pattern is matched.
 #define YY_USER_ACTION  loc.columns(yyleng);
@@ -113,6 +115,7 @@ loc.step();
     "{"+({INCOM}|"}")*      loc.step();
 }
 {INTEGER}   return parse_integer(yytext, loc);
+{FLOAT}     return yy::parser::make_FLOAT(std::stod(yytext), loc);
 <<EOF>>     return yy::parser::make_YYEOF(loc);
 %%
 yy::parser::symbol_type parse_integer(const std::string &s, const yy::parser::location_type& loc) {

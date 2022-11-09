@@ -239,3 +239,70 @@ TEST(Lexer, HandlesIntegerLiterals) {
     EXPECT_EQ(result[0].kind(), yy::parser::symbol_kind_type::S_INTEGER);
     EXPECT_EQ(result[0].value.as<int>(), 012);
 }
+
+TEST(Lexer, HandlesFloatLiterals) {
+    auto result = lex_string("3.14");
+    ASSERT_EQ(result.size(), 1);
+    EXPECT_EQ(result[0].kind(), yy::parser::symbol_kind_type::S_FLOAT);
+    EXPECT_DOUBLE_EQ(result[0].value.as<double>(), 3.14);
+
+    result = lex_string("3.14e10");
+    ASSERT_EQ(result.size(), 1);
+    EXPECT_EQ(result[0].kind(), yy::parser::symbol_kind_type::S_FLOAT);
+    EXPECT_DOUBLE_EQ(result[0].value.as<double>(), 3.14e10);
+
+    result = lex_string("3.14e+10");
+    ASSERT_EQ(result.size(), 1);
+    EXPECT_EQ(result[0].kind(), yy::parser::symbol_kind_type::S_FLOAT);
+    EXPECT_DOUBLE_EQ(result[0].value.as<double>(), 3.14e+10);
+
+    result = lex_string("3.14e-10");
+    ASSERT_EQ(result.size(), 1);
+    EXPECT_EQ(result[0].kind(), yy::parser::symbol_kind_type::S_FLOAT);
+    EXPECT_DOUBLE_EQ(result[0].value.as<double>(), 3.14e-10);
+
+    result = lex_string("3.14E-10");
+    ASSERT_EQ(result.size(), 1);
+    EXPECT_EQ(result[0].kind(), yy::parser::symbol_kind_type::S_FLOAT);
+    EXPECT_DOUBLE_EQ(result[0].value.as<double>(), 3.14E-10);
+
+    result = lex_string("3.14E+10");
+    ASSERT_EQ(result.size(), 1);
+    EXPECT_EQ(result[0].kind(), yy::parser::symbol_kind_type::S_FLOAT);
+    EXPECT_DOUBLE_EQ(result[0].value.as<double>(), 3.14E+10);
+
+    result = lex_string("3.14E10");
+    ASSERT_EQ(result.size(), 1);
+    EXPECT_EQ(result[0].kind(), yy::parser::symbol_kind_type::S_FLOAT);
+    EXPECT_DOUBLE_EQ(result[0].value.as<double>(), 3.14E10);
+
+    result = lex_string("2e10");
+    ASSERT_EQ(result.size(), 1);
+    EXPECT_EQ(result[0].kind(), yy::parser::symbol_kind_type::S_FLOAT);
+    EXPECT_DOUBLE_EQ(result[0].value.as<double>(), 2e10);
+
+    result = lex_string("2e+10");
+    ASSERT_EQ(result.size(), 1);
+    EXPECT_EQ(result[0].kind(), yy::parser::symbol_kind_type::S_FLOAT);
+    EXPECT_DOUBLE_EQ(result[0].value.as<double>(), 2e+10);
+
+    result = lex_string("2e-10");
+    ASSERT_EQ(result.size(), 1);
+    EXPECT_EQ(result[0].kind(), yy::parser::symbol_kind_type::S_FLOAT);
+    EXPECT_DOUBLE_EQ(result[0].value.as<double>(), 2e-10);
+
+    result = lex_string("2E10");
+    ASSERT_EQ(result.size(), 1);
+    EXPECT_EQ(result[0].kind(), yy::parser::symbol_kind_type::S_FLOAT);
+    EXPECT_DOUBLE_EQ(result[0].value.as<double>(), 2E10);
+
+    result = lex_string("2E+10");
+    ASSERT_EQ(result.size(), 1);
+    EXPECT_EQ(result[0].kind(), yy::parser::symbol_kind_type::S_FLOAT);
+    EXPECT_DOUBLE_EQ(result[0].value.as<double>(), 2E+10);
+
+    result = lex_string("2E-10");
+    ASSERT_EQ(result.size(), 1);
+    EXPECT_EQ(result[0].kind(), yy::parser::symbol_kind_type::S_FLOAT);
+    EXPECT_DOUBLE_EQ(result[0].value.as<double>(), 2E-10);
+}
