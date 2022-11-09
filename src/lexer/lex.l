@@ -10,6 +10,7 @@
 %option noyywrap nounput noinput batch debug stack
 %{
 yy::parser::symbol_type parse_integer(const std::string &s, const yy::parser::location_type& loc);
+yy::parser::symbol_type parse_character(const std::string &s, const yy::parser::location_type& loc);
 %}
 
 %x incomment
@@ -44,15 +45,18 @@ HEXADECIMAL {HEXIT}+
 INTEGER     {DECIMAL}|"0"[oO]{OCTAL}|"0"[xX]{HEXADECIMAL}
 EXPONENT    [eE][+-]?{DECIMAL}
 FLOAT       {DECIMAL}"."{DECIMAL}{EXPONENT}?|{DECIMAL}{EXPONENT}
+
+CHARESC     [abfnrtv\\\"\'&]
+CNTRL       {LARGE}|[@\[\\\]\^_]
+ASCII       "^"{CNTRL}|"NUL"|"SOH"|"STX"|"ETX"|"EOT"|"ENQ"|"ACK"|"BEL"|"BS"|"HT"|"LF"|"VT"|"FF"|"CR"|"SO"|"SI"|"DLE"|"DC1"|"DC2"|"DC3"|"DC4"|"NAK"|"SYN"|"ETB"|"CAN"|"EM"|"SUB"|"ESC"|"FS"|"GS"|"RS"|"US"|"SP"|"DEL"
+ESCAPE      "\\"({CHARESC}|{ASCII}|{DECIMAL}|"o"{OCTAL}|"x"{HEXADECIMAL})
+CHAR        \'(({SMALL}|{LARGE}|[!#\$%&\*\+\.\/\<=\>\?@\^\|\-~\:]|{DIGIT}|{SPECIAL}|\")|" "|{ESCAPE})\'
 %{
-// Code run each time a pattern is matched.
 #define YY_USER_ACTION  loc.columns(yyleng);
 %}
 %%
 %{
-// A handy shortcut to the location held by the Driver.
 yy::location& loc = drv.location;
-// Code run each time yylex is called.
 loc.step();
 %}
 {WHITECHAR} loc.step();
@@ -107,16 +111,19 @@ loc.step();
 {CONSYM}    return yy::parser::make_CONSYM(yytext, loc);
 {OPENCOM}   yy_push_state(incomment); loc.step();
 <incomment>{
-    {OPENCOM}               yy_push_state(incomment); loc.step();
-    {CLOSECOM}              yy_pop_state(); loc.step();
-    {NEWLINE}               loc.lines(1); loc.step();
-    ({INCOM}|"}")*          loc.step();
-    "-"+{INCOM}*            loc.step();
-    "{"+({INCOM}|"}")*      loc.step();
+    {OPENCOM}           yy_push_state(incomment); loc.step();
+    {CLOSECOM}          yy_pop_state(); loc.step();
+    {NEWLINE}           loc.lines(1); loc.step();
+    ({INCOM}|"}")*      loc.step();
+    "-"+{INCOM}*        loc.step();
+    "{"+({INCOM}|"}")*  loc.step();
+    .                   throw yy::parser::syntax_error(loc, "Invalid character: " + std::string(yytext));
 }
 {INTEGER}   return parse_integer(yytext, loc);
 {FLOAT}     return yy::parser::make_FLOAT(std::stod(yytext), loc);
+{CHAR}      return parse_character(yytext, loc);
 <<EOF>>     return yy::parser::make_YYEOF(loc);
+.           throw yy::parser::syntax_error(loc, "Invalid character: " + std::string(yytext));
 %%
 yy::parser::symbol_type parse_integer(const std::string &s, const yy::parser::location_type& loc) {
     if (s.rfind("0x", 0) == 0 || s.rfind("0X", 0) == 0) {
@@ -126,6 +133,132 @@ yy::parser::symbol_type parse_integer(const std::string &s, const yy::parser::lo
     } else {
         return yy::parser::make_INTEGER(std::stoi(s, nullptr, 10), loc);
     }
+}
+
+char parse_escape(const std::string e, const yy::parser::location_type& loc) {
+    int c = -1;
+
+    if (isdigit(e[1])) {
+        c = std::stoi(e.substr(1));
+    } else if (e[1] == 'o') {
+        c = std::stoi(e.substr(2), nullptr, 8);
+    } else if (e[1] == 'x') {
+        c = std::stoi(e.substr(2), nullptr, 16);
+    } else if (e == "\\a") {
+        c = 0x07;
+    } else if (e == "\\b") {
+        c = 0x08;
+    } else if (e == "\\f") {
+        c = 0x0C;
+    } else if (e == "\\n") {
+        c = 0x0A;
+    } else if (e == "\\r") {
+        c = 0x0D;
+    } else if (e == "\\t") {
+        c = 0x09;
+    } else if (e == "\\v") {
+        c = 0x0B;
+    } else if (e == "\\\"") {
+        c = 0x22;
+    } else if (e == "\\'") {
+        c = 0x27;
+    } else if (e == "\\\\") {
+        c = 0x5C;
+    } else if (e == "\\NUL") {
+        c = 0x00;
+    } else if (e == "\\SOH") {
+        c = 0x01;
+    } else if (e == "\\STX") {
+        c = 0x02;
+    } else if (e == "\\ETX") {
+        c = 0x03;
+    } else if (e == "\\EOT") {
+        c = 0x04;
+    } else if (e == "\\ENQ") {
+        c = 0x05;
+    } else if (e == "\\ACK") {
+        c = 0x06;
+    } else if (e == "\\BEL") {
+        c = 0x07;
+    } else if (e == "\\BS") {
+        c = 0x08;
+    } else if (e == "\\HT") {
+        c = 0x09;
+    } else if (e == "\\LF") {
+        c = 0x0A;
+    } else if (e == "\\VT") {
+        c = 0x0B;
+    } else if (e == "\\FF") {
+        c = 0x0C;
+    } else if (e == "\\CR") {
+        c = 0x0D;
+    } else if (e == "\\SO") {
+        c = 0x0E;
+    } else if (e == "\\SI") {
+        c = 0x0F;
+    } else if (e == "\\DLE") {
+        c = 0x10;
+    } else if (e == "\\DC1") {
+        c = 0x11;
+    } else if (e == "\\DC2") {
+        c = 0x12;
+    } else if (e == "\\DC3") {
+        c = 0x13;
+    } else if (e == "\\DC4") {
+        c = 0x14;
+    } else if (e == "\\NAK") {
+        c = 0x15;
+    } else if (e == "\\SYN") {
+        c = 0x16;
+    } else if (e == "\\ETB") {
+        c = 0x17;
+    } else if (e == "\\CAN") {
+        c = 0x18;
+    } else if (e == "\\EM") {
+        c = 0x19;
+    } else if (e == "\\SUB") {
+        c = 0x1A;
+    } else if (e == "\\ESC") {
+        c = 0x1B;
+    } else if (e == "\\FS") {
+        c = 0x1C;
+    } else if (e == "\\GS") {
+        c = 0x1D;
+    } else if (e == "\\RS") {
+        c = 0x1E;
+    } else if (e == "\\US") {
+        c = 0x1F;
+    } else if (e == "\\SP") {
+        c = 0x20;
+    } else if (e == "\\DEL") {
+        c = 0x7F;
+    } else if (e == "\\^@") {
+        c = 0x00;
+    } else if (e == "\\^[") {
+        c = 0x1B;
+    } else if (e == "\\^\\") {
+        c = 0x1C;
+    } else if (e == "\\^]") {
+        c = 0x1D;
+    } else if (e == "\\^^") {
+        c = 0x1E;
+    } else if (e == "\\^_") {
+        c = 0x1F;
+    } else if (e[1] == '^' && isupper(e[2])) {
+        c = e[2] - 0x40;
+    }
+
+    if (c < 0 || c > 127) {
+        throw yy::parser::syntax_error(loc, "Invalid escape sequence: " + e);
+    }
+    return c;
+}
+
+yy::parser::symbol_type parse_character(const std::string &s, const yy::parser::location_type& loc) {
+    if (s[1] == '\\') {
+        return yy::parser::make_CHAR(parse_escape(s.substr(1, s.size() - 2), loc), loc);
+    }
+    return yy::parser::make_CHAR(s[1], loc);
 }
 
 void Driver::scan_begin() {

@@ -1,6 +1,5 @@
 #include <gtest/gtest.h>
 #include <vector>
-#include <variant>
 #include "lexer/lexer.hpp"
 #include "parser/parser.hpp"
 #include "parser/driver.hpp"
@@ -24,10 +23,17 @@ std::vector<yy::parser::symbol_type> lex_string(const char* str) {
     return result;
 }
 
-#define EXPECT_SYMBOL(str, sym) {  \
-    auto result = lex_string(str); \
-    ASSERT_EQ(result.size(), 1);   \
-    EXPECT_EQ(result[0].kind(), sym);     \
+#define EXPECT_SYMBOL(str, sym) {     \
+    auto result = lex_string(str);    \
+    ASSERT_EQ(result.size(), 1);      \
+    EXPECT_EQ(result[0].kind(), sym); \
+}
+
+#define EXPECT_CHAR(str, c) {                                          \
+    auto result = lex_string(str);                                     \
+    ASSERT_EQ(result.size(), 1);                                       \
+    EXPECT_EQ(result[0].kind(), yy::parser::symbol_kind_type::S_CHAR); \
+    EXPECT_EQ(result[0].value.as<char>(), c);                          \
 }
 
 TEST(Lexer, RecognisesKeywords) {
@@ -85,7 +91,7 @@ TEST(Lexer, RecognisesVARID) {
     EXPECT_SYMBOL("lotsofcases", yy::parser::symbol_kind_type::S_VARID);
     EXPECT_SYMBOL("zsS''123'", yy::parser::symbol_kind_type::S_VARID);
     EXPECT_SYMBOL("a", yy::parser::symbol_kind_type::S_VARID);
-    //TODO: starting with '
+    EXPECT_THROW(lex_string("'a"), yy::parser::syntax_error);
 }
 
 TEST(Lexer, RecognisesCONID) {
@@ -94,7 +100,6 @@ TEST(Lexer, RecognisesCONID) {
     EXPECT_SYMBOL("Lotsofcases", yy::parser::symbol_kind_type::S_CONID);
     EXPECT_SYMBOL("ZsS''123'", yy::parser::symbol_kind_type::S_CONID);
     EXPECT_SYMBOL("A", yy::parser::symbol_kind_type::S_CONID);
-    //TODO: starting with '
 }
 
 TEST(Lexer, RecognisesVARSYM) {
@@ -305,4 +310,71 @@ TEST(Lexer, HandlesFloatLiterals) {
     ASSERT_EQ(result.size(), 1);
     EXPECT_EQ(result[0].kind(), yy::parser::symbol_kind_type::S_FLOAT);
     EXPECT_DOUBLE_EQ(result[0].value.as<double>(), 2E-10);
+}
+
+TEST(Lexer, HandlesCharLiterals) {
+    EXPECT_CHAR("'a'", 'a');
+    EXPECT_CHAR("'\\0'", 0x00);
+    EXPECT_CHAR("'\\a'", 0x07);
+    EXPECT_CHAR("'\\b'", 0x08);
+    EXPECT_CHAR("'\\f'", 0x0C);
+    EXPECT_CHAR("'\\n'", 0x0A);
+    EXPECT_CHAR("'\\r'", 0x0D);
+    EXPECT_CHAR("'\\t'", 0x09);
+    EXPECT_CHAR("'\\v'", 0x0B);
+    EXPECT_CHAR("'\\\"'", 0x22);
+    EXPECT_CHAR("'\\''", 0x27);
+    EXPECT_CHAR("'\\\\'", 0x5C);
+    EXPECT_CHAR("'\\NUL'", 0x00);
+    EXPECT_CHAR("'\\SOH'", 0x01);
+    EXPECT_CHAR("'\\STX'", 0x02);
+    EXPECT_CHAR("'\\ETX'", 0x03);
+    EXPECT_CHAR("'\\EOT'", 0x04);
+    EXPECT_CHAR("'\\ENQ'", 0x05);
+    EXPECT_CHAR("'\\ACK'", 0x06);
+    EXPECT_CHAR("'\\BEL'", 0x07);
+    EXPECT_CHAR("'\\BS'", 0x08);
+    EXPECT_CHAR("'\\HT'", 0x09);
+    EXPECT_CHAR("'\\LF'", 0x0A);
+    EXPECT_CHAR("'\\VT'", 0x0B);
+    EXPECT_CHAR("'\\FF'", 0x0C);
+    EXPECT_CHAR("'\\CR'", 0x0D);
+    EXPECT_CHAR("'\\SO'", 0x0E);
+    EXPECT_CHAR("'\\SI'", 0x0F);
+    EXPECT_CHAR("'\\DLE'", 0x10);
+    EXPECT_CHAR("'\\DC1'", 0x11);
+    EXPECT_CHAR("'\\DC2'", 0x12);
+    EXPECT_CHAR("'\\DC3'", 0x13);
+    EXPECT_CHAR("'\\DC4'", 0x14);
+    EXPECT_CHAR("'\\NAK'", 0x15);
+    EXPECT_CHAR("'\\SYN'", 0x16);
+    EXPECT_CHAR("'\\ETB'", 0x17);
+    EXPECT_CHAR("'\\CAN'", 0x18);
+    EXPECT_CHAR("'\\EM'", 0x19);
+    EXPECT_CHAR("'\\SUB'", 0x1A);
+    EXPECT_CHAR("'\\ESC'", 0x1B);
+    EXPECT_CHAR("'\\FS'", 0x1C);
+    EXPECT_CHAR("'\\GS'", 0x1D);
+    EXPECT_CHAR("'\\RS'", 0x1E);
+    EXPECT_CHAR("'\\US'", 0x1F);
+    EXPECT_CHAR("'\\SP'", 0x20);
+    EXPECT_CHAR("'\\DEL'", 0x7F);
+    EXPECT_CHAR("'\\^@'", 0x00);
+    EXPECT_CHAR("'\\^A'", 0x01);
+    EXPECT_CHAR("'\\^C'", 0x03);
+    EXPECT_CHAR("'\\^Z'", 0x1A);
+    EXPECT_CHAR("'\\^['", 0x1B);
+    EXPECT_CHAR("'\\^\\'", 0x1C);
+    EXPECT_CHAR("'\\^]'", 0x1D);
+    EXPECT_CHAR("'\\^^'", 0x1E);
+    EXPECT_CHAR("'\\^_'", 0x1F);
+    EXPECT_CHAR("'\\123'", 123);
+    EXPECT_CHAR("'\\x12'", 0x12);
+    EXPECT_CHAR("'\\o12'", 012);
+
+    EXPECT_THROW(lex_string("'\\O12'"), yy::parser::syntax_error);
+    EXPECT_THROW(lex_string("'\\X12'"), yy::parser::syntax_error);
+    EXPECT_THROW(lex_string("'\\1234'"), yy::parser::syntax_error);
+    EXPECT_THROW(lex_string("'\\&'"), yy::parser::syntax_error);
+    EXPECT_THROW(lex_string("''"), yy::parser::syntax_error);
 }
