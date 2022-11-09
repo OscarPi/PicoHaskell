@@ -19,40 +19,65 @@
 }
 %define api.token.prefix {TOK_}
 %token
-    ASSIGN  ":="
-    MINUS   "-"
-    PLUS    "+"
-    STAR    "*"
-    SLASH   "/"
-    LPAREN  "("
-    RPAREN  ")"
+    CASE          "case"
+    CLASS         "class"
+    DATA          "data"
+    DEFAULT       "default"
+    DERIVING      "deriving"
+    DO            "do"
+    ELSE          "else"
+    FOREIGN       "foreign"
+    IF            "if"
+    IMPORT        "import"
+    IN            "in"
+    INFIX         "infix"
+    INFIXL        "infixl"
+    INFIXR        "infixr"
+    INSTANCE      "instance"
+    LET           "let"
+    MODULE        "module"
+    NEWTYPE       "newtype"
+    OF            "of"
+    THEN          "then"
+    TYPE          "type"
+    WHERE         "where"
+    _             "_"
+    DOTDOT        ".."
+    COLON         ":"
+    HASTYPE       "::"
+    EQUALS        "="
+    BACKSLASH     "\\"
+    PIPE          "|"
+    LEFTARROW     "<-"
+    RIGHTARROW    "->"
+    AT            "@"
+    TILDE         "~"
+    IMPLIES       "=>"
+    LEFTBRACKET   "("
+    RIGHTBRACKET  ")"
+    COMMA         ","
+    SEMICOLON     ";"
+    LEFTCROTCHET  "["
+    RIGHTCROTCHET "]"
+    BACKTICK      "`"
+    LEFTBRACE     "{"
+    RIGHTBRACE    "}"
 ;
-%token <std::string> IDENTIFIER "identifier"
-%token <int> NUMBER "number"
+%token <std::string> VARID
+%token <std::string> CONID
+%token <std::string> VARSYM
+%token <std::string> CONSYM
+%token <int> INTEGER
+%token <double> FLOAT
+%token <char> CHAR
+%token <std::string> STRING
 %nterm <int> exp
 %printer { yyo << $$; } <*>;
 
 %%
 %start unit;
-unit: assignments exp  { drv.result = $2; };
+unit: COMMA {};
 
-assignments:
-  %empty                 {}
-| assignments assignment {};
-
-assignment:
-  "identifier" ":=" exp { drv.variables[$1] = $3; };
-
-%left "+" "-";
-%left "*" "/";
-exp:
-  "number"
-| "identifier"  { $$ = drv.variables[$1]; }
-| exp "+" exp   { $$ = $1 + $3; }
-| exp "-" exp   { $$ = $1 - $3; }
-| exp "*" exp   { $$ = $1 * $3; }
-| exp "/" exp   { $$ = $1 / $3; }
-| "(" exp ")"   { $$ = $2; }
 %%
 void yy::parser::error(const location_type& l, const std::string& m) {
   std::cerr << l << ": " << m << '\n';
