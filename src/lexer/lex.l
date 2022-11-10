@@ -11,10 +11,12 @@
 %{
 yy::parser::symbol_type parse_integer(const std::string &s, const yy::parser::location_type& loc);
 yy::parser::symbol_type parse_character(const std::string &s, const yy::parser::location_type& loc);
+char parse_escape(const std::string e, const yy::parser::location_type& loc);
 %}
 
 %x incomment
 %x instring
+%x ingap
 
 /* definitions */
 LARGE       [A-Z]
@@ -51,6 +53,7 @@ CNTRL       {LARGE}|[@\[\\\]\^_]
 ASCII       "^"{CNTRL}|"NUL"|"SOH"|"STX"|"ETX"|"EOT"|"ENQ"|"ACK"|"BEL"|"BS"|"HT"|"LF"|"VT"|"FF"|"CR"|"SO"|"SI"|"DLE"|"DC1"|"DC2"|"DC3"|"DC4"|"NAK"|"SYN"|"ETB"|"CAN"|"EM"|"SUB"|"ESC"|"FS"|"GS"|"RS"|"US"|"SP"|"DEL"
 ESCAPE      "\\"({CHARESC}|{ASCII}|{DECIMAL}|"o"{OCTAL}|"x"{HEXADECIMAL})
 CHAR        \'(({SMALL}|{LARGE}|[!#\$%&\*\+\.\/\<=\>\?@\^\|\-~\:]|{DIGIT}|{SPECIAL}|\")|" "|{ESCAPE})\'
+STRCHAR     {SMALL}|{LARGE}|[!#\$%&\*\+\.\/\<=\>\?@\^\|\-~\:]|{DIGIT}|{SPECIAL}|\'|" "
 %{
 #define YY_USER_ACTION  loc.columns(yyleng);
 %}
@@ -58,6 +61,7 @@ CHAR        \'(({SMALL}|{LARGE}|[!#\$%&\*\+\.\/\<=\>\?@\^\|\-~\:]|{DIGIT}|{SPECI
 %{
 yy::location& loc = drv.location;
 loc.step();
+std::string strliteral;
 %}
 {WHITECHAR} loc.step();
 {NEWLINE}   loc.lines(1); loc.step();
@@ -122,6 +126,21 @@ loc.step();
 {INTEGER}   return parse_integer(yytext, loc);
 {FLOAT}     return yy::parser::make_FLOAT(std::stod(yytext), loc);
 {CHAR}      return parse_character(yytext, loc);
+\"          BEGIN(instring); strliteral.clear(); loc.step();
+<instring>{
+    \"             BEGIN(INITIAL); return yy::parser::make_STRING(strliteral, loc);
+    \\{WHITECHAR}+ BEGIN(ingap); loc.step();
+    \\{NEWLINE}    BEGIN(ingap); loc.lines(1); loc.step();
+    {ESCAPE}       strcmp(yytext, "\\&") == 0 ? loc.step() : (strliteral += parse_escape(yytext, loc), loc.step());
+    {STRCHAR}+     strliteral += yytext; loc.step();
+    .              throw yy::parser::syntax_error(loc, "Invalid character in string literal: " + std::string(yytext));
+}
+<ingap>{
+    {WHITECHAR}+ loc.step();
+    {NEWLINE}    loc.lines(1); loc.step();
+    \\           BEGIN(instring); loc.step();
+    .            throw yy::parser::syntax_error(loc, "Invalid character in gap in string literal: " + std::string(yytext));
+}
 <<EOF>>     return yy::parser::make_YYEOF(loc);
 .           throw yy::parser::syntax_error(loc, "Invalid character: " + std::string(yytext));
 %%

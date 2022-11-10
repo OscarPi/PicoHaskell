@@ -29,11 +29,32 @@ std::vector<yy::parser::symbol_type> lex_string(const char* str) {
     EXPECT_EQ(result[0].kind(), sym); \
 }
 
+#define EXPECT_INTEGER(str, i) {                                          \
+    auto result = lex_string(str);                                        \
+    ASSERT_EQ(result.size(), 1);                                          \
+    ASSERT_EQ(result[0].kind(), yy::parser::symbol_kind_type::S_INTEGER); \
+    EXPECT_EQ(result[0].value.as<int>(), i);                              \
+}
+
+#define EXPECT_FLOAT(str, f) {                                          \
+    auto result = lex_string(str);                                      \
+    ASSERT_EQ(result.size(), 1);                                        \
+    ASSERT_EQ(result[0].kind(), yy::parser::symbol_kind_type::S_FLOAT); \
+    EXPECT_DOUBLE_EQ(result[0].value.as<double>(), f);                  \
+}
+
 #define EXPECT_CHAR(str, c) {                                          \
     auto result = lex_string(str);                                     \
     ASSERT_EQ(result.size(), 1);                                       \
-    EXPECT_EQ(result[0].kind(), yy::parser::symbol_kind_type::S_CHAR); \
+    ASSERT_EQ(result[0].kind(), yy::parser::symbol_kind_type::S_CHAR); \
     EXPECT_EQ(result[0].value.as<char>(), c);                          \
+}
+
+#define EXPECT_STRING(str, s) {                                          \
+    auto result = lex_string(str);                                       \
+    ASSERT_EQ(result.size(), 1);                                         \
+    ASSERT_EQ(result[0].kind(), yy::parser::symbol_kind_type::S_STRING); \
+    EXPECT_EQ(result[0].value.as<std::string>(), s);                     \
 }
 
 TEST(Lexer, RecognisesKeywords) {
@@ -219,97 +240,27 @@ TEST(Lexer, IgnoresMultiLineComments) {
 }
 
 TEST(Lexer, HandlesIntegerLiterals) {
-    auto result = lex_string("0123456");
-    ASSERT_EQ(result.size(), 1);
-    EXPECT_EQ(result[0].kind(), yy::parser::symbol_kind_type::S_INTEGER);
-    EXPECT_EQ(result[0].value.as<int>(), 123456);
-
-    result = lex_string("0x123456");
-    ASSERT_EQ(result.size(), 1);
-    EXPECT_EQ(result[0].kind(), yy::parser::symbol_kind_type::S_INTEGER);
-    EXPECT_EQ(result[0].value.as<int>(), 0x123456);
-
-    result = lex_string("0XABCDEF");
-    ASSERT_EQ(result.size(), 1);
-    EXPECT_EQ(result[0].kind(), yy::parser::symbol_kind_type::S_INTEGER);
-    EXPECT_EQ(result[0].value.as<int>(), 0xABCDEF);
-
-    result = lex_string("0o1234567");
-    ASSERT_EQ(result.size(), 1);
-    EXPECT_EQ(result[0].kind(), yy::parser::symbol_kind_type::S_INTEGER);
-    EXPECT_EQ(result[0].value.as<int>(), 01234567);
-
-    result = lex_string("0O12");
-    ASSERT_EQ(result.size(), 1);
-    EXPECT_EQ(result[0].kind(), yy::parser::symbol_kind_type::S_INTEGER);
-    EXPECT_EQ(result[0].value.as<int>(), 012);
+    EXPECT_INTEGER("0123456", 123456);
+    EXPECT_INTEGER("0x123456", 0x123456);
+    EXPECT_INTEGER("0XABCDEF", 0xABCDEF);
+    EXPECT_INTEGER("0o1234567", 01234567);
+    EXPECT_INTEGER("0O12", 012);
 }
 
 TEST(Lexer, HandlesFloatLiterals) {
-    auto result = lex_string("3.14");
-    ASSERT_EQ(result.size(), 1);
-    EXPECT_EQ(result[0].kind(), yy::parser::symbol_kind_type::S_FLOAT);
-    EXPECT_DOUBLE_EQ(result[0].value.as<double>(), 3.14);
-
-    result = lex_string("3.14e10");
-    ASSERT_EQ(result.size(), 1);
-    EXPECT_EQ(result[0].kind(), yy::parser::symbol_kind_type::S_FLOAT);
-    EXPECT_DOUBLE_EQ(result[0].value.as<double>(), 3.14e10);
-
-    result = lex_string("3.14e+10");
-    ASSERT_EQ(result.size(), 1);
-    EXPECT_EQ(result[0].kind(), yy::parser::symbol_kind_type::S_FLOAT);
-    EXPECT_DOUBLE_EQ(result[0].value.as<double>(), 3.14e+10);
-
-    result = lex_string("3.14e-10");
-    ASSERT_EQ(result.size(), 1);
-    EXPECT_EQ(result[0].kind(), yy::parser::symbol_kind_type::S_FLOAT);
-    EXPECT_DOUBLE_EQ(result[0].value.as<double>(), 3.14e-10);
-
-    result = lex_string("3.14E-10");
-    ASSERT_EQ(result.size(), 1);
-    EXPECT_EQ(result[0].kind(), yy::parser::symbol_kind_type::S_FLOAT);
-    EXPECT_DOUBLE_EQ(result[0].value.as<double>(), 3.14E-10);
-
-    result = lex_string("3.14E+10");
-    ASSERT_EQ(result.size(), 1);
-    EXPECT_EQ(result[0].kind(), yy::parser::symbol_kind_type::S_FLOAT);
-    EXPECT_DOUBLE_EQ(result[0].value.as<double>(), 3.14E+10);
-
-    result = lex_string("3.14E10");
-    ASSERT_EQ(result.size(), 1);
-    EXPECT_EQ(result[0].kind(), yy::parser::symbol_kind_type::S_FLOAT);
-    EXPECT_DOUBLE_EQ(result[0].value.as<double>(), 3.14E10);
-
-    result = lex_string("2e10");
-    ASSERT_EQ(result.size(), 1);
-    EXPECT_EQ(result[0].kind(), yy::parser::symbol_kind_type::S_FLOAT);
-    EXPECT_DOUBLE_EQ(result[0].value.as<double>(), 2e10);
-
-    result = lex_string("2e+10");
-    ASSERT_EQ(result.size(), 1);
-    EXPECT_EQ(result[0].kind(), yy::parser::symbol_kind_type::S_FLOAT);
-    EXPECT_DOUBLE_EQ(result[0].value.as<double>(), 2e+10);
-
-    result = lex_string("2e-10");
-    ASSERT_EQ(result.size(), 1);
-    EXPECT_EQ(result[0].kind(), yy::parser::symbol_kind_type::S_FLOAT);
-    EXPECT_DOUBLE_EQ(result[0].value.as<double>(), 2e-10);
-
-    result = lex_string("2E10");
-    ASSERT_EQ(result.size(), 1);
-    EXPECT_EQ(result[0].kind(), yy::parser::symbol_kind_type::S_FLOAT);
-    EXPECT_DOUBLE_EQ(result[0].value.as<double>(), 2E10);
-
-    result = lex_string("2E+10");
-    ASSERT_EQ(result.size(), 1);
-    EXPECT_EQ(result[0].kind(), yy::parser::symbol_kind_type::S_FLOAT);
-    EXPECT_DOUBLE_EQ(result[0].value.as<double>(), 2E+10);
-
-    result = lex_string("2E-10");
-    ASSERT_EQ(result.size(), 1);
-    EXPECT_EQ(result[0].kind(), yy::parser::symbol_kind_type::S_FLOAT);
-    EXPECT_DOUBLE_EQ(result[0].value.as<double>(), 2E-10);
+    EXPECT_FLOAT("3.14", 3.14);
+    EXPECT_FLOAT("3.14e10", 3.14e10);
+    EXPECT_FLOAT("3.14e+10", 3.14e+10);
+    EXPECT_FLOAT("3.14e-10", 3.14e-10);
+    EXPECT_FLOAT("3.14E-10", 3.14E-10);
+    EXPECT_FLOAT("3.14E+10", 3.14E+10);
+    EXPECT_FLOAT("3.14E10", 3.14E10);
+    EXPECT_FLOAT("2e10", 2e10);
+    EXPECT_FLOAT("2e+10", 2e+10);
+    EXPECT_FLOAT("2e-10", 2e-10);
+    EXPECT_FLOAT("2E10", 2E10);
+    EXPECT_FLOAT("2E+10", 2E+10);
+    EXPECT_FLOAT("2E-10", 2E-10);
 }
 
 TEST(Lexer, HandlesCharLiterals) {
@@ -377,4 +328,21 @@ TEST(Lexer, HandlesCharLiterals) {
     EXPECT_THROW(lex_string("'\\1234'"), yy::parser::syntax_error);
     EXPECT_THROW(lex_string("'\\&'"), yy::parser::syntax_error);
     EXPECT_THROW(lex_string("''"), yy::parser::syntax_error);
+}
+
+TEST(Lexer, HandlesStringLiterals) {
+    auto result = lex_string(R"("abc123" "abc143")");
+    ASSERT_EQ(result.size(), 2);
+    ASSERT_EQ(result[0].kind(), yy::parser::symbol_kind_type::S_STRING);
+    ASSERT_EQ(result[1].kind(), yy::parser::symbol_kind_type::S_STRING);
+    EXPECT_EQ(result[0].value.as<std::string>(), "abc123");
+    EXPECT_EQ(result[1].value.as<std::string>(), "abc143");
+
+    EXPECT_STRING(R"("a bc\&123")", "a bc123");
+    EXPECT_STRING(R"("")", "");
+    EXPECT_STRING(R"("\&")", "")
+    EXPECT_STRING(R"("\1\2\3")", "\1\2\3");
+    EXPECT_STRING("\"hi\\   \t\v\n\r\n\\bye\"", "hibye");
+
+    EXPECT_THROW(lex_string(R"("\poopoo\")"), yy::parser::syntax_error);
 }
