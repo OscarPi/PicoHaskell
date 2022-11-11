@@ -1,3 +1,4 @@
+add_subdirectory(lexer)
 add_subdirectory(parser)
 
 find_package(BISON)
@@ -11,9 +12,9 @@ ADD_FLEX_BISON_DEPENDENCY(Lexer Parser)
 
 add_executable(main main.cpp ${BISON_Parser_OUTPUTS} ${FLEX_Lexer_OUTPUTS})
 target_include_directories(main PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
-target_link_libraries(main parser ${FLEX_LIBRARIES})
+target_link_libraries(main lexer parser ${FLEX_LIBRARIES})
 
 add_library(PicoHaskell INTERFACE)
 target_include_directories(PicoHaskell INTERFACE ${CMAKE_CURRENT_BINARY_DIR})
 target_sources(PicoHaskell INTERFACE ${BISON_Parser_OUTPUTS} ${FLEX_Lexer_OUTPUTS})
-target_link_libraries(PicoHaskell INTERFACE parser ${FLEX_LIBRARIES})
+target_link_libraries(PicoHaskell INTERFACE lexer parser ${FLEX_LIBRARIES})

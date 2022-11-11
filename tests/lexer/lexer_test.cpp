@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 #include <vector>
 #include "lexer/lexer.hpp"
+#include "lexer/layout.hpp"
 #include "parser/parser.hpp"
 #include "parser/driver.hpp"
 

@@ -15,6 +15,7 @@
 %define parse.error detailed
 %define parse.lac full
 %code {
+    #include "lexer/layout.hpp"
     #include "parser/driver.hpp"
 }
 %define api.token.prefix {TOK_}
