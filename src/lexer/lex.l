@@ -29,7 +29,6 @@ SPECIAL     [\(\)\,\;\[\]\`\{\}]
 GRAPHIC     {SMALL}|{LARGE}|{SYMBOL}|{DIGIT}|{SPECIAL}|\"|\'
 ANY         {GRAPHIC}|" "|\t
 NEWLINE     \r\n|\r|\n|\f
-WHITECHAR   [\t \v]
 
 VARID       {SMALL}({SMALL}|{LARGE}|{DIGIT}|\')*
 CONID       {LARGE}({SMALL}|{LARGE}|{DIGIT}|\')*
@@ -39,7 +38,7 @@ CONSYM      ":"{SYMBOL}*
 COMMENT     "--""-"*(({SMALL}|{LARGE}|{DIGIT}|{SPECIAL}|\"|\'|" "|\t){ANY}*)?{NEWLINE}
 OPENCOM     "{""-"+
 CLOSECOM    "-"+"}"
-INCOM       {SMALL}|{LARGE}|{DIGIT}|[!#\$%&\*\+\.\/\<=\>\?@\\\^\|~\:\(\)\,\;\[\]\`\"\'\t \v]
+INCOM       {SMALL}|{LARGE}|{DIGIT}|[!#\$%&\*\+\.\/\<=\>\?@\\\^\|~\:\(\)\,\;\[\]\`\"\' \v]
 
 DECIMAL     {DIGIT}+
 OCTAL       {OCTIT}+
@@ -63,7 +62,8 @@ yy::location& loc = drv.location;
 loc.step();
 std::string strliteral;
 %}
-{WHITECHAR} loc.step();
+[ \v]+      loc.step();
+\t          loc.columns(((loc.end.column-1) % 8) == 0 ? 0 : 8-((loc.end.column-1) % 8)); loc.step();
 {NEWLINE}   loc.lines(1); loc.step();
 {COMMENT}   loc.lines(1); loc.step();
 "case"      return yy::parser::make_CASE(loc);
@@ -113,32 +113,35 @@ std::string strliteral;
 {CONID}     return yy::parser::make_CONID(yytext, loc);
 {VARSYM}    return yy::parser::make_VARSYM(yytext, loc);
 {CONSYM}    return yy::parser::make_CONSYM(yytext, loc);
-{OPENCOM}   yy_push_state(incomment); loc.step();
+{OPENCOM}   yy_push_state(incomment);
 <incomment>{
-    {OPENCOM}           yy_push_state(incomment); loc.step();
+    {OPENCOM}           yy_push_state(incomment);
     {CLOSECOM}          yy_pop_state(); loc.step();
-    {NEWLINE}           loc.lines(1); loc.step();
-    ({INCOM}|"}")*      loc.step();
-    "-"+{INCOM}*        loc.step();
-    "{"+({INCOM}|"}")*  loc.step();
+    {NEWLINE}           loc.lines(1);
+    ({INCOM}|"}")*
+    "-"+{INCOM}*
+    "{"+({INCOM}|"}")*
+    \t                  loc.columns(((loc.end.column-1) % 8) == 0 ? 0 : 8-((loc.end.column-1) % 8));
     .                   throw yy::parser::syntax_error(loc, "Invalid character: " + std::string(yytext));
 }
 {INTEGER}   return parse_integer(yytext, loc);
 {FLOAT}     return yy::parser::make_FLOAT(std::stod(yytext), loc);
 {CHAR}      return parse_character(yytext, loc);
-\"          BEGIN(instring); strliteral.clear(); loc.step();
+\"          BEGIN(instring); strliteral.clear();
 <instring>{
     \"             BEGIN(INITIAL); return yy::parser::make_STRING(strliteral, loc);
-    \\{WHITECHAR}+ BEGIN(ingap); loc.step();
-    \\{NEWLINE}    BEGIN(ingap); loc.lines(1); loc.step();
-    {ESCAPE}       strcmp(yytext, "\\&") == 0 ? loc.step() : (strliteral += parse_escape(yytext, loc), loc.step());
-    {STRCHAR}+     strliteral += yytext; loc.step();
+    \\[ \v]+       BEGIN(ingap);
+    \\\t           loc.columns(((loc.end.column-1) % 8) == 0 ? 0 : 8-((loc.end.column-1) % 8)); BEGIN(ingap);
+    \\{NEWLINE}    BEGIN(ingap); loc.lines(1);
+    {ESCAPE}       if (strcmp(yytext, "\\&") != 0) { strliteral += parse_escape(yytext, loc); }
+    {STRCHAR}+     strliteral += yytext;
     .              throw yy::parser::syntax_error(loc, "Invalid character in string literal: " + std::string(yytext));
 }
 <ingap>{
-    {WHITECHAR}+ loc.step();
-    {NEWLINE}    loc.lines(1); loc.step();
-    \\           BEGIN(instring); loc.step();
+    [ \v]+
+    \t           loc.columns(((loc.end.column-1) % 8) == 0 ? 0 : 8-((loc.end.column-1) % 8));
+    {NEWLINE}    loc.lines(1);
+    \\           BEGIN(instring);
     .            throw yy::parser::syntax_error(loc, "Invalid character in gap in string literal: " + std::string(yytext));
 }
 <<EOF>>     return yy::parser::make_YYEOF(loc);

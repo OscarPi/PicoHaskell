@@ -347,3 +347,51 @@ TEST(Lexer, HandlesStringLiterals) {
 
     EXPECT_THROW(lex_string(R"("\poopoo\")"), yy::parser::syntax_error);
 }
+
+TEST(Lexer, TracksLocations) {
+    auto result = lex_string("    if default");
+    ASSERT_EQ(result.size(), 2);
+    EXPECT_EQ(result[0].kind(), yy::parser::symbol_kind_type::S_IF);
+    EXPECT_EQ(result[0].location.begin.line, 1);
+    EXPECT_EQ(result[0].location.begin.column, 5);
+    EXPECT_EQ(result[0].location.end.line, 1);
+    EXPECT_EQ(result[0].location.end.column, 7);
+    EXPECT_EQ(result[1].kind(), yy::parser::symbol_kind_type::S_DEFAULT);
+    EXPECT_EQ(result[1].location.begin.line, 1);
+    EXPECT_EQ(result[1].location.begin.column, 8);
+    EXPECT_EQ(result[1].location.end.line, 1);
+    EXPECT_EQ(result[1].location.end.column, 15);
+
+    result = lex_string("\tif\n  \tif\tdefault\"hey\\\n\\howdy\"\ndefault{-\n\n\n-}\n--sup\n\tif");
+    ASSERT_EQ(result.size(), 6);
+    EXPECT_EQ(result[0].kind(), yy::parser::symbol_kind_type::S_IF);
+    EXPECT_EQ(result[0].location.begin.line, 1);
+    EXPECT_EQ(result[0].location.begin.column, 9);
+    EXPECT_EQ(result[0].location.end.line, 1);
+    EXPECT_EQ(result[0].location.end.column, 11);
+    EXPECT_EQ(result[1].kind(), yy::parser::symbol_kind_type::S_IF);
+    EXPECT_EQ(result[1].location.begin.line, 2);
+    EXPECT_EQ(result[1].location.begin.column, 9);
+    EXPECT_EQ(result[1].location.end.line, 2);
+    EXPECT_EQ(result[1].location.end.column, 11);
+    EXPECT_EQ(result[2].kind(), yy::parser::symbol_kind_type::S_DEFAULT);
+    EXPECT_EQ(result[2].location.begin.line, 2);
+    EXPECT_EQ(result[2].location.begin.column, 17);
+    EXPECT_EQ(result[2].location.end.line, 2);
+    EXPECT_EQ(result[2].location.end.column, 24);
+    EXPECT_EQ(result[3].kind(), yy::parser::symbol_kind_type::S_STRING);
+    EXPECT_EQ(result[3].location.begin.line, 2);
+    EXPECT_EQ(result[3].location.begin.column, 24);
+    EXPECT_EQ(result[3].location.end.line, 3);
+    EXPECT_EQ(result[3].location.end.column, 8);
+    EXPECT_EQ(result[4].kind(), yy::parser::symbol_kind_type::S_DEFAULT);
+    EXPECT_EQ(result[4].location.begin.line, 4);
+    EXPECT_EQ(result[4].location.begin.column, 1);
+    EXPECT_EQ(result[4].location.end.line, 4);
+    EXPECT_EQ(result[4].location.end.column, 8);
+    EXPECT_EQ(result[5].kind(), yy::parser::symbol_kind_type::S_IF);
+    EXPECT_EQ(result[5].location.begin.line, 9);
+    EXPECT_EQ(result[5].location.begin.column, 9);
+    EXPECT_EQ(result[5].location.end.line, 9);
+    EXPECT_EQ(result[5].location.end.column, 11);
+}
