@@ -1,5 +1,7 @@
 #include "parser/driver.hpp"
 #include "parser/parser.hpp"
+#include "parser/syntax.hpp"
+#include <memory>
 
 Driver::Driver () : trace_parsing (false), trace_scanning (false) {
     variables["one"] = 1;
@@ -11,7 +13,8 @@ int Driver::parse (const std::string &f)
     file = f;
     location.initialize(&file);
     scan_begin();
-    yy::parser parse(*this);
+    std::shared_ptr<SyntaxTreeNode> tree;
+    yy::parser parse(*this, &tree);
     parse.set_debug_level(trace_parsing);
     int res = parse();
     scan_end();

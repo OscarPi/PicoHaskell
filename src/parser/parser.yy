@@ -7,9 +7,12 @@
 %define parse.assert
 %code requires {
     #include <string>
+    #include <memory>
+    #include "parser/syntax.hpp"
     class Driver;
 }
 %param { Driver& drv }
+%parse-param { std::shared_ptr<SyntaxTreeNode> *result }
 %locations
 %define parse.trace
 %define parse.error detailed
@@ -72,12 +75,122 @@
 %token <double> FLOAT
 %token <char> CHAR
 %token <std::string> STRING
-%nterm <int> exp
-%printer { yyo << $$; } <*>;
+
+%nterm <std::shared_ptr<SyntaxTreeNode>> exp;
+
+//%printer { yyo << $$; } <*>;
 
 %%
-%start unit;
-unit: COMMA {};
+%start exp;
+
+exp: "\\" { $$ = std::make_shared<Literal>(); *result = $$; };
+//apatlist: apat | apatlist apat;
+//lexp:
+//    "\" apatlist "->" exp
+//  | "let" decls "in" exp
+//  | "if" exp optsemicolon "then" exp optsemicolon "else" exp
+//  | "case" exp "of" "{" alts "}"
+//  | "do" "{" stmts "}"
+//  | fexp
+
+//fexp: aexp | fexp aexp;
+
+//fbindlist: fbind | fbindlist "," fbind;
+//optfbindlist: %empty | fbindlist;
+//quallist: qual | quallist "," qual;
+//explist: exp | explist "," exp;
+//optexp: %empty | exp;
+//optexpcomma: %empty | "," exp;
+//aexp:
+//    qvar
+//  | gcon
+//  | literal
+//  | "(" exp ")"
+//  | "(" exp "," explist ")"
+//  | "[" explist "]"
+//  | "[" exp optexpcomma ".." optexp "]"
+//  | "[" exp "|" quallist "]"
+//  | "(" infixexp qop ")"
+//  | "(" qop infixexp ")" //TODO: -
+//  | qcon "{" optfbindlist "}"
+//  | aexp "{" fbindlist "}" //TODO: not qcon
+//  ;
+//
+//qual:
+//    pat "<-" exp
+//  | "let" decls
+//  | exp
+//  ;
+//
+//alts: alt | alts ";" alt;
+//optwhere: %empty | "where" decls;
+//alt:
+//  | pat "->" exp optdecls
+//  | pat gdpat optdecls
+//  | %empty
+//  ;
+//
+//gdpat: guards "->" exp | guards "->" exp gdpat;
+//
+//stmtlist: stmt | stmtlist "," stmt;
+//optstmtlist: %empty | stmtlist;
+//optsemicolon: %empty | ";";
+//stmts: optstmtlist exp optsemicolon;
+//stmt:
+//    exp ";"
+//  | pat "<-" exp ";"
+//  | "let" decls ";"
+//  | ";"
+//  ;
+//
+//fbind: qvar "=" exp;
+//
+//pat:
+//    lpat qconop pat
+//  | lpat
+//  ;
+//
+//apatlist: apat | apatlist apat;
+//lpat:
+//    apat
+//  | "-" INTEGER
+//  | "-" FLOAT
+//  | gcon apatlist
+//  ;
+//
+//optat: "@" apat | %empty;
+//fpats: fpat | fpats "," fpat;
+//fpatlist: %empty | fpats;
+//optfpatlist: "{" fpatlist "}" | %empty;
+//patlist: pat | patlist "," pat;
+//apat:
+//    qvar optat
+//  | gcon
+//  | qcon optfpatlist
+//  | literal
+//  | "_"
+//  | "(" pat ")"
+//  | "(" pat, patlist ")"
+//  | "[" patlist "]"
+//  | "~" apat
+//  ;
+//
+//fpat: qvar "=" pat;
+//
+//gcon:
+//    "(" ")"
+//  | "[" "]"
+//  | "(" "," "{" "," "}" ")"
+//  | qcon
+//  ;
+//
+//qvar: VARID | "(" VARSYM ")";
+//qcon: CONID | "(" gconsym ")";
+//qvarop: VARSYM | "`" VARID "`";
+//qconop: gconsym | "`" CONID "`";
+//qop: qvarop | qconop;
+//gconsym: ":" | CONSYM;
+//literal: INTEGER | FLOAT | CHAR | STRING;
 
 %%
 void yy::parser::error(const location_type& l, const std::string& m) {
