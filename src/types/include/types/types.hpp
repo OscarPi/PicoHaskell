@@ -3,6 +3,7 @@
 #include <memory>
 #include <string>
 #include <map>
+#include <set>
 
 enum class kindtype {star, arrow};
 enum class ttype {var, con, ap, gen};
@@ -100,12 +101,13 @@ const type tList = std::make_shared<const TypeConstructor>("[]", kStarToStar);
 const type tArrow = std::make_shared<const TypeConstructor>("(->)", kStarToStarToStar);
 const type tTuple2 = std::make_shared<const TypeConstructor>("(,)", kStarToStarToStar);
 
-type makeFunctionType(type argType, type resultType);
-type makeListType(type elementType);
-type makePairType(type leftType, type rightType);
+type makeFunctionType(const type &argType, const type &resultType);
+type makeListType(const type &elementType);
+type makePairType(const type &leftType, const type &rightType);
 
-bool sameKind(kind a, kind b);
-bool sameType(type a, type b);
-type applySubstitution(type t, substitution s);
+bool sameKind(const kind &a, const kind &b);
+bool sameType(const type &a, const type &b);
+type applySubstitution(const type &t, substitution s);
+std::set<std::string> findTypeVariables(const type &t);
 
 #endif //PICOHASKELL_TYPES_HPP

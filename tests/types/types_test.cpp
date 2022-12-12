@@ -103,3 +103,31 @@ TEST(Types, ApplySubstitution) {
     ASSERT_TRUE(sameType(std::make_shared<TypeApplication>(tInt, varA), applySubstitution(ap2, s)));
     ASSERT_TRUE(sameType(std::make_shared<TypeApplication>(ap1, con1), applySubstitution(ap3, s)));
 }
+
+TEST(Types, FindTypeVariables) {
+    type varA = std::make_shared<TypeVariable>("a", kStar);
+    auto variables = findTypeVariables(varA);
+    ASSERT_EQ(variables.size(), 1);
+    ASSERT_TRUE(variables.count("a") == 1);
+
+    type varB = std::make_shared<TypeVariable>("b", kStarToStar);
+    variables = findTypeVariables(varB);
+    ASSERT_EQ(variables.size(), 1);
+    ASSERT_TRUE(variables.count("b") == 1);
+
+    type con1 = std::make_shared<TypeConstructor>("a", kStar);
+    variables = findTypeVariables(con1);
+    ASSERT_EQ(variables.size(), 0);
+
+    type ap1 = std::make_shared<TypeApplication>(varB, varA);
+    variables = findTypeVariables(ap1);
+    ASSERT_EQ(variables.size(), 2);
+    ASSERT_TRUE(variables.count("a") == 1);
+    ASSERT_TRUE(variables.count("b") == 1);
+
+    type ap3 = std::make_shared<TypeApplication>(ap1, con1);
+    variables = findTypeVariables(ap1);
+    ASSERT_EQ(variables.size(), 2);
+    ASSERT_TRUE(variables.count("a") == 1);
+    ASSERT_TRUE(variables.count("b") == 1);
+}

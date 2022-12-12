@@ -79,21 +79,21 @@ kind ArrowKind::getResult() const {
     return result;
 }
 
-type makeFunctionType(const type argType, const type resultType) {
+type makeFunctionType(const type &argType, const type &resultType) {
     type partial = std::make_shared<const TypeApplication>(tArrow, argType);
     return std::make_shared<const TypeApplication>(partial, resultType);
 }
 
-type makeListType(const type elementType) {
+type makeListType(const type &elementType) {
     return std::make_shared<const TypeApplication>(tList, elementType);
 }
 
-type makePairType(const type leftType, const type rightType) {
+type makePairType(const type &leftType, const type &rightType) {
     type partial = std::make_shared<const TypeApplication>(tTuple2, leftType);
     return std::make_shared<const TypeApplication>(partial, rightType);
 }
 
-bool sameKind(kind a, kind b) {
+bool sameKind(const kind &a, const kind &b) {
     std::shared_ptr<const ArrowKind> arrow1;
     std::shared_ptr<const ArrowKind> arrow2;
     switch (a->getType()) {
@@ -111,7 +111,7 @@ bool sameKind(kind a, kind b) {
     }
 }
 
-bool sameType(type a, type b) {
+bool sameType(const type &a, const type &b) {
     std::shared_ptr<const TypeVariable> variable1;
     std::shared_ptr<const TypeVariable> variable2;
     std::shared_ptr<const TypeConstructor> constructor1;
@@ -139,7 +139,7 @@ bool sameType(type a, type b) {
     }
 }
 
-type applySubstitution(const type t, substitution s) {
+type applySubstitution(const type &t, substitution s) {
     std::string id;
     type left;
     type newLeft;
@@ -165,5 +165,24 @@ type applySubstitution(const type t, substitution s) {
             return std::make_shared<TypeApplication>(newLeft, newRight);
         case ttype::gen:
             return t;
+    }
+}
+
+std::set<std::string> findTypeVariables(const type &t) {
+    std::set<std::string> variables;
+    std::set<std::string> moreVariables;
+    switch (t->getType()) {
+        case ttype::var:
+            variables.insert(std::dynamic_pointer_cast<const TypeVariable>(t)->getId());
+            return variables;
+        case ttype::con:
+            return variables;
+        case ttype::ap:
+            variables = findTypeVariables(std::dynamic_pointer_cast<const TypeApplication>(t)->getLeft());
+            moreVariables = findTypeVariables(std::dynamic_pointer_cast<const TypeApplication>(t)->getRight());
+            variables.insert(moreVariables.begin(), moreVariables.end());
+            return variables;
+        case ttype::gen:
+            return variables;
     }
 }
