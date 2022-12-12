@@ -131,3 +131,42 @@ TEST(Types, FindTypeVariables) {
     ASSERT_TRUE(variables.count("a") == 1);
     ASSERT_TRUE(variables.count("b") == 1);
 }
+
+TEST(Types, ApplySubstitutionVector) {
+    substitution s;
+    s["a"] = tUnit;
+    std::vector<type> ts;
+    ts.push_back(std::make_shared<TypeVariable>("a", kStar));
+    ts.push_back(std::make_shared<TypeVariable>("b", kStarToStar));
+    ts.push_back(std::make_shared<TypeConstructor>("a", kStar));
+    ts.push_back(std::make_shared<TypeConstructor>("b", kStar));
+    ts.push_back(std::make_shared<TypeConstructor>("c", kStarToStarToStar));
+    ts.push_back(std::make_shared<TypeApplication>(ts[4], ts[0]));
+    ts.push_back(std::make_shared<TypeApplication>(ts[1], ts[0]));
+    ts.push_back(std::make_shared<TypeApplication>(ts[5], ts[2]));
+
+    std::vector<type> substituted = applySubstitution(ts, s);
+    ASSERT_EQ(substituted.size(), 8);
+    type ap1Dash = std::make_shared<TypeApplication>(ts[4], tUnit);
+    ASSERT_TRUE(sameType(tUnit, substituted[0]));
+    ASSERT_TRUE(sameType(ts[1], substituted[1]));
+    ASSERT_TRUE(sameType(ts[2], substituted[2]));
+    ASSERT_TRUE(sameType(ts[3], substituted[3]));
+    ASSERT_TRUE(sameType(ts[4], substituted[4]));
+    ASSERT_TRUE(sameType(ap1Dash, substituted[5]));
+    ASSERT_TRUE(sameType(std::make_shared<TypeApplication>(ts[1], tUnit), substituted[6]));
+    ASSERT_TRUE(sameType(std::make_shared<TypeApplication>(ap1Dash, ts[2]), substituted[7]));
+}
+
+TEST(Types, FindTypeVariablesVector) {
+    std::vector<type> ts;
+    ts.push_back(std::make_shared<TypeVariable>("a", kStar));
+    ts.push_back(std::make_shared<TypeVariable>("b", kStarToStar));
+    ts.push_back(std::make_shared<TypeConstructor>("c", kStar));
+    ts.push_back(std::make_shared<TypeApplication>(std::make_shared<TypeVariable>("d", kStarToStar), tUnit));
+    auto variables = findTypeVariables(ts);
+    ASSERT_EQ(variables.size(), 3);
+    ASSERT_TRUE(variables.count("a") == 1);
+    ASSERT_TRUE(variables.count("b") == 1);
+    ASSERT_TRUE(variables.count("d") == 1);
+}

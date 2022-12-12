@@ -1,5 +1,6 @@
 #include "types/types.hpp"
 #include <string>
+#include <algorithm>
 
 TypeVariable::TypeVariable(std::string id, kind k): id(id), k(k) {}
 
@@ -185,4 +186,21 @@ std::set<std::string> findTypeVariables(const type &t) {
         case ttype::gen:
             return variables;
     }
+}
+
+std::vector<type> applySubstitution(const std::vector<type> &ts, substitution s) {
+    std::vector<type> result;
+    auto substitute = [&s](const type& t) { return applySubstitution(t, s); };
+    std::transform(ts.cbegin(), ts.cend(), std::back_inserter(result), substitute);
+    return result;
+}
+
+std::set<std::string> findTypeVariables(const std::vector<type> &ts) {
+    std::set<std::string> variables;
+    auto find = [&variables](const type& t) {
+        auto moreVariables = findTypeVariables(t);
+        variables.insert(moreVariables.begin(), moreVariables.end());
+    };
+    std::for_each(ts.cbegin(), ts.cend(), find);
+    return variables;
 }

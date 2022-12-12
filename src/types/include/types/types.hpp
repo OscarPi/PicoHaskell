@@ -4,6 +4,7 @@
 #include <string>
 #include <map>
 #include <set>
+#include <vector>
 
 enum class kindtype {star, arrow};
 enum class ttype {var, con, ap, gen};
@@ -109,5 +110,7 @@ bool sameKind(const kind &a, const kind &b);
 bool sameType(const type &a, const type &b);
 type applySubstitution(const type &t, substitution s);
 std::set<std::string> findTypeVariables(const type &t);
+std::vector<type> applySubstitution(const std::vector<type> &ts, substitution s);
+std::set<std::string> findTypeVariables(const std::vector<type> &ts);
 
 #endif //PICOHASKELL_TYPES_HPP
