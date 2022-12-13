@@ -204,3 +204,13 @@ std::set<std::string> findTypeVariables(const std::vector<type> &ts) {
     std::for_each(ts.cbegin(), ts.cend(), find);
     return variables;
 }
+
+substitution compose(const substitution &s1, const substitution &s2) {
+    substitution result = s1;
+
+    for (const auto& [k, t] : s2) {
+        result[k] = applySubstitution(t, s1);
+    }
+
+    return result;
+}

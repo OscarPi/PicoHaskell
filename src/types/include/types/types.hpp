@@ -112,5 +112,6 @@ type applySubstitution(const type &t, substitution s);
 std::set<std::string> findTypeVariables(const type &t);
 std::vector<type> applySubstitution(const std::vector<type> &ts, substitution s);
 std::set<std::string> findTypeVariables(const std::vector<type> &ts);
+substitution compose(const substitution &s1, const substitution &s2);
 
 #endif //PICOHASKELL_TYPES_HPP
