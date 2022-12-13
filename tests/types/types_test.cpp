@@ -190,3 +190,34 @@ TEST(Types, SubstitutionComposition) {
     EXPECT_TRUE(sameType(s["d"], std::make_shared<const TypeVariable>("e", kStar)));
     EXPECT_TRUE(sameType(s["e"], tFloat));
 }
+
+TEST(Types, SubstitutionMerge) {
+    substitution s1;
+    substitution s2;
+    s1["a"] = tUnit;
+    s2["b"] = tDouble;
+
+    substitution s = merge(s1, s2);
+    EXPECT_EQ(s.size(), 2);
+    EXPECT_TRUE(sameType(s["a"], tUnit));
+    EXPECT_TRUE(sameType(s["b"], tDouble));
+
+    s2["a"] = tUnit;
+    s1["b"] = tDouble;
+    s = merge(s1, s2);
+    EXPECT_EQ(s.size(), 2);
+    EXPECT_TRUE(sameType(s["a"], tUnit));
+    EXPECT_TRUE(sameType(s["b"], tDouble));
+
+    s1["a"] = tDouble;
+    EXPECT_THROW(merge(s1, s2), std::invalid_argument);
+
+    s1["a"] = std::make_shared<TypeVariable>("b", kStar);
+    s2["b"] = std::make_shared<TypeVariable>("a", kStar);
+    s1.erase("b");
+    s2.erase("a");
+    s = merge(s1, s2);
+    EXPECT_EQ(s.size(), 2);
+    EXPECT_TRUE(sameType(s["a"], std::make_shared<TypeVariable>("b", kStar)));
+    EXPECT_TRUE(sameType(s["b"], std::make_shared<TypeVariable>("a", kStar)));
+}

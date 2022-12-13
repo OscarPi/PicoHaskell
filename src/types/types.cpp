@@ -1,6 +1,7 @@
 #include "types/types.hpp"
 #include <string>
 #include <algorithm>
+#include <stdexcept>
 
 TypeVariable::TypeVariable(std::string id, kind k): id(id), k(k) {}
 
@@ -210,6 +211,22 @@ substitution compose(const substitution &s1, const substitution &s2) {
 
     for (const auto& [k, t] : s2) {
         result[k] = applySubstitution(t, s1);
+    }
+
+    return result;
+}
+
+substitution merge(const substitution &s1, const substitution &s2) {
+    substitution result = s1;
+
+    for (const auto& [k, t] : s2) {
+        if (result.count(k) > 0) {
+            if (!sameType(result[k], t)) {
+                throw std::invalid_argument("Cannot merge substitutions that do not agree.");
+            }
+        } else {
+            result[k] = t;
+        }
     }
 
     return result;
