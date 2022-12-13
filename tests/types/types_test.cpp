@@ -54,14 +54,14 @@ TEST(Types, MakePairType) {
 
 TEST(Types, ApplySubstitution) {
     substitution s;
-    type varA = std::make_shared<TypeVariable>("a", kStar);
-    type varB = std::make_shared<TypeVariable>("b", kStarToStar);
-    type con1 = std::make_shared<TypeConstructor>("a", kStar);
-    type con2 = std::make_shared<TypeConstructor>("b", kStar);
-    type con3 = std::make_shared<TypeConstructor>("c", kStarToStarToStar);
-    type ap1 = std::make_shared<TypeApplication>(con3, varA);
-    type ap2 = std::make_shared<TypeApplication>(varB, varA);
-    type ap3 = std::make_shared<TypeApplication>(ap1, con1);
+    type varA = std::make_shared<const TypeVariable>("a", kStar);
+    type varB = std::make_shared<const TypeVariable>("b", kStarToStar);
+    type con1 = std::make_shared<const TypeConstructor>("a", kStar);
+    type con2 = std::make_shared<const TypeConstructor>("b", kStar);
+    type con3 = std::make_shared<const TypeConstructor>("c", kStarToStarToStar);
+    type ap1 = std::make_shared<const TypeApplication>(con3, varA);
+    type ap2 = std::make_shared<const TypeApplication>(varB, varA);
+    type ap3 = std::make_shared<const TypeApplication>(ap1, con1);
 
     EXPECT_TRUE(sameType(varA, applySubstitution(varA, s)));
     EXPECT_TRUE(sameType(varB, applySubstitution(varB, s)));
@@ -73,15 +73,15 @@ TEST(Types, ApplySubstitution) {
     EXPECT_TRUE(sameType(ap3, applySubstitution(ap3, s)));
 
     s["a"] = tUnit;
-    type ap1Dash = std::make_shared<TypeApplication>(con3, tUnit);
+    type ap1Dash = std::make_shared<const TypeApplication>(con3, tUnit);
     EXPECT_TRUE(sameType(tUnit, applySubstitution(varA, s)));
     EXPECT_TRUE(sameType(varB, applySubstitution(varB, s)));
     EXPECT_TRUE(sameType(con1, applySubstitution(con1, s)));
     EXPECT_TRUE(sameType(con2, applySubstitution(con2, s)));
     EXPECT_TRUE(sameType(con3, applySubstitution(con3, s)));
     EXPECT_TRUE(sameType(ap1Dash, applySubstitution(ap1, s)));
-    EXPECT_TRUE(sameType(std::make_shared<TypeApplication>(varB, tUnit), applySubstitution(ap2, s)));
-    EXPECT_TRUE(sameType(std::make_shared<TypeApplication>(ap1Dash, con1), applySubstitution(ap3, s)));
+    EXPECT_TRUE(sameType(std::make_shared<const TypeApplication>(varB, tUnit), applySubstitution(ap2, s)));
+    EXPECT_TRUE(sameType(std::make_shared<const TypeApplication>(ap1Dash, con1), applySubstitution(ap3, s)));
 
     s["b"] = tInt;
     EXPECT_TRUE(sameType(tUnit, applySubstitution(varA, s)));
@@ -90,8 +90,8 @@ TEST(Types, ApplySubstitution) {
     EXPECT_TRUE(sameType(con2, applySubstitution(con2, s)));
     EXPECT_TRUE(sameType(con3, applySubstitution(con3, s)));
     EXPECT_TRUE(sameType(ap1Dash, applySubstitution(ap1, s)));
-    EXPECT_TRUE(sameType(std::make_shared<TypeApplication>(tInt, tUnit), applySubstitution(ap2, s)));
-    EXPECT_TRUE(sameType(std::make_shared<TypeApplication>(ap1Dash, con1), applySubstitution(ap3, s)));
+    EXPECT_TRUE(sameType(std::make_shared<const TypeApplication>(tInt, tUnit), applySubstitution(ap2, s)));
+    EXPECT_TRUE(sameType(std::make_shared<const TypeApplication>(ap1Dash, con1), applySubstitution(ap3, s)));
 
     s.erase("a");
     EXPECT_TRUE(sameType(varA, applySubstitution(varA, s)));
@@ -100,32 +100,32 @@ TEST(Types, ApplySubstitution) {
     EXPECT_TRUE(sameType(con2, applySubstitution(con2, s)));
     EXPECT_TRUE(sameType(con3, applySubstitution(con3, s)));
     EXPECT_TRUE(sameType(ap1, applySubstitution(ap1, s)));
-    EXPECT_TRUE(sameType(std::make_shared<TypeApplication>(tInt, varA), applySubstitution(ap2, s)));
-    EXPECT_TRUE(sameType(std::make_shared<TypeApplication>(ap1, con1), applySubstitution(ap3, s)));
+    EXPECT_TRUE(sameType(std::make_shared<const TypeApplication>(tInt, varA), applySubstitution(ap2, s)));
+    EXPECT_TRUE(sameType(std::make_shared<const TypeApplication>(ap1, con1), applySubstitution(ap3, s)));
 }
 
 TEST(Types, FindTypeVariables) {
-    type varA = std::make_shared<TypeVariable>("a", kStar);
+    type varA = std::make_shared<const TypeVariable>("a", kStar);
     auto variables = findTypeVariables(varA);
     EXPECT_EQ(variables.size(), 1);
     EXPECT_TRUE(variables.count("a") == 1);
 
-    type varB = std::make_shared<TypeVariable>("b", kStarToStar);
+    type varB = std::make_shared<const TypeVariable>("b", kStarToStar);
     variables = findTypeVariables(varB);
     EXPECT_EQ(variables.size(), 1);
     EXPECT_TRUE(variables.count("b") == 1);
 
-    type con1 = std::make_shared<TypeConstructor>("a", kStar);
+    type con1 = std::make_shared<const TypeConstructor>("a", kStar);
     variables = findTypeVariables(con1);
     EXPECT_EQ(variables.size(), 0);
 
-    type ap1 = std::make_shared<TypeApplication>(varB, varA);
+    type ap1 = std::make_shared<const TypeApplication>(varB, varA);
     variables = findTypeVariables(ap1);
     EXPECT_EQ(variables.size(), 2);
     EXPECT_TRUE(variables.count("a") == 1);
     EXPECT_TRUE(variables.count("b") == 1);
 
-    type ap3 = std::make_shared<TypeApplication>(ap1, con1);
+    type ap3 = std::make_shared<const TypeApplication>(ap1, con1);
     variables = findTypeVariables(ap1);
     EXPECT_EQ(variables.size(), 2);
     EXPECT_TRUE(variables.count("a") == 1);
@@ -136,34 +136,34 @@ TEST(Types, ApplySubstitutionVector) {
     substitution s;
     s["a"] = tUnit;
     std::vector<type> ts;
-    ts.push_back(std::make_shared<TypeVariable>("a", kStar));
-    ts.push_back(std::make_shared<TypeVariable>("b", kStarToStar));
-    ts.push_back(std::make_shared<TypeConstructor>("a", kStar));
-    ts.push_back(std::make_shared<TypeConstructor>("b", kStar));
-    ts.push_back(std::make_shared<TypeConstructor>("c", kStarToStarToStar));
-    ts.push_back(std::make_shared<TypeApplication>(ts[4], ts[0]));
-    ts.push_back(std::make_shared<TypeApplication>(ts[1], ts[0]));
-    ts.push_back(std::make_shared<TypeApplication>(ts[5], ts[2]));
+    ts.push_back(std::make_shared<const TypeVariable>("a", kStar));
+    ts.push_back(std::make_shared<const TypeVariable>("b", kStarToStar));
+    ts.push_back(std::make_shared<const TypeConstructor>("a", kStar));
+    ts.push_back(std::make_shared<const TypeConstructor>("b", kStar));
+    ts.push_back(std::make_shared<const TypeConstructor>("c", kStarToStarToStar));
+    ts.push_back(std::make_shared<const TypeApplication>(ts[4], ts[0]));
+    ts.push_back(std::make_shared<const TypeApplication>(ts[1], ts[0]));
+    ts.push_back(std::make_shared<const TypeApplication>(ts[5], ts[2]));
 
     std::vector<type> substituted = applySubstitution(ts, s);
     EXPECT_EQ(substituted.size(), 8);
-    type ap1Dash = std::make_shared<TypeApplication>(ts[4], tUnit);
+    type ap1Dash = std::make_shared<const TypeApplication>(ts[4], tUnit);
     EXPECT_TRUE(sameType(tUnit, substituted[0]));
     EXPECT_TRUE(sameType(ts[1], substituted[1]));
     EXPECT_TRUE(sameType(ts[2], substituted[2]));
     EXPECT_TRUE(sameType(ts[3], substituted[3]));
     EXPECT_TRUE(sameType(ts[4], substituted[4]));
     EXPECT_TRUE(sameType(ap1Dash, substituted[5]));
-    EXPECT_TRUE(sameType(std::make_shared<TypeApplication>(ts[1], tUnit), substituted[6]));
-    EXPECT_TRUE(sameType(std::make_shared<TypeApplication>(ap1Dash, ts[2]), substituted[7]));
+    EXPECT_TRUE(sameType(std::make_shared<const TypeApplication>(ts[1], tUnit), substituted[6]));
+    EXPECT_TRUE(sameType(std::make_shared<const TypeApplication>(ap1Dash, ts[2]), substituted[7]));
 }
 
 TEST(Types, FindTypeVariablesVector) {
     std::vector<type> ts;
-    ts.push_back(std::make_shared<TypeVariable>("a", kStar));
-    ts.push_back(std::make_shared<TypeVariable>("b", kStarToStar));
-    ts.push_back(std::make_shared<TypeConstructor>("c", kStar));
-    ts.push_back(std::make_shared<TypeApplication>(std::make_shared<TypeVariable>("d", kStarToStar), tUnit));
+    ts.push_back(std::make_shared<const TypeVariable>("a", kStar));
+    ts.push_back(std::make_shared<const TypeVariable>("b", kStarToStar));
+    ts.push_back(std::make_shared<const TypeConstructor>("c", kStar));
+    ts.push_back(std::make_shared<const TypeApplication>(std::make_shared<const TypeVariable>("d", kStarToStar), tUnit));
     auto variables = findTypeVariables(ts);
     EXPECT_EQ(variables.size(), 3);
     EXPECT_TRUE(variables.count("a") == 1);
@@ -212,12 +212,66 @@ TEST(Types, SubstitutionMerge) {
     s1["a"] = tDouble;
     EXPECT_THROW(merge(s1, s2), std::invalid_argument);
 
-    s1["a"] = std::make_shared<TypeVariable>("b", kStar);
-    s2["b"] = std::make_shared<TypeVariable>("a", kStar);
+    s1["a"] = std::make_shared<const TypeVariable>("b", kStar);
+    s2["b"] = std::make_shared<const TypeVariable>("a", kStar);
     s1.erase("b");
     s2.erase("a");
     s = merge(s1, s2);
     EXPECT_EQ(s.size(), 2);
-    EXPECT_TRUE(sameType(s["a"], std::make_shared<TypeVariable>("b", kStar)));
-    EXPECT_TRUE(sameType(s["b"], std::make_shared<TypeVariable>("a", kStar)));
+    EXPECT_TRUE(sameType(s["a"], std::make_shared<const TypeVariable>("b", kStar)));
+    EXPECT_TRUE(sameType(s["b"], std::make_shared<const TypeVariable>("a", kStar)));
+}
+
+TEST(Types, Unification) {
+    type t1 = std::make_shared<const TypeVariable>("a", kStar);
+    type t2 = std::make_shared<const TypeVariable>("a", kStar);
+    substitution s = mostGeneralUnifier(t1, t2);
+    EXPECT_EQ(s.size(), 0);
+
+    t2 = std::make_shared<const TypeVariable>("a", kStarToStar);
+    EXPECT_THROW(mostGeneralUnifier(t1, t2), std::invalid_argument);
+
+    t2 = std::make_shared<const TypeApplication>(tList, t1);
+    EXPECT_THROW(mostGeneralUnifier(t1, t2), std::invalid_argument);
+
+    t1 = tUnit;
+    t2 = tUnit;
+    s = mostGeneralUnifier(t1, t2);
+    EXPECT_EQ(s.size(), 0);
+
+    t2 = tInt;
+    EXPECT_THROW(mostGeneralUnifier(t1, t2), std::invalid_argument);
+
+    t1 = std::make_shared<const TypeVariable>("a", kStar);
+    t2 = std::make_shared<const TypeVariable>("b", kStar);
+    s = mostGeneralUnifier(t1, t2);
+    EXPECT_EQ(s.size(), 1);
+    EXPECT_TRUE(sameType(s["a"], t2));
+
+    t1 = std::make_shared<const TypeVariable>("a", kStar);
+    t2 = tDouble;
+    s = mostGeneralUnifier(t1, t2);
+    EXPECT_EQ(s.size(), 1);
+    EXPECT_TRUE(sameType(s["a"], t2));
+
+    t1 = tDouble;
+    t2 = std::make_shared<const TypeVariable>("a", kStar);
+    s = mostGeneralUnifier(t1, t2);
+    EXPECT_EQ(s.size(), 1);
+    EXPECT_TRUE(sameType(s["a"], t1));
+
+    t1 = std::make_shared<const TypeApplication>(tList, tInt);
+    t2 = std::make_shared<const TypeApplication>(tList, std::make_shared<const TypeVariable>("a", kStar));
+    s = mostGeneralUnifier(t1, t2);
+    EXPECT_EQ(s.size(), 1);
+    EXPECT_TRUE(sameType(s["a"], tInt));
+
+    t1 = std::make_shared<const TypeApplication>(tList, tInt);
+    t2 = std::make_shared<const TypeApplication>(tList, tInt);
+    s = mostGeneralUnifier(t1, t2);
+    EXPECT_EQ(s.size(), 0);
+
+    t1 = std::make_shared<const TypeApplication>(tList, tInt);
+    t2 = std::make_shared<const TypeApplication>(tList, tDouble);
+    EXPECT_THROW(mostGeneralUnifier(t1, t2), std::invalid_argument);
 }

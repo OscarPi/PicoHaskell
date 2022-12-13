@@ -228,6 +228,37 @@ substitution merge(const substitution &s1, const substitution &s2) {
             result[k] = t;
         }
     }
-
     return result;
+}
+
+substitution varBind(const std::shared_ptr<const TypeVariable> &var, const type &t) {
+    if (sameType(var, t)) {
+        substitution empty;
+        return empty;
+    } else if (findTypeVariables(t).count(var->getId()) > 0) {
+        throw std::invalid_argument("Occurs check failed.");
+    } else if (!sameKind(var->getKind(), t->getKind())) {
+        throw std::invalid_argument("Kinds do not match.");
+    }
+    substitution s;
+    s[var->getId()] = t;
+    return s;
+}
+
+substitution mostGeneralUnifier(const type &t1, const type &t2) {
+    if (t1->getType() == ttype::con && sameType(t1, t2)) {
+        substitution empty;
+        return empty;
+    } else if (t1->getType() == ttype::var) {
+        return varBind(std::dynamic_pointer_cast<const TypeVariable>(t1), t2);
+    } else if (t2->getType() == ttype::var) {
+        return varBind(std::dynamic_pointer_cast<const TypeVariable>(t2), t1);
+    } else if (t1->getType() == ttype::ap && t2->getType() == ttype::ap) {
+        const auto ap1 = std::dynamic_pointer_cast<const TypeApplication>(t1);
+        const auto ap2 = std::dynamic_pointer_cast<const TypeApplication>(t2);
+        substitution s1 = mostGeneralUnifier(ap1->getLeft(), ap2->getLeft());
+        substitution s2 = mostGeneralUnifier(applySubstitution(ap1->getRight(), s1), applySubstitution(ap2->getRight(), s1));
+        return compose(s2, s1);
+    }
+    throw std::invalid_argument("Types do not unify.");
 }
