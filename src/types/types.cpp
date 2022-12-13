@@ -262,3 +262,25 @@ substitution mostGeneralUnifier(const type &t1, const type &t2) {
     }
     throw std::invalid_argument("Types do not unify.");
 }
+
+substitution match(const type &t1, const type &t2) {
+    if (t1->getType() == ttype::con && sameType(t1, t2)) {
+        substitution empty;
+        return empty;
+    } else if (t1->getType() == ttype::var && sameKind(t1->getKind(), t2->getKind())) {
+        if (sameType(t1, t2)) {
+            substitution empty;
+            return empty;
+        }
+        substitution s;
+        s[std::dynamic_pointer_cast<const TypeVariable>(t1)->getId()] = t2;
+        return s;
+    } else if (t1->getType() == ttype::ap && t2->getType() == ttype::ap) {
+        const auto ap1 = std::dynamic_pointer_cast<const TypeApplication>(t1);
+        const auto ap2 = std::dynamic_pointer_cast<const TypeApplication>(t2);
+        substitution s1 = match(ap1->getLeft(), ap2->getLeft());
+        substitution s2 = match(ap1->getRight(), ap2->getRight());
+        return merge(s1, s2);
+    }
+    throw std::invalid_argument("Types do not match.");
+}

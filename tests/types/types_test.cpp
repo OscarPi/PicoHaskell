@@ -275,3 +275,61 @@ TEST(Types, Unification) {
     t2 = std::make_shared<const TypeApplication>(tList, tDouble);
     EXPECT_THROW(mostGeneralUnifier(t1, t2), std::invalid_argument);
 }
+
+TEST(Types, Matching) {
+    type t1 = std::make_shared<const TypeVariable>("a", kStar);
+    type t2 = std::make_shared<const TypeVariable>("a", kStar);
+    substitution s = match(t1, t2);
+    EXPECT_EQ(s.size(), 0);
+
+    t2 = std::make_shared<const TypeVariable>("a", kStarToStar);
+    EXPECT_THROW(match(t1, t2), std::invalid_argument);
+
+    t2 = std::make_shared<const TypeApplication>(tList, t1);
+    s = match(t1, t2);
+    EXPECT_EQ(s.size(), 1);
+    EXPECT_TRUE(sameType(s["a"], t2));
+
+    t1 = tUnit;
+    t2 = tUnit;
+    s = match(t1, t2);
+    EXPECT_EQ(s.size(), 0);
+
+    t2 = tInt;
+    EXPECT_THROW(match(t1, t2), std::invalid_argument);
+
+    t1 = std::make_shared<const TypeVariable>("a", kStar);
+    t2 = std::make_shared<const TypeVariable>("b", kStar);
+    s = match(t1, t2);
+    EXPECT_EQ(s.size(), 1);
+    EXPECT_TRUE(sameType(s["a"], t2));
+
+    t1 = std::make_shared<const TypeVariable>("a", kStar);
+    t2 = tDouble;
+    s = match(t1, t2);
+    EXPECT_EQ(s.size(), 1);
+    EXPECT_TRUE(sameType(s["a"], t2));
+
+    t1 = tDouble;
+    t2 = std::make_shared<const TypeVariable>("a", kStar);
+    EXPECT_THROW(match(t1, t2), std::invalid_argument);
+
+    t1 = std::make_shared<const TypeApplication>(tList, tInt);
+    t2 = std::make_shared<const TypeApplication>(tList, std::make_shared<const TypeVariable>("a", kStar));
+    EXPECT_THROW(match(t1, t2), std::invalid_argument);
+
+    t1 = std::make_shared<const TypeApplication>(tList, std::make_shared<const TypeVariable>("a", kStar));
+    t2 = std::make_shared<const TypeApplication>(tList, tInt);
+    s = match(t1, t2);
+    EXPECT_EQ(s.size(), 1);
+    EXPECT_TRUE(sameType(s["a"], tInt));
+
+    t1 = std::make_shared<const TypeApplication>(tList, tInt);
+    t2 = std::make_shared<const TypeApplication>(tList, tInt);
+    s = match(t1, t2);
+    EXPECT_EQ(s.size(), 0);
+
+    t1 = std::make_shared<const TypeApplication>(tList, tInt);
+    t2 = std::make_shared<const TypeApplication>(tList, tDouble);
+    EXPECT_THROW(match(t1, t2), std::invalid_argument);
+}
