@@ -19,11 +19,11 @@
 %define parse.error detailed
 %define parse.lac full
 %code {
-    #include "lexer/layout.hpp"
     #include "parser/driver.hpp"
 }
 %define api.token.prefix {TOK_}
 %token
+    NEWLINE       "\n"
     CASE          "case"
     CLASS         "class"
     DATA          "data"
@@ -82,13 +82,15 @@
 //%printer { yyo << $$; } <*>;
 
 %%
-%start topdecls;
+%start prog;
+
+prog: topdecls | topdecls break;
 
 topdecls:
 //    typedecl
-  | decl
+    decl
 //  | topdecls typedecl
-  | topdecls decl
+  | topdecls break decl
   ;
 
 decl:
@@ -260,6 +262,9 @@ var:
 //
 //fpat: qvar "=" pat;
 //
+
+break: NEWLINE | break NEWLINE;
+optbreak: %empty | break;
 
 %%
 void yy::parser::error(const location_type& l, const std::string& m) {

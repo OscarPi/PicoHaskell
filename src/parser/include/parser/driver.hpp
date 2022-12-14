@@ -4,7 +4,7 @@
 #include <map>
 #include "parser/parser.hpp"
 
-#define YY_DECL yy::parser::symbol_type yyflex(Driver& drv)
+#define YY_DECL yy::parser::symbol_type yylex(Driver& drv)
 YY_DECL;
 
 class Driver {

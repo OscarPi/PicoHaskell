@@ -7,6 +7,10 @@
 #include <memory>
 #include "types/types.hpp"
 
+class DataConstructor {
+private:
+    const std::vector<type> types;
+};
 
 class Expression {
 public:

@@ -64,7 +64,7 @@ std::string strliteral;
 %}
 [ \v]+      loc.step();
 \t          loc.columns(((loc.end.column-1) % 8) == 0 ? 0 : 8-((loc.end.column-1) % 8)); loc.step();
-{NEWLINE}   loc.lines(1); loc.step();
+{NEWLINE}   loc.lines(1); return yy::parser::make_NEWLINE(loc);
 {COMMENT}   loc.lines(1); loc.step();
 "case"      return yy::parser::make_CASE(loc);
 "class"     return yy::parser::make_CLASS(loc);
