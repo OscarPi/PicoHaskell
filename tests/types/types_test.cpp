@@ -357,5 +357,30 @@ TEST(Types, Scheme) {
                     std::make_shared<const TypeApplication>(c1, a1)
             )
     );
-    ASSERT_TRUE(sameType(s.getType(), t1));
+    EXPECT_TRUE(sameType(s.getType(), t1));
+}
+
+TEST(Types, Assumptions) {
+    Assumptions a;
+    Scheme s1(std::make_shared<TypeVariable>("a", kStar));
+    Scheme s2(tDouble);
+
+    Assumptions b = a.add("vara", s1);
+    Assumptions c = b.add("d", s2);
+
+    auto variables = c.findTypeVariables();
+    EXPECT_EQ(variables.size(), 1);
+    EXPECT_EQ(variables[0], "a");
+
+    EXPECT_EQ(c.find("vara"), s1);
+    EXPECT_EQ(c.find("d"), s2);
+
+    substitution s;
+    s["a"] = tUnit;
+    Scheme s3(tUnit);
+    Assumptions d = c.applySubstitution(s);
+    variables = d.findTypeVariables();
+    EXPECT_EQ(variables.size(), 0);
+    EXPECT_EQ(d.find("vara"), s3);
+    EXPECT_EQ(d.find("d"), s2);
 }

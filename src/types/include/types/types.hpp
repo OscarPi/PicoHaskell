@@ -99,6 +99,20 @@ public:
     std::vector<std::string> findTypeVariables() const;
     type getType() const;
 };
+bool operator==(const Scheme &lhs, const Scheme &rhs);
+bool operator!=(const Scheme &lhs, const Scheme &rhs);
+
+class Assumptions {
+private:
+    const std::map<std::string, Scheme> assumptions;
+    explicit Assumptions(const std::map<std::string, Scheme> &assumptions);
+public:
+    Assumptions() = default;
+    Assumptions add(const std::string &v, const Scheme &scheme) const;
+    Assumptions applySubstitution(const substitution &s) const;
+    std::vector<std::string> findTypeVariables() const;
+    Scheme find(const std::string &v) const;
+};
 
 const kind kStar = std::make_shared<const StarKind>();
 const kind kStarToStar = std::make_shared<const ArrowKind>(kStar, kStar);

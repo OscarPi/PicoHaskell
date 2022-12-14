@@ -118,6 +118,43 @@ bool operator!=(const Scheme &lhs, const Scheme &rhs) {
     return !(lhs == rhs);
 }
 
+Assumptions::Assumptions(const std::map<std::string, Scheme> &assumptions): assumptions(assumptions) {}
+
+Assumptions Assumptions::add(const std::string &v, const Scheme &scheme) const {
+    auto newAssumptions = assumptions;
+    newAssumptions.insert({v, scheme});
+    return Assumptions(newAssumptions);
+}
+
+Assumptions Assumptions::applySubstitution(const substitution &s) const {
+    std::map<std::string, Scheme> newAssumptions;
+    for (const auto& [v, scheme] : assumptions) {
+        newAssumptions.insert({v, scheme.applySubstitution(s)});
+    }
+    return Assumptions(newAssumptions);
+}
+
+std::vector<std::string> Assumptions::findTypeVariables() const {
+    std::vector<std::string> variables;
+    for (const auto& [v, scheme] : assumptions) {
+        auto moreVariables = scheme.findTypeVariables();
+        for (const auto &v: moreVariables) {
+            if (std::count(variables.begin(), variables.end(), v) == 0) {
+                variables.push_back(v);
+            }
+        }
+    }
+    return variables;
+}
+
+Scheme Assumptions::find(const std::string &v) const {
+    auto iterator = assumptions.find(v);
+    if (iterator == assumptions.end()) {
+        throw std::invalid_argument("Unbound identifier: " + v);
+    }
+    return iterator->second;
+}
+
 type makeFunctionType(const type &argType, const type &resultType) {
     type partial = std::make_shared<const TypeApplication>(tArrow, argType);
     return std::make_shared<const TypeApplication>(partial, resultType);
@@ -241,15 +278,14 @@ std::vector<type> applySubstitution(const std::vector<type> &ts, const substitut
 
 std::vector<std::string> findTypeVariables(const std::vector<type> &ts) {
     std::vector<std::string> variables;
-    auto find = [&variables](const type& t) {
+    for (const auto& t: ts) {
         auto moreVariables = findTypeVariables(t);
         for (const auto &v: moreVariables) {
             if (std::count(variables.begin(), variables.end(), v) == 0) {
                 variables.push_back(v);
             }
         }
-    };
-    std::for_each(ts.cbegin(), ts.cend(), find);
+    }
     return variables;
 }
 
