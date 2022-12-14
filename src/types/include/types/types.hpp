@@ -81,11 +81,23 @@ public:
 class TypeGeneric : public Type {
 private:
     const int n;
+    const kind k;
 public:
-    explicit TypeGeneric(int n);
+    TypeGeneric(int n, kind k);
     ttype getType() const override;
     int getN() const;
     kind getKind() const override;
+};
+
+class Scheme {
+private:
+    type t;
+public:
+    Scheme(const std::vector<std::shared_ptr<const TypeVariable>> &variables, const type &t);
+    explicit Scheme(type t);
+    Scheme applySubstitution(const substitution &s) const;
+    std::vector<std::string> findTypeVariables() const;
+    type getType() const;
 };
 
 const kind kStar = std::make_shared<const StarKind>();
@@ -108,10 +120,10 @@ type makePairType(const type &leftType, const type &rightType);
 
 bool sameKind(const kind &a, const kind &b);
 bool sameType(const type &a, const type &b);
-type applySubstitution(const type &t, substitution s);
-std::set<std::string> findTypeVariables(const type &t);
-std::vector<type> applySubstitution(const std::vector<type> &ts, substitution s);
-std::set<std::string> findTypeVariables(const std::vector<type> &ts);
+type applySubstitution(const type &t, const substitution &s);
+std::vector<std::string> findTypeVariables(const type &t);
+std::vector<type> applySubstitution(const std::vector<type> &ts, const substitution &s);
+std::vector<std::string> findTypeVariables(const std::vector<type> &ts);
 substitution compose(const substitution &s1, const substitution &s2);
 substitution merge(const substitution &s1, const substitution &s2);
 substitution mostGeneralUnifier(const type &t1, const type &t2);

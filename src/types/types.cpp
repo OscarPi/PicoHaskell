@@ -49,7 +49,7 @@ kind TypeApplication::getKind() const {
     return (*std::dynamic_pointer_cast<const ArrowKind>((*left).getKind())).getResult();
 }
 
-TypeGeneric::TypeGeneric(int n): n(n) {}
+TypeGeneric::TypeGeneric(int n, kind k): n(n), k(k) {}
 
 ttype TypeGeneric::getType() const {
     return ttype::gen;
@@ -60,7 +60,7 @@ int TypeGeneric::getN() const {
 }
 
 kind TypeGeneric::getKind() const {
-    return nullptr;
+    return k;
 }
 
 kindtype StarKind::getType() const {
@@ -79,6 +79,43 @@ kind ArrowKind::getArg() const {
 
 kind ArrowKind::getResult() const {
     return result;
+}
+
+Scheme::Scheme(const std::vector<std::shared_ptr<const TypeVariable>> &variables, const type &tp) {
+    substitution s;
+    int i = 0;
+
+    for (const auto &variable: ::findTypeVariables(tp)) {
+        auto p = [&variable](const std::shared_ptr<const TypeVariable> &v) { return v->getId() == variable; };
+        auto iterator = std::find_if(variables.begin(), variables.end(), p);
+        if (iterator != variables.end()) {
+            s[variable] = std::make_shared<TypeGeneric>(i++, iterator->get()->getKind());
+        }
+    }
+
+    t = ::applySubstitution(tp, s);
+}
+
+Scheme::Scheme(type t): t(t) {}
+
+Scheme Scheme::applySubstitution(const substitution &s) const {
+    return Scheme(::applySubstitution(t, s));
+}
+
+std::vector<std::string> Scheme::findTypeVariables() const {
+    return ::findTypeVariables(t);
+}
+
+type Scheme::getType() const {
+    return t;
+}
+
+bool operator==(const Scheme &lhs, const Scheme &rhs) {
+    return sameType(lhs.getType(), rhs.getType());
+}
+
+bool operator!=(const Scheme &lhs, const Scheme &rhs) {
+    return !(lhs == rhs);
 }
 
 type makeFunctionType(const type &argType, const type &resultType) {
@@ -141,17 +178,19 @@ bool sameType(const type &a, const type &b) {
     }
 }
 
-type applySubstitution(const type &t, substitution s) {
+type applySubstitution(const type &t, const substitution &s) {
     std::string id;
     type left;
     type newLeft;
     type right;
     type newRight;
+    substitution::const_iterator iterator;
     switch (t->getType()) {
         case ttype::var:
             id = std::dynamic_pointer_cast<const TypeVariable>(t)->getId();
-            if (s.count(id) > 0) {
-                return s[id];
+            iterator = s.find(id);
+            if (iterator != s.end()) {
+                return iterator->second;
             }
             return t;
         case ttype::con:
@@ -170,37 +209,45 @@ type applySubstitution(const type &t, substitution s) {
     }
 }
 
-std::set<std::string> findTypeVariables(const type &t) {
-    std::set<std::string> variables;
-    std::set<std::string> moreVariables;
+std::vector<std::string> findTypeVariables(const type &t) {
+    std::vector<std::string> variables;
+    std::vector<std::string> moreVariables;
     switch (t->getType()) {
         case ttype::var:
-            variables.insert(std::dynamic_pointer_cast<const TypeVariable>(t)->getId());
+            variables.push_back(std::dynamic_pointer_cast<const TypeVariable>(t)->getId());
             return variables;
         case ttype::con:
             return variables;
         case ttype::ap:
             variables = findTypeVariables(std::dynamic_pointer_cast<const TypeApplication>(t)->getLeft());
             moreVariables = findTypeVariables(std::dynamic_pointer_cast<const TypeApplication>(t)->getRight());
-            variables.insert(moreVariables.begin(), moreVariables.end());
+            for (const auto &v: moreVariables) {
+                if (std::count(variables.begin(), variables.end(), v) == 0) {
+                    variables.push_back(v);
+                }
+            }
             return variables;
         case ttype::gen:
             return variables;
     }
 }
 
-std::vector<type> applySubstitution(const std::vector<type> &ts, substitution s) {
+std::vector<type> applySubstitution(const std::vector<type> &ts, const substitution &s) {
     std::vector<type> result;
     auto substitute = [&s](const type& t) { return applySubstitution(t, s); };
     std::transform(ts.cbegin(), ts.cend(), std::back_inserter(result), substitute);
     return result;
 }
 
-std::set<std::string> findTypeVariables(const std::vector<type> &ts) {
-    std::set<std::string> variables;
+std::vector<std::string> findTypeVariables(const std::vector<type> &ts) {
+    std::vector<std::string> variables;
     auto find = [&variables](const type& t) {
         auto moreVariables = findTypeVariables(t);
-        variables.insert(moreVariables.begin(), moreVariables.end());
+        for (const auto &v: moreVariables) {
+            if (std::count(variables.begin(), variables.end(), v) == 0) {
+                variables.push_back(v);
+            }
+        }
     };
     std::for_each(ts.cbegin(), ts.cend(), find);
     return variables;
@@ -232,10 +279,11 @@ substitution merge(const substitution &s1, const substitution &s2) {
 }
 
 substitution varBind(const std::shared_ptr<const TypeVariable> &var, const type &t) {
+    auto variables = findTypeVariables(t);
     if (sameType(var, t)) {
         substitution empty;
         return empty;
-    } else if (findTypeVariables(t).count(var->getId()) > 0) {
+    } else if (std::count(variables.begin(), variables.end(), var->getId()) > 0) {
         throw std::invalid_argument("Occurs check failed.");
     } else if (!sameKind(var->getKind(), t->getKind())) {
         throw std::invalid_argument("Kinds do not match.");

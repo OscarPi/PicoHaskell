@@ -1,4 +1,5 @@
 #include <gtest/gtest.h>
+#include <algorithm>
 #include "types/types.hpp"
 
 TEST(Types, KindEquality) {
@@ -108,12 +109,12 @@ TEST(Types, FindTypeVariables) {
     type varA = std::make_shared<const TypeVariable>("a", kStar);
     auto variables = findTypeVariables(varA);
     EXPECT_EQ(variables.size(), 1);
-    EXPECT_TRUE(variables.count("a") == 1);
+    EXPECT_TRUE(std::count(variables.begin(), variables.end(), "a") == 1);
 
     type varB = std::make_shared<const TypeVariable>("b", kStarToStar);
     variables = findTypeVariables(varB);
     EXPECT_EQ(variables.size(), 1);
-    EXPECT_TRUE(variables.count("b") == 1);
+    EXPECT_TRUE(std::count(variables.begin(), variables.end(), "b") == 1);
 
     type con1 = std::make_shared<const TypeConstructor>("a", kStar);
     variables = findTypeVariables(con1);
@@ -122,14 +123,14 @@ TEST(Types, FindTypeVariables) {
     type ap1 = std::make_shared<const TypeApplication>(varB, varA);
     variables = findTypeVariables(ap1);
     EXPECT_EQ(variables.size(), 2);
-    EXPECT_TRUE(variables.count("a") == 1);
-    EXPECT_TRUE(variables.count("b") == 1);
+    EXPECT_TRUE(std::count(variables.begin(), variables.end(), "a") == 1);
+    EXPECT_TRUE(std::count(variables.begin(), variables.end(), "b") == 1);
 
     type ap3 = std::make_shared<const TypeApplication>(ap1, con1);
     variables = findTypeVariables(ap1);
     EXPECT_EQ(variables.size(), 2);
-    EXPECT_TRUE(variables.count("a") == 1);
-    EXPECT_TRUE(variables.count("b") == 1);
+    EXPECT_TRUE(std::count(variables.begin(), variables.end(), "a") == 1);
+    EXPECT_TRUE(std::count(variables.begin(), variables.end(), "b") == 1);
 }
 
 TEST(Types, ApplySubstitutionVector) {
@@ -166,9 +167,9 @@ TEST(Types, FindTypeVariablesVector) {
     ts.push_back(std::make_shared<const TypeApplication>(std::make_shared<const TypeVariable>("d", kStarToStar), tUnit));
     auto variables = findTypeVariables(ts);
     EXPECT_EQ(variables.size(), 3);
-    EXPECT_TRUE(variables.count("a") == 1);
-    EXPECT_TRUE(variables.count("b") == 1);
-    EXPECT_TRUE(variables.count("d") == 1);
+    EXPECT_TRUE(std::count(variables.begin(), variables.end(), "a") == 1);
+    EXPECT_TRUE(std::count(variables.begin(), variables.end(), "b") == 1);
+    EXPECT_TRUE(std::count(variables.begin(), variables.end(), "d") == 1);
 }
 
 TEST(Types, SubstitutionComposition) {
@@ -332,4 +333,29 @@ TEST(Types, Matching) {
     t1 = std::make_shared<const TypeApplication>(tList, tInt);
     t2 = std::make_shared<const TypeApplication>(tList, tDouble);
     EXPECT_THROW(match(t1, t2), std::invalid_argument);
+}
+
+TEST(Types, Scheme) {
+    std::shared_ptr<const TypeVariable> a = std::make_shared<const TypeVariable>("a", kStar);
+    type b = std::make_shared<const TypeVariable>("b", kStar);
+    std::shared_ptr<const TypeVariable> c = std::make_shared<const TypeVariable>("c", kStarToStar);
+    type t = std::make_shared<const TypeApplication>(
+            std::make_shared<const TypeApplication>(tTuple2, a),
+            std::make_shared<const TypeApplication>(
+                    std::make_shared<const TypeApplication>(tTuple2, b),
+                    std::make_shared<const TypeApplication>(c, a)
+            )
+    );
+    std::vector<std::shared_ptr<const TypeVariable>> vs = {a, c};
+    Scheme s(vs, t);
+    type a1 = std::make_shared<const TypeGeneric>(0, kStar);
+    type c1 = std::make_shared<const TypeGeneric>(1, kStarToStar);
+    type t1 = std::make_shared<const TypeApplication>(
+            std::make_shared<const TypeApplication>(tTuple2, a1),
+            std::make_shared<const TypeApplication>(
+                    std::make_shared<const TypeApplication>(tTuple2, b),
+                    std::make_shared<const TypeApplication>(c1, a1)
+            )
+    );
+    ASSERT_TRUE(sameType(s.getType(), t1));
 }
