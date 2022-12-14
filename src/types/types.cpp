@@ -169,6 +169,24 @@ type makePairType(const type &leftType, const type &rightType) {
     return std::make_shared<const TypeApplication>(partial, rightType);
 }
 
+kind makeTupleConstructorKind(size_t size) {
+    kind k = kStar;
+    for (int i = 0; i < size; i++) {
+        k = std::make_shared<const ArrowKind>(kStar, k);
+    }
+    return k;
+}
+
+type makeTupleType(const std::vector<type> &components) {
+    std::string constructor = "(" + std::string(components.size() - 1, ',') + ")";
+    kind k = makeTupleConstructorKind(components.size());
+    type t = std::make_shared<const TypeConstructor>(constructor, k);
+    for (const auto &c: components) {
+        t = std::make_shared<const TypeApplication>(t, c);
+    }
+    return t;
+}
+
 bool sameKind(const kind &a, const kind &b) {
     std::shared_ptr<const ArrowKind> arrow1;
     std::shared_ptr<const ArrowKind> arrow2;

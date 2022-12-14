@@ -131,6 +131,8 @@ const type tTuple2 = std::make_shared<const TypeConstructor>("(,)", kStarToStarT
 type makeFunctionType(const type &argType, const type &resultType);
 type makeListType(const type &elementType);
 type makePairType(const type &leftType, const type &rightType);
+kind makeTupleConstructorKind(size_t size);
+type makeTupleType(const std::vector<type> &components);
 
 bool sameKind(const kind &a, const kind &b);
 bool sameType(const type &a, const type &b);

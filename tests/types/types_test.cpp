@@ -384,3 +384,7 @@ TEST(Types, Assumptions) {
     EXPECT_EQ(d.find("vara"), s3);
     EXPECT_EQ(d.find("d"), s2);
 }
+
+TEST(Types, MakeTuple) {
+    ASSERT_TRUE(sameType(makePairType(tInt, tDouble), makeTupleType({tInt, tDouble})));
+}

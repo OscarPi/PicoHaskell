@@ -9,10 +9,11 @@
     #include <string>
     #include <memory>
     #include "parser/syntax.hpp"
+    #include "types/types.hpp"
     class Driver;
 }
 %param { Driver& drv }
-%parse-param { std::shared_ptr<SyntaxTreeNode> *result }
+%parse-param { std::shared_ptr<Program> program }
 %locations
 %define parse.trace
 %define parse.error detailed
@@ -67,23 +68,118 @@
     LEFTBRACE     "{"
     RIGHTBRACE    "}"
 ;
-%token <std::string> VARID
-%token <std::string> CONID
-%token <std::string> VARSYM
-%token <std::string> CONSYM
+%token <std::string> VARID CONID VARSYM CONSYM STRING
 %token <int> INTEGER
 %token <double> FLOAT
 %token <char> CHAR
-%token <std::string> STRING
 
-%nterm <std::shared_ptr<SyntaxTreeNode>> exp;
+%nterm <std::vector<std::string>> vars
+%nterm <std::string> var
+%nterm <type> ctype btype atype gtycon
+%nterm <std::vector<type>> types
+%nterm <int> commas
 
 //%printer { yyo << $$; } <*>;
 
 %%
-%start exp;
+%start topdecls;
 
-exp: "\\" { $$ = std::make_shared<Literal>(); *result = $$; };
+topdecls:
+//    typedecl
+  | decl
+//  | topdecls typedecl
+  | topdecls decl
+  ;
+
+decl:
+    gendecl
+//  | funlhs rhs
+//  | pat rhs
+  ;
+
+gendecl:
+    vars "::" ctype { program->addTypeSignatures($1, $3); }
+  ;
+
+vars:
+    var      { $$ = {$1}; }
+  | vars var { $$ = $1; $$.push_back($2); }
+  ;
+
+ctype:
+    btype            { $$ = $1; }
+  | btype "->" ctype { $$ = makeFunctionType($1, $3); }
+  ;
+
+btype:
+    atype       { $$ = $1; }
+  | btype atype { $$ = std::make_shared<const TypeApplication>($1, $2); }
+  ;
+
+atype:
+   gtycon        { $$ = $1; }
+ | VARID         { $$ = std::make_shared<const TypeVariable>($1, nullptr); }
+ | "(" types ")" { $$ = makeTupleType($2); }
+ | "[" ctype "]"  { $$ = makeListType($2); }
+ | "(" ctype ")"  { $$ = $2; }
+ ;
+
+types:
+    ctype "," ctype  { $$ = {$1, $3}; }
+  | types "," ctype { $$ = $1; $$.push_back($3); }
+  ;
+
+gtycon:
+    CONID          { $$ = std::make_shared<const TypeConstructor>($1, nullptr); }
+  | "(" ")"        { $$ = tUnit; }
+  | "[" "]"        { $$ = tList; }
+  | "(" "->" ")"   { $$ = tArrow; }
+  | "(" commas ")" { $$ = std::make_shared<const TypeConstructor>("(" + std::string($2, ',') + ")", makeTupleConstructorKind($2 + 1)); }
+  ;
+
+commas:
+    ","        { $$ = 1; }
+  | commas "," { $$ = $1 + 1; }
+  ;
+
+//aexp:
+//    qvar
+//  | gcon
+//  | literal
+//  | "(" exp ")"
+//  | "(" exp "," explist ")"
+//  | "[" explist "]"
+//  | "[" exp optexpcomma ".." optexp "]"
+//  | "[" exp "|" quallist "]"
+//  | "(" infixexp qop ")"
+//  | "(" qop infixexp ")" //TODO: -
+//  | qcon "{" optfbindlist "}"
+//  | aexp "{" fbindlist "}" //TODO: not qcon
+//  ;
+
+//gcon:
+//    "(" ")"
+//  | "[" "]"
+//  | "(" "," "{" "," "}" ")"
+//  | qcon
+//  ;
+
+var:
+    VARID          { $$ = $1; }
+  | "(" VARSYM ")" { $$ = $2; }
+  ;
+//qcon: CONID | "(" gconsym ")";
+//qvarop: VARSYM | "`" VARID "`";
+//qconop: gconsym | "`" CONID "`";
+//qop: qvarop | qconop;
+//gconsym: ":" | CONSYM;
+//literal:
+//    INTEGER { $$ = std::make_shared<Literal<int>>($1); }
+//  | FLOAT   { $$ = std::make_shared<Literal<double>>($1); }
+//  | CHAR    { $$ = std::make_shared<Literal<char>>($1); }
+//  | STRING  { $$ = std::make_shared<Literal<std::string>>($1); }
+//  ;
+
 //apatlist: apat | apatlist apat;
 //lexp:
 //    "\" apatlist "->" exp
@@ -101,20 +197,7 @@ exp: "\\" { $$ = std::make_shared<Literal>(); *result = $$; };
 //explist: exp | explist "," exp;
 //optexp: %empty | exp;
 //optexpcomma: %empty | "," exp;
-//aexp:
-//    qvar
-//  | gcon
-//  | literal
-//  | "(" exp ")"
-//  | "(" exp "," explist ")"
-//  | "[" explist "]"
-//  | "[" exp optexpcomma ".." optexp "]"
-//  | "[" exp "|" quallist "]"
-//  | "(" infixexp qop ")"
-//  | "(" qop infixexp ")" //TODO: -
-//  | qcon "{" optfbindlist "}"
-//  | aexp "{" fbindlist "}" //TODO: not qcon
-//  ;
+
 //
 //qual:
 //    pat "<-" exp
@@ -177,20 +260,6 @@ exp: "\\" { $$ = std::make_shared<Literal>(); *result = $$; };
 //
 //fpat: qvar "=" pat;
 //
-//gcon:
-//    "(" ")"
-//  | "[" "]"
-//  | "(" "," "{" "," "}" ")"
-//  | qcon
-//  ;
-//
-//qvar: VARID | "(" VARSYM ")";
-//qcon: CONID | "(" gconsym ")";
-//qvarop: VARSYM | "`" VARID "`";
-//qconop: gconsym | "`" CONID "`";
-//qop: qvarop | qconop;
-//gconsym: ":" | CONSYM;
-//literal: INTEGER | FLOAT | CHAR | STRING;
 
 %%
 void yy::parser::error(const location_type& l, const std::string& m) {
