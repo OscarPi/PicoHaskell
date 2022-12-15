@@ -9,6 +9,7 @@
 #include <variant>
 #include "types/types.hpp"
 
+enum class patform {con, wild, lit, var};
 enum class expform {var, con, lit, lam, app, cas, let, bop};
 enum class builtinop {add, subtract, times, divide, equality, inequality, lt, lte, gt, gte, land, lor, negate};
 
@@ -46,6 +47,44 @@ public:
     std::string getName();
     std::vector<std::string> getArgumentVariables();
     std::vector<std::shared_ptr<DConstructor>> getDataConstructors();
+};
+
+struct Pattern {
+    const int lineNo;
+    const std::string as;
+    explicit Pattern(const int &lineNo, const std::string &as): lineNo(lineNo), as(as) {}
+    virtual patform getForm() = 0;
+    virtual ~Pattern() = default;
+};
+
+struct ConPattern : Pattern {
+    const std::string name;
+    const std::vector<std::shared_ptr<Pattern>> args;
+    ConPattern(
+            const int &lineNo,
+            const std::string &as,
+            const std::string &name,
+            const std::vector<std::shared_ptr<Pattern>> &args): Pattern(lineNo, as), name(name), args(args) {}
+    patform getForm() override { return patform::con; }
+};
+
+struct WildPattern : Pattern {
+    WildPattern(const int &lineNo, const std::string &as): Pattern(lineNo, as) {}
+    patform getForm() override { return patform::wild; }
+};
+
+struct LiteralPattern : Pattern {
+    const std::variant<int, std::string, char> value;
+    LiteralPattern(const int &lineNo, const std::string &as, int value): Pattern(lineNo, as), value(value) {}
+    LiteralPattern(const int &lineNo, const std::string &as, char value): Pattern(lineNo, as), value(value) {}
+    LiteralPattern(const int &lineNo, const std::string &as, std::string value): Pattern(lineNo, as), value(value) {}
+    patform getForm() override { return patform::lit; }
+};
+
+struct VarPattern : Pattern {
+    const std::string name;
+    VarPattern(const int &lineNo, const std::string &as, const std::string &name): Pattern(lineNo, as), name(name) {}
+    patform getForm() override { return patform::var; }
 };
 
 struct Expression {
@@ -97,6 +136,13 @@ struct Application : public Expression {
 };
 
 struct Case : public Expression {
+    const std::shared_ptr<Expression> exp;
+    const std::vector<std::pair<std::shared_ptr<Pattern>, std::shared_ptr<Expression>>> alts;
+    Case(
+            const int &lineNo,
+            const std::shared_ptr<Expression> &exp,
+            const std::vector<std::pair<std::shared_ptr<Pattern>, std::shared_ptr<Expression>>> &alts
+            ): Expression(lineNo), exp(exp), alts(alts) {}
     expform getForm() override { return expform::cas; }
 };
 
@@ -134,5 +180,11 @@ struct Program {
             const std::vector<std::string> &args,
             const std::shared_ptr<Expression> &body);
 };
+
+std::shared_ptr<Expression> makeIf(
+        const int &lineNo,
+        const std::shared_ptr<Expression> &e1,
+        const std::shared_ptr<Expression> &e2,
+        const std::shared_ptr<Expression> &e3);
 
 #endif //PICOHASKELL_SYNTAX_HPP

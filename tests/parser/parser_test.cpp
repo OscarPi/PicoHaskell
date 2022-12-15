@@ -384,3 +384,34 @@ TEST(Parser, ParsesInfix) {
     ASSERT_EQ(b->right->getForm(), expform::var);
     EXPECT_EQ(std::dynamic_pointer_cast<Variable>(b->right)->name, "c");
 }
+
+TEST(Parser, ParsesConditionals) {
+    auto program = std::make_shared<Program>();
+    auto result = parse_string("i = if a then 1 else 2", program);
+    ASSERT_EQ(result, 0);
+    EXPECT_EQ(program->bindings.size(), 1);
+
+    ASSERT_NE(program->bindings["i"], nullptr);
+    ASSERT_EQ(program->bindings["i"]->getForm(), expform::cas);
+    auto i = std::dynamic_pointer_cast<Case>(program->bindings["i"]);
+    ASSERT_EQ(i->exp->getForm(), expform::var);
+    EXPECT_EQ(std::dynamic_pointer_cast<Variable>(i->exp)->name, "a");
+
+    auto alts = i->alts;
+    ASSERT_EQ(alts.size(), 2);
+    ASSERT_EQ(alts[0].first->getForm(), patform::con);
+    auto p = std::dynamic_pointer_cast<ConPattern>(alts[0].first);
+    EXPECT_EQ(p->name, "True");
+    EXPECT_EQ(p->args.size(), 0);
+    ASSERT_EQ(alts[0].second->getForm(), expform::lit);
+    auto l = std::dynamic_pointer_cast<Literal>(alts[0].second);
+    EXPECT_EQ(std::get<int>(l->value), 1);
+
+    ASSERT_EQ(alts[1].first->getForm(), patform::con);
+    p = std::dynamic_pointer_cast<ConPattern>(alts[1].first);
+    EXPECT_EQ(p->name, "False");
+    EXPECT_EQ(p->args.size(), 0);
+    ASSERT_EQ(alts[1].second->getForm(), expform::lit);
+    l = std::dynamic_pointer_cast<Literal>(alts[1].second);
+    EXPECT_EQ(std::get<int>(l->value), 2);
+}

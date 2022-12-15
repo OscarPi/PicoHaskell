@@ -93,7 +93,7 @@
 %left "*" "/"
 %right "."
 
-%nterm <std::string> var con
+%nterm <std::string> var
 %nterm <std::vector<std::string>> vars tyvars
 %nterm <type> ctype btype atype gtycon
 %nterm <std::vector<type>> types atypes
@@ -152,8 +152,9 @@ infixexp:
   ;
 
 lexp:
-    fexp               { $$ = $1; }
-  | "\\" vars "->" exp { $$ = std::make_shared<Lambda>(@1.begin.line, $2, $4); }
+    fexp                                                     { $$ = $1; }
+  | "\\" vars "->" exp                                       { $$ = std::make_shared<Lambda>(@1.begin.line, $2, $4); }
+  | "if" exp optsemicolon "then" exp optsemicolon "else" exp { $$ = makeIf(@1.begin.line, $2, $5, $8); }
   ;
 
 fexp:
@@ -237,7 +238,8 @@ gcon:
     "(" ")"        { $$ = std::make_shared<Constructor>(@1.begin.line, "()"); }
   | "[" "]"        { $$ = std::make_shared<Constructor>(@1.begin.line, "[]"); }
   | "(" commas ")" { $$ = std::make_shared<Constructor>(@1.begin.line, "(" + std::string($2, ',') + ")"); }
-  | con            { $$ = std::make_shared<Constructor>(@1.begin.line, $1); }
+  | "(" ":" ")"    { $$ = std::make_shared<Constructor>(@1.begin.line, ":"); }
+  | CONID          { $$ = std::make_shared<Constructor>(@1.begin.line, $1); }
   ;
 
   ;
@@ -295,9 +297,7 @@ var:
   | "(" "&&" ")" { $$ = "&&"; }
   | "(" "||" ")" { $$ = "||"; }
 
-con:
-    CONID       { $$ = $1; }
-  | "(" ":" ")" { $$ = ":"; }
+optsemicolon: %empty | ";";
 
 %%
 void yy::parser::error(const location_type& l, const std::string& m) {

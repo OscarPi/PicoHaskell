@@ -129,3 +129,16 @@ void Program::addNamedFunction(const int &lineNo, const std::string &name, const
     }
     bindings[name] = std::make_shared<Lambda>(lineNo, args, body);
 }
+
+std::shared_ptr<Expression> makeIf(
+        const int &lineNo,
+        const std::shared_ptr<Expression> &e1,
+        const std::shared_ptr<Expression> &e2,
+        const std::shared_ptr<Expression> &e3) {
+    const auto t = std::make_shared<ConPattern>(lineNo, "", "True", std::vector<std::shared_ptr<Pattern>>());
+    const auto f = std::make_shared<ConPattern>(lineNo, "", "False", std::vector<std::shared_ptr<Pattern>>());
+    const auto alt1 = std::make_pair(t, e2);
+    const auto alt2 = std::make_pair(f, e3);
+    const std::vector<std::pair<std::shared_ptr<Pattern>, std::shared_ptr<Expression>>> alts = {alt1, alt2};
+    return std::make_shared<Case>(lineNo, e1, alts);
+}
