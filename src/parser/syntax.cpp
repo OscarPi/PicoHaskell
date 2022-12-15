@@ -156,3 +156,14 @@ std::shared_ptr<Expression> makeList(const int &lineNo, const std::vector<std::s
     }
     return list;
 }
+
+std::shared_ptr<Expression> makeTuple(const int &lineNo, const std::vector<std::shared_ptr<Expression>> &elts) {
+    std::shared_ptr<Expression> tuple = std::make_shared<Constructor>(
+            lineNo,
+            "(" + std::string(elts.size() - 1, ',') + ")");
+
+    for (const auto &e: elts) {
+        tuple = std::make_shared<Application>(lineNo, tuple, e);
+    }
+    return tuple;
+}

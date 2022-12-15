@@ -164,12 +164,13 @@ fexp:
   ;
 
 aexp:
-    var             { $$ = std::make_shared<Variable>(@1.begin.line, $1); }
-  | INTEGER         { $$ = std::make_shared<Literal>(@1.begin.line, $1); }
-  | STRING          { $$ = std::make_shared<Literal>(@1.begin.line, $1); }
-  | CHAR            { $$ = std::make_shared<Literal>(@1.begin.line, $1); }
-  | gcon            { $$ = $1; }
-  | "[" explist "]" { $$ = makeList(@1.begin.line, $2); }
+    var                     { $$ = std::make_shared<Variable>(@1.begin.line, $1); }
+  | INTEGER                 { $$ = std::make_shared<Literal>(@1.begin.line, $1); }
+  | STRING                  { $$ = std::make_shared<Literal>(@1.begin.line, $1); }
+  | CHAR                    { $$ = std::make_shared<Literal>(@1.begin.line, $1); }
+  | gcon                    { $$ = $1; }
+  | "[" explist "]"         { $$ = makeList(@1.begin.line, $2); }
+  | "(" explist "," exp ")" { $2.push_back($4); $$ = makeTuple(@1.begin.line, $2); }
   ;
 
 explist:

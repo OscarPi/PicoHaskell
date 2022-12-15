@@ -186,7 +186,7 @@ std::shared_ptr<Expression> makeIf(
         const std::shared_ptr<Expression> &e1,
         const std::shared_ptr<Expression> &e2,
         const std::shared_ptr<Expression> &e3);
-
 std::shared_ptr<Expression> makeList(const int &lineNo, const std::vector<std::shared_ptr<Expression>> &elts);
+std::shared_ptr<Expression> makeTuple(const int &lineNo, const std::vector<std::shared_ptr<Expression>> &elts);
 
 #endif //PICOHASKELL_SYNTAX_HPP
