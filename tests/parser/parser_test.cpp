@@ -110,3 +110,97 @@ TEST(Parser, ParsesTypeSignatures) {
     ASSERT_NE(program->getTypeSignature("a"), nullptr);
     EXPECT_TRUE(sameType_ignoreKinds(program->getTypeSignature("a"), makeTupleType({tInt, tDouble, tInt})));
 }
+
+TEST(Parser, ParsesDataDecls) {
+    std::shared_ptr<Program> program = std::make_shared<Program>();
+    int result = parse_string("data hey", program);
+    ASSERT_EQ(result, 1);
+
+    program = std::make_shared<Program>();
+    result = parse_string("data Hi", program);
+    ASSERT_EQ(result, 0);
+    auto tConstructor = program->getTypeConstructor("Hi");
+    ASSERT_NE(tConstructor, nullptr);
+    EXPECT_EQ(tConstructor->getLineNo(), 1);
+    EXPECT_EQ(tConstructor->getName(), "Hi");
+    EXPECT_EQ(tConstructor->getArgumentVariables().size(), 0);
+    EXPECT_EQ(tConstructor->getDataConstructors().size(), 0);
+
+    program = std::make_shared<Program>();
+    EXPECT_THROW(parse_string("data Hi a a", program), ParseError);
+
+    program = std::make_shared<Program>();
+    EXPECT_THROW(parse_string("data Hi a = Bye b", program), ParseError);
+
+    program = std::make_shared<Program>();
+    result = parse_string("data Hi = Bye | No", program);
+    ASSERT_EQ(result, 0);
+    tConstructor = program->getTypeConstructor("Hi");
+    ASSERT_NE(tConstructor, nullptr);
+    EXPECT_EQ(tConstructor->getLineNo(), 1);
+    EXPECT_EQ(tConstructor->getName(), "Hi");
+    EXPECT_EQ(tConstructor->getArgumentVariables().size(), 0);
+    ASSERT_EQ(tConstructor->getDataConstructors().size(), 2);
+    auto dConstructor = tConstructor->getDataConstructors()[0];
+    EXPECT_EQ(dConstructor->getLineNo(), 1);
+    EXPECT_EQ(dConstructor->getName(), "Bye");
+    EXPECT_EQ(dConstructor->getTypes().size(), 0);
+    EXPECT_EQ(dConstructor->getTConstructor(), tConstructor);
+    dConstructor = tConstructor->getDataConstructors()[1];
+    EXPECT_EQ(dConstructor->getLineNo(), 1);
+    EXPECT_EQ(dConstructor->getName(), "No");
+    EXPECT_EQ(dConstructor->getTypes().size(), 0);
+    EXPECT_EQ(dConstructor->getTConstructor(), tConstructor);
+
+    program = std::make_shared<Program>();
+    result = parse_string("data Hi a b = Bye a | No", program);
+    ASSERT_EQ(result, 0);
+    tConstructor = program->getTypeConstructor("Hi");
+    ASSERT_NE(tConstructor, nullptr);
+    EXPECT_EQ(tConstructor->getLineNo(), 1);
+    EXPECT_EQ(tConstructor->getName(), "Hi");
+    EXPECT_EQ(tConstructor->getArgumentVariables().size(), 2);
+    ASSERT_EQ(tConstructor->getDataConstructors().size(), 2);
+    dConstructor = tConstructor->getDataConstructors()[0];
+    EXPECT_EQ(dConstructor->getLineNo(), 1);
+    EXPECT_EQ(dConstructor->getName(), "Bye");
+    EXPECT_EQ(dConstructor->getTypes().size(), 1);
+    EXPECT_EQ(dConstructor->getTConstructor(), tConstructor);
+    dConstructor = tConstructor->getDataConstructors()[1];
+    EXPECT_EQ(dConstructor->getLineNo(), 1);
+    EXPECT_EQ(dConstructor->getName(), "No");
+    EXPECT_EQ(dConstructor->getTypes().size(), 0);
+    EXPECT_EQ(dConstructor->getTConstructor(), tConstructor);
+
+    program = std::make_shared<Program>();
+    EXPECT_THROW(parse_string("data Hi a\ndata Hi", program), ParseError);
+
+    program = std::make_shared<Program>();
+    EXPECT_THROW(parse_string("data Hi = One\ndata Bye = One", program), ParseError);
+
+    program = std::make_shared<Program>();
+    result = parse_string("data Hi = Bye\ndata Bye = Hi", program);
+    ASSERT_EQ(result, 0);
+    tConstructor = program->getTypeConstructor("Hi");
+    ASSERT_NE(tConstructor, nullptr);
+    EXPECT_EQ(tConstructor->getLineNo(), 1);
+    EXPECT_EQ(tConstructor->getName(), "Hi");
+    EXPECT_EQ(tConstructor->getArgumentVariables().size(), 0);
+    ASSERT_EQ(tConstructor->getDataConstructors().size(), 1);
+    dConstructor = tConstructor->getDataConstructors()[0];
+    EXPECT_EQ(dConstructor->getLineNo(), 1);
+    EXPECT_EQ(dConstructor->getName(), "Bye");
+    EXPECT_EQ(dConstructor->getTypes().size(), 0);
+    EXPECT_EQ(dConstructor->getTConstructor(), tConstructor);
+    tConstructor = program->getTypeConstructor("Bye");
+    ASSERT_NE(tConstructor, nullptr);
+    EXPECT_EQ(tConstructor->getLineNo(), 2);
+    EXPECT_EQ(tConstructor->getName(), "Bye");
+    EXPECT_EQ(tConstructor->getArgumentVariables().size(), 0);
+    ASSERT_EQ(tConstructor->getDataConstructors().size(), 1);
+    dConstructor = tConstructor->getDataConstructors()[0];
+    EXPECT_EQ(dConstructor->getLineNo(), 2);
+    EXPECT_EQ(dConstructor->getName(), "Hi");
+    EXPECT_EQ(dConstructor->getTypes().size(), 0);
+    EXPECT_EQ(dConstructor->getTConstructor(), tConstructor);
+}

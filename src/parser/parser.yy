@@ -73,11 +73,14 @@
 %token <double> FLOAT
 %token <char> CHAR
 
-%nterm <std::vector<std::string>> vars
-%nterm <std::string> var
+%nterm <std::vector<std::string>> vars tyvars
+%nterm <std::string> var con
 %nterm <type> ctype btype atype gtycon
-%nterm <std::vector<type>> types
+%nterm <std::vector<type>> types atypes
 %nterm <int> commas
+%nterm <std::pair<std::string, std::vector<std::string>>> simpletype
+%nterm <std::vector<std::shared_ptr<DConstructor>>> constrs
+%nterm <std::shared_ptr<DConstructor>> constr
 
 //%printer { yyo << $$; } <*>;
 
@@ -87,10 +90,14 @@
 prog: topdecls | topdecls break;
 
 topdecls:
-//    typedecl
+    topdecl
+  | topdecls break topdecl
+  ;
+
+topdecl:
     decl
-//  | topdecls typedecl
-  | topdecls break decl
+  | "data" simpletype             { program->addTypeConstructor(@1.begin.line, $2.first, $2.second, {}); }
+  | "data" simpletype "=" constrs { program->addTypeConstructor(@1.begin.line, $2.first, $2.second, $4); }
   ;
 
 decl:
@@ -106,6 +113,28 @@ gendecl:
 vars:
     var      { $$ = {$1}; }
   | vars var { $$ = $1; $$.push_back($2); }
+  ;
+
+constrs:
+    constr             { $$ = {$1}; }
+  | constrs "|" constr { $$ = $1; $$.push_back($3); }
+
+constr:
+    con        { $$ = std::make_shared<DConstructor>(@1.begin.line, $1, std::vector<type>()); }
+  | con atypes { $$ = std::make_shared<DConstructor>(@1.begin.line, $1, $2); }
+
+atypes:
+    atype        { $$ = {$1}; }
+  | atypes atype { $$ = $1; $$.push_back($2); }
+
+simpletype:
+    CONID tyvars { $$ = std::make_pair($1, $2); }
+  | CONID        { $$ = std::make_pair($1, std::vector<std::string>()); }
+  ;
+
+tyvars:
+    VARID        { $$ = {$1}; }
+  | tyvars VARID { $$ = $1; $$.push_back($2); }
   ;
 
 ctype:
@@ -143,6 +172,10 @@ commas:
     ","        { $$ = 1; }
   | commas "," { $$ = $1 + 1; }
   ;
+
+con:
+    CONID          { $$ = $1; }
+  | "(" CONSYM ")" { $$ = $2; }
 
 //aexp:
 //    qvar
