@@ -67,27 +67,52 @@
     BACKTICK      "`"
     LEFTBRACE     "{"
     RIGHTBRACE    "}"
+    PLUS          "+"
+    MINUS         "-"
+    TIMES         "*"
+    DIVIDE        "/"
+    EQUALITY      "=="
+    INEQUALITY    "/="
+    LT            "<"
+    LTE           "<="
+    GT            ">"
+    GTE           ">="
+    AND           "&&"
+    OR            "||"
+    DOT           "."
 ;
-%token <std::string> VARID CONID VARSYM CONSYM STRING
+%token <std::string> VARID CONID STRING
 %token <int> INTEGER
 %token <double> FLOAT
 %token <char> CHAR
 
-%nterm <std::vector<std::string>> vars tyvars
+%right "||"
+%right "&&"
+%precedence "==" "/=" "<" "<=" ">=" ">"
+%right ":"
+%left "+" "-"
+%left "*" "/"
+%right "."
+
 %nterm <std::string> var con
+%nterm <std::vector<std::string>> vars tyvars
 %nterm <type> ctype btype atype gtycon
 %nterm <std::vector<type>> types atypes
 %nterm <int> commas
 %nterm <std::pair<std::string, std::vector<std::string>>> simpletype
 %nterm <std::vector<std::shared_ptr<DConstructor>>> constrs
 %nterm <std::shared_ptr<DConstructor>> constr
+%nterm <std::shared_ptr<Expression>> exp infixexp lexp fexp aexp gcon
+%nterm <std::pair<std::string, std::shared_ptr<Expression>>> vardecl
+%nterm <std::tuple<std::string, std::vector<std::string>, std::shared_ptr<Expression>>> fundecl
+%nterm <std::pair<std::vector<std::string>, type>> typesig
 
 //%printer { yyo << $$; } <*>;
 
 %%
 %start prog;
 
-prog: topdecls | topdecls break;
+prog: optbreak topdecls optbreak;
 
 topdecls:
     topdecl
@@ -95,24 +120,61 @@ topdecls:
   ;
 
 topdecl:
-    decl
+    typesig                       { program->addTypeSignatures($1.first, $1.second); }
+  | fundecl                       { program->addNamedFunction(@1.begin.line, std::get<0>($1), std::get<1>($1), std::get<2>($1)); }
+  | vardecl                       { program->addVariable(@1.begin.line, $1.first, $1.second); }
   | "data" simpletype             { program->addTypeConstructor(@1.begin.line, $2.first, $2.second, {}); }
   | "data" simpletype "=" constrs { program->addTypeConstructor(@1.begin.line, $2.first, $2.second, $4); }
   ;
 
-decl:
-    gendecl
-//  | funlhs rhs
-//  | pat rhs
+typesig: vars "::" ctype    { $$ = std::make_pair($1, $3); };
+fundecl: VARID vars "=" exp { $$ = std::make_tuple($1, $2, $4); };
+vardecl: VARID "=" exp      { $$ =  std::make_pair($1, $3); };
+
+exp:
+    infixexp { $$ = $1; }
   ;
 
-gendecl:
-    vars "::" ctype { program->addTypeSignatures($1, $3); }
+infixexp:
+    infixexp "+" infixexp  { $$ = std::make_shared<BuiltInOp>(@2.begin.line, $1, $3, builtinop::add); }
+  | infixexp "-" infixexp  { $$ = std::make_shared<BuiltInOp>(@2.begin.line, $1, $3, builtinop::subtract); }
+  | "-" infixexp           { $$ = std::make_shared<BuiltInOp>(@1.begin.line, nullptr, $2, builtinop::negate); }
+  | infixexp "*" infixexp  { $$ = std::make_shared<BuiltInOp>(@2.begin.line, $1, $3, builtinop::times); }
+  | infixexp "/" infixexp  { $$ = std::make_shared<BuiltInOp>(@2.begin.line, $1, $3, builtinop::divide); }
+  | infixexp "==" infixexp { $$ = std::make_shared<BuiltInOp>(@2.begin.line, $1, $3, builtinop::equality); }
+  | infixexp "/=" infixexp { $$ = std::make_shared<BuiltInOp>(@2.begin.line, $1, $3, builtinop::inequality); }
+  | infixexp "<" infixexp  { $$ = std::make_shared<BuiltInOp>(@2.begin.line, $1, $3, builtinop::lt); }
+  | infixexp "<=" infixexp { $$ = std::make_shared<BuiltInOp>(@2.begin.line, $1, $3, builtinop::lte); }
+  | infixexp ">" infixexp  { $$ = std::make_shared<BuiltInOp>(@2.begin.line, $1, $3, builtinop::gt); }
+  | infixexp ">=" infixexp { $$ = std::make_shared<BuiltInOp>(@2.begin.line, $1, $3, builtinop::gte); }
+  | infixexp "&&" infixexp { $$ = std::make_shared<BuiltInOp>(@2.begin.line, $1, $3, builtinop::land); }
+  | infixexp "||" infixexp { $$ = std::make_shared<BuiltInOp>(@2.begin.line, $1, $3, builtinop::lor); }
+  | infixexp "." infixexp  { $$ = std::make_shared<Application>(@2.begin.line, std::make_shared<Application>(@2.begin.line, std::make_shared<Variable>(@2.begin.line, "."), $1), $3); }
+  | infixexp ":" infixexp  { $$ = std::make_shared<Application>(@2.begin.line, std::make_shared<Application>(@2.begin.line, std::make_shared<Constructor>(@2.begin.line, ":"), $1), $3); }
+  | lexp                   { $$ = $1; }
+  ;
+
+lexp:
+    fexp               { $$ = $1; }
+  | "\\" vars "->" exp { $$ = std::make_shared<Lambda>(@1.begin.line, $2, $4); }
+  ;
+
+fexp:
+    fexp aexp { $$ = std::make_shared<Application>(@2.begin.line, $1, $2); }
+  | aexp      { $$ = $1; }
+  ;
+
+aexp:
+    var        { $$ = std::make_shared<Variable>(@1.begin.line, $1); }
+  | INTEGER    { $$ = std::make_shared<Literal>(@1.begin.line, $1); }
+  | STRING     { $$ = std::make_shared<Literal>(@1.begin.line, $1); }
+  | CHAR       { $$ = std::make_shared<Literal>(@1.begin.line, $1); }
+  | gcon       { $$ = $1; }
   ;
 
 vars:
-    var      { $$ = {$1}; }
-  | vars var { $$ = $1; $$.push_back($2); }
+    VARID      { $$ = {$1}; }
+  | vars VARID { $$ = $1; $$.push_back($2); }
   ;
 
 constrs:
@@ -120,8 +182,8 @@ constrs:
   | constrs "|" constr { $$ = $1; $$.push_back($3); }
 
 constr:
-    con        { $$ = std::make_shared<DConstructor>(@1.begin.line, $1, std::vector<type>()); }
-  | con atypes { $$ = std::make_shared<DConstructor>(@1.begin.line, $1, $2); }
+    CONID        { $$ = std::make_shared<DConstructor>(@1.begin.line, $1, std::vector<type>()); }
+  | CONID atypes { $$ = std::make_shared<DConstructor>(@1.begin.line, $1, $2); }
 
 atypes:
     atype        { $$ = {$1}; }
@@ -173,58 +235,17 @@ commas:
   | commas "," { $$ = $1 + 1; }
   ;
 
-con:
-    CONID          { $$ = $1; }
-  | "(" CONSYM ")" { $$ = $2; }
 
-//aexp:
-//    qvar
-//  | gcon
-//  | literal
-//  | "(" exp ")"
-//  | "(" exp "," explist ")"
-//  | "[" explist "]"
-//  | "[" exp optexpcomma ".." optexp "]"
-//  | "[" exp "|" quallist "]"
-//  | "(" infixexp qop ")"
-//  | "(" qop infixexp ")" //TODO: -
-//  | qcon "{" optfbindlist "}"
-//  | aexp "{" fbindlist "}" //TODO: not qcon
-//  ;
-
-//gcon:
-//    "(" ")"
-//  | "[" "]"
-//  | "(" "," "{" "," "}" ")"
-//  | qcon
-//  ;
-
-var:
-    VARID          { $$ = $1; }
-  | "(" VARSYM ")" { $$ = $2; }
+gcon:
+    "(" ")"        { $$ = std::make_shared<Constructor>(@1.begin.line, "()"); }
+  | "[" "]"        { $$ = std::make_shared<Constructor>(@1.begin.line, "[]"); }
+  | "(" commas ")" { $$ = std::make_shared<Constructor>(@1.begin.line, "(" + std::string($2, ',') + ")"); }
+  | con            { $$ = std::make_shared<Constructor>(@1.begin.line, $1); }
   ;
-//qcon: CONID | "(" gconsym ")";
-//qvarop: VARSYM | "`" VARID "`";
-//qconop: gconsym | "`" CONID "`";
-//qop: qvarop | qconop;
-//gconsym: ":" | CONSYM;
-//literal:
-//    INTEGER { $$ = std::make_shared<Literal<int>>($1); }
-//  | FLOAT   { $$ = std::make_shared<Literal<double>>($1); }
-//  | CHAR    { $$ = std::make_shared<Literal<char>>($1); }
-//  | STRING  { $$ = std::make_shared<Literal<std::string>>($1); }
-//  ;
+
+  ;
 
 //apatlist: apat | apatlist apat;
-//lexp:
-//    "\" apatlist "->" exp
-//  | "let" decls "in" exp
-//  | "if" exp optsemicolon "then" exp optsemicolon "else" exp
-//  | "case" exp "of" "{" alts "}"
-//  | "do" "{" stmts "}"
-//  | fexp
-
-//fexp: aexp | fexp aexp;
 
 //fbindlist: fbind | fbindlist "," fbind;
 //optfbindlist: %empty | fbindlist;
@@ -233,41 +254,6 @@ var:
 //optexp: %empty | exp;
 //optexpcomma: %empty | "," exp;
 
-//
-//qual:
-//    pat "<-" exp
-//  | "let" decls
-//  | exp
-//  ;
-//
-//alts: alt | alts ";" alt;
-//optwhere: %empty | "where" decls;
-//alt:
-//  | pat "->" exp optdecls
-//  | pat gdpat optdecls
-//  | %empty
-//  ;
-//
-//gdpat: guards "->" exp | guards "->" exp gdpat;
-//
-//stmtlist: stmt | stmtlist "," stmt;
-//optstmtlist: %empty | stmtlist;
-//optsemicolon: %empty | ";";
-//stmts: optstmtlist exp optsemicolon;
-//stmt:
-//    exp ";"
-//  | pat "<-" exp ";"
-//  | "let" decls ";"
-//  | ";"
-//  ;
-//
-//fbind: qvar "=" exp;
-//
-//pat:
-//    lpat qconop pat
-//  | lpat
-//  ;
-//
 //apatlist: apat | apatlist apat;
 //lpat:
 //    apat
@@ -295,6 +281,26 @@ var:
 //
 //fpat: qvar "=" pat;
 //
+
+var:
+    VARID        { $$ = $1; }
+  | "(" "." ")"  { $$ = "."; }
+  | "(" "+" ")"  { $$ = "+"; }
+  | "(" "-" ")"  { $$ = "-"; }
+  | "(" "*" ")"  { $$ = "*"; }
+  | "(" "/" ")"  { $$ = "/"; }
+  | "(" "==" ")" { $$ = "=="; }
+  | "(" "/=" ")" { $$ = "/="; }
+  | "(" "<" ")"  { $$ = "<"; }
+  | "(" "<=" ")" { $$ = "<="; }
+  | "(" ">" ")"  { $$ = ">"; }
+  | "(" ">=" ")" { $$ = ">="; }
+  | "(" "&&" ")" { $$ = "&&"; }
+  | "(" "||" ")" { $$ = "||"; }
+
+con:
+    CONID       { $$ = $1; }
+  | "(" ":" ")" { $$ = ":"; }
 
 break: NEWLINE | break NEWLINE;
 optbreak: %empty | break;

@@ -63,10 +63,6 @@ std::vector<std::shared_ptr<DConstructor>> TConstructor::getDataConstructors() {
     return dConstructors;
 }
 
-void Program::addBinding(const std::string &name, const std::shared_ptr<Expression> &exp) {
-    bindings[name] = exp;
-}
-
 void Program::addTypeSignatures(const std::vector<std::string> &names, const type &t) {
     for (const auto& name: names) {
         if (typeSignatures.count(name) > 0) {
@@ -74,14 +70,6 @@ void Program::addTypeSignatures(const std::vector<std::string> &names, const typ
         }
         typeSignatures[name] = t;
     }
-}
-
-std::shared_ptr<Expression> Program::getBinding(const std::string &name) {
-    return bindings[name];
-}
-
-type Program::getTypeSignature(const std::string &name) {
-    return typeSignatures[name];
 }
 
 void Program::addTypeConstructor(
@@ -115,10 +103,29 @@ void Program::addTypeConstructor(
     typeConstructors[tConstructor->getName()] = tConstructor;
 }
 
-std::shared_ptr<TConstructor> Program::getTypeConstructor(const std::string &name) {
-    return typeConstructors[name];
+void Program::addVariable(const int &lineNo, const std::string &name, const std::shared_ptr<Expression> &exp) {
+    if (bindings.count(name) > 0) {
+        throw ParseError(
+                "Line " +
+                std::to_string(lineNo) +
+                ": multiple bindings to the name " +
+                name +
+                "."
+        );
+    }
+    bindings[name] = exp;
 }
 
-std::shared_ptr<DConstructor> Program::getDataConstructor(const std::string &name) {
-    return dataConstructors[name];
+void Program::addNamedFunction(const int &lineNo, const std::string &name, const std::vector<std::string> &args,
+                               const std::shared_ptr<Expression> &body) {
+    if (bindings.count(name) > 0) {
+        throw ParseError(
+                "Line " +
+                std::to_string(lineNo) +
+                ": multiple bindings to the name " +
+                name +
+                "."
+        );
+    }
+    bindings[name] = std::make_shared<Lambda>(lineNo, args, body);
 }

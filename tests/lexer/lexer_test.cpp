@@ -116,6 +116,7 @@ TEST(Lexer, RecognisesOps) {
     EXPECT_SYMBOL(">=", yy::parser::symbol_kind_type::S_GTE);
     EXPECT_SYMBOL("&&", yy::parser::symbol_kind_type::S_AND);
     EXPECT_SYMBOL("||", yy::parser::symbol_kind_type::S_OR);
+    EXPECT_SYMBOL(".", yy::parser::symbol_kind_type::S_DOT);
 }
 
 TEST(Lexer, RecognisesVARID) {

@@ -6,7 +6,11 @@
 #include <string>
 #include <memory>
 #include <stdexcept>
+#include <variant>
 #include "types/types.hpp"
+
+enum class expform {var, con, lit, lam, app, cas, let, bop};
+enum class builtinop {add, subtract, times, divide, equality, inequality, lt, lte, gt, gte, land, lor, negate};
 
 class ParseError : public std::runtime_error {
 public:
@@ -44,29 +48,91 @@ public:
     std::vector<std::shared_ptr<DConstructor>> getDataConstructors();
 };
 
-class Expression {
-public:
+struct Expression {
+    const int lineNo;
+    type signature;
+    explicit Expression(const int &lineNo): lineNo(lineNo) {}
+    virtual expform getForm() = 0;
     virtual ~Expression() = default;
 };
 
-class Program {
-private:
+struct Variable : public Expression {
+    const std::string name;
+    Variable(const int &lineNo, const std::string &name): Expression(lineNo), name(name) {}
+    expform getForm() override { return expform::var; }
+};
+
+struct Constructor : public Expression {
+    const std::string name;
+    Constructor(const int &lineNo, const std::string &name): Expression(lineNo), name(name) {}
+    expform getForm() override { return expform::con; }
+};
+
+struct Literal : public Expression {
+    const std::variant<int, std::string, char> value;
+    Literal(const int &lineNo, int i) : Expression(lineNo), value(i) {}
+    Literal(const int &lineNo, char c) : Expression(lineNo), value(c) {}
+    Literal(const int &lineNo, std::string s) : Expression(lineNo), value(s) {}
+    expform getForm() override { return expform::lit; }
+};
+
+struct Lambda : public Expression {
+    const std::vector<std::string> args;
+    const std::shared_ptr<Expression> body;
+    Lambda(
+            const int &lineNo,
+            const std::vector<std::string> &args,
+            const std::shared_ptr<Expression> &body): Expression(lineNo), args(args), body(body) {}
+    expform getForm() override { return expform::lam; }
+};
+
+struct Application : public Expression {
+    const std::shared_ptr<Expression> left;
+    const std::shared_ptr<Expression> right;
+    Application(
+            const int &lineNo,
+            const std::shared_ptr<Expression> &left,
+            const std::shared_ptr<Expression> &right): Expression(lineNo), left(left), right(right) {}
+    expform getForm() override { return expform::app; }
+};
+
+struct Case : public Expression {
+    expform getForm() override { return expform::cas; }
+};
+
+struct Let : public Expression {
+    expform getForm() override { return expform::let; }
+};
+
+struct BuiltInOp : public Expression {
+    const std::shared_ptr<Expression> left;
+    const std::shared_ptr<Expression> right;
+    const builtinop op;
+    BuiltInOp(
+            const int &lineNo,
+            const std::shared_ptr<Expression> &left,
+            const std::shared_ptr<Expression> &right,
+            const builtinop &op): Expression(lineNo), left(left), right(right), op(op) {}
+    expform getForm() override { return expform::bop; }
+};
+
+struct Program {
     std::map<std::string, std::shared_ptr<TConstructor>> typeConstructors;
     std::map<std::string, std::shared_ptr<DConstructor>> dataConstructors;
     std::map<std::string, std::shared_ptr<Expression>> bindings;
     std::map<std::string, type> typeSignatures;
-public:
-    void addBinding(const std::string &name, const std::shared_ptr<Expression> &exp);
     void addTypeSignatures(const std::vector<std::string> &names, const type &t);
-    std::shared_ptr<Expression> getBinding(const std::string &name);
-    type getTypeSignature(const std::string &name);
     void addTypeConstructor(
             int lineNo,
             const std::string &name,
             const std::vector<std::string> &argvars,
             const std::vector<std::shared_ptr<DConstructor>> &dConstructors);
-    std::shared_ptr<TConstructor> getTypeConstructor(const std::string &name);
-    std::shared_ptr<DConstructor> getDataConstructor(const std::string &name);
+    void addVariable(const int &lineNo, const std::string &name, const std::shared_ptr<Expression> &exp);
+    void addNamedFunction(
+            const int &lineNo,
+            const std::string &name,
+            const std::vector<std::string> &args,
+            const std::shared_ptr<Expression> &body);
 };
 
 #endif //PICOHASKELL_SYNTAX_HPP
