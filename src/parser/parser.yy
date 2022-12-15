@@ -171,6 +171,7 @@ aexp:
   | gcon                    { $$ = $1; }
   | "[" explist "]"         { $$ = makeList(@1.begin.line, $2); }
   | "(" explist "," exp ")" { $2.push_back($4); $$ = makeTuple(@1.begin.line, $2); }
+  | "(" exp ")"             { $$ = $2; }
   ;
 
 explist:
