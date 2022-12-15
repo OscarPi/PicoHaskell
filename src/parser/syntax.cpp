@@ -142,3 +142,17 @@ std::shared_ptr<Expression> makeIf(
     const std::vector<std::pair<std::shared_ptr<Pattern>, std::shared_ptr<Expression>>> alts = {alt1, alt2};
     return std::make_shared<Case>(lineNo, e1, alts);
 }
+
+std::shared_ptr<Expression> makeList(const int &lineNo, const std::vector<std::shared_ptr<Expression>> &elts) {
+    std::shared_ptr<Expression> list = std::make_shared<Constructor>(lineNo, "[]");
+    for (int i = elts.size() - 1; i >= 0; i--) {
+        list = std::make_shared<Application>(
+                lineNo,
+                std::make_shared<Application>(
+                        lineNo,
+                        std::make_shared<Constructor>(lineNo, ":"),
+                        elts[i]),
+                list);
+    }
+    return list;
+}

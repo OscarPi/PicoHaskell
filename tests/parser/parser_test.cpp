@@ -415,3 +415,32 @@ TEST(Parser, ParsesConditionals) {
     l = std::dynamic_pointer_cast<Literal>(alts[1].second);
     EXPECT_EQ(std::get<int>(l->value), 2);
 }
+
+TEST(Parser, ParsesLists) {
+    auto program = std::make_shared<Program>();
+    auto result = parse_string("l = [1,2]", program);
+    ASSERT_EQ(result, 0);
+    EXPECT_EQ(program->bindings.size(), 1);
+
+    ASSERT_NE(program->bindings["l"], nullptr);
+    ASSERT_EQ(program->bindings["l"]->getForm(), expform::app);
+    auto l = std::dynamic_pointer_cast<Application>(program->bindings["l"]);
+
+    ASSERT_EQ(l->left->getForm(), expform::app);
+    auto ll = std::dynamic_pointer_cast<Application>(l->left);
+    ASSERT_EQ(ll->left->getForm(), expform::con);
+    EXPECT_EQ(std::dynamic_pointer_cast<Constructor>(ll->left)->name, ":");
+    ASSERT_EQ(ll->right->getForm(), expform::lit);
+    EXPECT_EQ(std::get<int>(std::dynamic_pointer_cast<Literal>(ll->right)->value), 1);
+
+    ASSERT_EQ(l->right->getForm(), expform::app);
+    auto r = std::dynamic_pointer_cast<Application>(l->right);
+    ASSERT_EQ(r->left->getForm(), expform::app);
+    auto rl = std::dynamic_pointer_cast<Application>(r->left);
+    ASSERT_EQ(rl->left->getForm(), expform::con);
+    EXPECT_EQ(std::dynamic_pointer_cast<Constructor>(rl->left)->name, ":");
+    ASSERT_EQ(rl->right->getForm(), expform::lit);
+    EXPECT_EQ(std::get<int>(std::dynamic_pointer_cast<Literal>(rl->right)->value), 2);
+    ASSERT_EQ(r->right->getForm(), expform::con);
+    EXPECT_EQ(std::dynamic_pointer_cast<Constructor>(r->right)->name, "[]");
+}

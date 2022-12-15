@@ -105,6 +105,7 @@
 %nterm <std::pair<std::string, std::shared_ptr<Expression>>> vardecl
 %nterm <std::tuple<std::string, std::vector<std::string>, std::shared_ptr<Expression>>> fundecl
 %nterm <std::pair<std::vector<std::string>, type>> typesig
+%nterm <std::vector<std::shared_ptr<Expression>>> explist
 
 //%printer { yyo << $$; } <*>;
 
@@ -163,12 +164,17 @@ fexp:
   ;
 
 aexp:
-    var        { $$ = std::make_shared<Variable>(@1.begin.line, $1); }
-  | INTEGER    { $$ = std::make_shared<Literal>(@1.begin.line, $1); }
-  | STRING     { $$ = std::make_shared<Literal>(@1.begin.line, $1); }
-  | CHAR       { $$ = std::make_shared<Literal>(@1.begin.line, $1); }
-  | gcon       { $$ = $1; }
+    var             { $$ = std::make_shared<Variable>(@1.begin.line, $1); }
+  | INTEGER         { $$ = std::make_shared<Literal>(@1.begin.line, $1); }
+  | STRING          { $$ = std::make_shared<Literal>(@1.begin.line, $1); }
+  | CHAR            { $$ = std::make_shared<Literal>(@1.begin.line, $1); }
+  | gcon            { $$ = $1; }
+  | "[" explist "]" { $$ = makeList(@1.begin.line, $2); }
   ;
+
+explist:
+    exp             { $$ = {$1}; }
+  | explist "," exp { $$ = $1; $$.push_back($3); }
 
 vars:
     VARID      { $$ = {$1}; }
