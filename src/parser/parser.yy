@@ -23,7 +23,6 @@
 }
 %define api.token.prefix {TOK_}
 %token
-    NEWLINE       "\n"
     CASE          "case"
     CLASS         "class"
     DATA          "data"
@@ -110,13 +109,11 @@
 //%printer { yyo << $$; } <*>;
 
 %%
-%start prog;
-
-prog: optbreak topdecls optbreak;
+%start topdecls;
 
 topdecls:
     topdecl
-  | topdecls break topdecl
+  | topdecls ";" topdecl
   ;
 
 topdecl:
@@ -301,9 +298,6 @@ var:
 con:
     CONID       { $$ = $1; }
   | "(" ":" ")" { $$ = ":"; }
-
-break: NEWLINE | break NEWLINE;
-optbreak: %empty | break;
 
 %%
 void yy::parser::error(const location_type& l, const std::string& m) {

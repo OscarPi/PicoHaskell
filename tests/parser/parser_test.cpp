@@ -173,13 +173,13 @@ TEST(Parser, ParsesDataDecls) {
     EXPECT_EQ(dConstructor->getTConstructor(), tConstructor);
 
     program = std::make_shared<Program>();
-    EXPECT_THROW(parse_string("data Hi a\ndata Hi", program), ParseError);
+    EXPECT_THROW(parse_string("data Hi a\n;data Hi", program), ParseError);
 
     program = std::make_shared<Program>();
-    EXPECT_THROW(parse_string("data Hi = One\ndata Bye = One", program), ParseError);
+    EXPECT_THROW(parse_string("data Hi = One\n;data Bye = One", program), ParseError);
 
     program = std::make_shared<Program>();
-    result = parse_string("data Hi = Bye\ndata Bye = Hi", program);
+    result = parse_string("data Hi = Bye\n;data Bye = Hi", program);
     ASSERT_EQ(result, 0);
     tConstructor = program->typeConstructors["Hi"];
     ASSERT_NE(tConstructor, nullptr);
@@ -207,7 +207,7 @@ TEST(Parser, ParsesDataDecls) {
 
 TEST(Parser, ParsesVariableExpressions) {
     auto program = std::make_shared<Program>();
-    auto result = parse_string("a = b \nc = d", program);
+    auto result = parse_string("a = b \n;c = d", program);
     ASSERT_EQ(result, 0);
     EXPECT_EQ(program->bindings.size(), 2);
     ASSERT_NE(program->bindings["a"], nullptr);
@@ -220,12 +220,12 @@ TEST(Parser, ParsesVariableExpressions) {
     EXPECT_EQ(std::dynamic_pointer_cast<Variable>(c)->name, "d");
 
     program = std::make_shared<Program>();
-    EXPECT_THROW(parse_string("a = b \na = d", program), ParseError);
+    EXPECT_THROW(parse_string("a = b \n;a = d", program), ParseError);
 }
 
 TEST(Parser, ParsesLiteralExpressions) {
     auto program = std::make_shared<Program>();
-    auto result = parse_string("a = 1\nb = 'a'\nc = \"hi\"", program);
+    auto result = parse_string("a = 1\n;b = 'a'\n;c = \"hi\"", program);
     ASSERT_EQ(result, 0);
     EXPECT_EQ(program->bindings.size(), 3);
 
@@ -250,7 +250,7 @@ TEST(Parser, ParsesLiteralExpressions) {
 
 TEST(Parser, ParsesConstructorExpressions) {
     auto program = std::make_shared<Program>();
-    auto result = parse_string("a = ()\nb = []\nc = (,,)\nd = Toast", program);
+    auto result = parse_string("a = ()\n;b = []\n;c = (,,)\n;d = Toast", program);
     ASSERT_EQ(result, 0);
     EXPECT_EQ(program->bindings.size(), 4);
 
