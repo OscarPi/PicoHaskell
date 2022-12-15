@@ -1,7 +1,6 @@
 #include <gtest/gtest.h>
 #include <vector>
 #include "lexer/lexer.hpp"
-#include "lexer/layout.hpp"
 #include "parser/parser.hpp"
 #include "parser/driver.hpp"
 
@@ -83,7 +82,7 @@ TEST(Lexer, RecognisesKeywords) {
     EXPECT_SYMBOL("where", yy::parser::symbol_kind_type::S_WHERE);
 }
 
-TEST(Lexer, RecognisesReserveOp) {
+TEST(Lexer, RecognisesOps) {
     EXPECT_SYMBOL("_", yy::parser::symbol_kind_type::S__);
     EXPECT_SYMBOL("..", yy::parser::symbol_kind_type::S_DOTDOT);
     EXPECT_SYMBOL(":", yy::parser::symbol_kind_type::S_COLON);
@@ -105,6 +104,18 @@ TEST(Lexer, RecognisesReserveOp) {
     EXPECT_SYMBOL("`", yy::parser::symbol_kind_type::S_BACKTICK);
     EXPECT_SYMBOL("{", yy::parser::symbol_kind_type::S_LEFTBRACE);
     EXPECT_SYMBOL("}", yy::parser::symbol_kind_type::S_RIGHTBRACE);
+    EXPECT_SYMBOL("+", yy::parser::symbol_kind_type::S_PLUS);
+    EXPECT_SYMBOL("-", yy::parser::symbol_kind_type::S_MINUS);
+    EXPECT_SYMBOL("*", yy::parser::symbol_kind_type::S_TIMES);
+    EXPECT_SYMBOL("/", yy::parser::symbol_kind_type::S_DIVIDE);
+    EXPECT_SYMBOL("==", yy::parser::symbol_kind_type::S_EQUALITY);
+    EXPECT_SYMBOL("/=", yy::parser::symbol_kind_type::S_INEQUALITY);
+    EXPECT_SYMBOL("<", yy::parser::symbol_kind_type::S_LT);
+    EXPECT_SYMBOL("<=", yy::parser::symbol_kind_type::S_LTE);
+    EXPECT_SYMBOL(">", yy::parser::symbol_kind_type::S_GT);
+    EXPECT_SYMBOL(">=", yy::parser::symbol_kind_type::S_GTE);
+    EXPECT_SYMBOL("&&", yy::parser::symbol_kind_type::S_AND);
+    EXPECT_SYMBOL("||", yy::parser::symbol_kind_type::S_OR);
 }
 
 TEST(Lexer, RecognisesVARID) {
@@ -124,94 +135,16 @@ TEST(Lexer, RecognisesCONID) {
     EXPECT_SYMBOL("A", yy::parser::symbol_kind_type::S_CONID);
 }
 
-TEST(Lexer, RecognisesVARSYM) {
-    EXPECT_SYMBOL("!", yy::parser::symbol_kind_type::S_VARSYM);
-    EXPECT_SYMBOL("#", yy::parser::symbol_kind_type::S_VARSYM);
-    EXPECT_SYMBOL("$", yy::parser::symbol_kind_type::S_VARSYM);
-    EXPECT_SYMBOL("%", yy::parser::symbol_kind_type::S_VARSYM);
-    EXPECT_SYMBOL("&", yy::parser::symbol_kind_type::S_VARSYM);
-    EXPECT_SYMBOL("*", yy::parser::symbol_kind_type::S_VARSYM);
-    EXPECT_SYMBOL("+", yy::parser::symbol_kind_type::S_VARSYM);
-    EXPECT_SYMBOL(".", yy::parser::symbol_kind_type::S_VARSYM);
-    EXPECT_SYMBOL("/", yy::parser::symbol_kind_type::S_VARSYM);
-    EXPECT_SYMBOL("<", yy::parser::symbol_kind_type::S_VARSYM);
-    EXPECT_SYMBOL("=!", yy::parser::symbol_kind_type::S_VARSYM);
-    EXPECT_SYMBOL(">", yy::parser::symbol_kind_type::S_VARSYM);
-    EXPECT_SYMBOL("?", yy::parser::symbol_kind_type::S_VARSYM);
-    EXPECT_SYMBOL("@#:!", yy::parser::symbol_kind_type::S_VARSYM);
-    EXPECT_SYMBOL("\\\\\\\\", yy::parser::symbol_kind_type::S_VARSYM);
-    EXPECT_SYMBOL("^", yy::parser::symbol_kind_type::S_VARSYM);
-    EXPECT_SYMBOL("||", yy::parser::symbol_kind_type::S_VARSYM);
-    EXPECT_SYMBOL("-", yy::parser::symbol_kind_type::S_VARSYM);
-    EXPECT_SYMBOL("~~#", yy::parser::symbol_kind_type::S_VARSYM);
-    EXPECT_SYMBOL("--#\n", yy::parser::symbol_kind_type::S_VARSYM);
-}
-
-TEST(Lexer, RecognisesCONSYM) {
-    EXPECT_SYMBOL(":::", yy::parser::symbol_kind_type::S_CONSYM);
-    EXPECT_SYMBOL(":!", yy::parser::symbol_kind_type::S_CONSYM);
-    EXPECT_SYMBOL(":#", yy::parser::symbol_kind_type::S_CONSYM);
-    EXPECT_SYMBOL(":$", yy::parser::symbol_kind_type::S_CONSYM);
-    EXPECT_SYMBOL(":%", yy::parser::symbol_kind_type::S_CONSYM);
-    EXPECT_SYMBOL(":&", yy::parser::symbol_kind_type::S_CONSYM);
-    EXPECT_SYMBOL(":*", yy::parser::symbol_kind_type::S_CONSYM);
-    EXPECT_SYMBOL(":+", yy::parser::symbol_kind_type::S_CONSYM);
-    EXPECT_SYMBOL(":.", yy::parser::symbol_kind_type::S_CONSYM);
-    EXPECT_SYMBOL(":/", yy::parser::symbol_kind_type::S_CONSYM);
-    EXPECT_SYMBOL(":<", yy::parser::symbol_kind_type::S_CONSYM);
-    EXPECT_SYMBOL(":=!", yy::parser::symbol_kind_type::S_CONSYM);
-    EXPECT_SYMBOL(":>", yy::parser::symbol_kind_type::S_CONSYM);
-    EXPECT_SYMBOL(":?", yy::parser::symbol_kind_type::S_CONSYM);
-    EXPECT_SYMBOL(":@#:!", yy::parser::symbol_kind_type::S_CONSYM);
-    EXPECT_SYMBOL(":\\\\\\\\", yy::parser::symbol_kind_type::S_CONSYM);
-    EXPECT_SYMBOL(":^", yy::parser::symbol_kind_type::S_CONSYM);
-    EXPECT_SYMBOL(":||", yy::parser::symbol_kind_type::S_CONSYM);
-    EXPECT_SYMBOL(":-", yy::parser::symbol_kind_type::S_CONSYM);
-    EXPECT_SYMBOL(":~~#", yy::parser::symbol_kind_type::S_CONSYM);
-}
-
-TEST(Lexer, HandleIDMixedWithSYM) {
-    auto result = lex_string("hello##Goodbye");
-    ASSERT_EQ(result.size(), 3);
-    EXPECT_EQ(result[0].kind(), yy::parser::symbol_kind_type::S_VARID);
-    EXPECT_EQ(result[1].kind(), yy::parser::symbol_kind_type::S_VARSYM);
-    EXPECT_EQ(result[2].kind(), yy::parser::symbol_kind_type::S_CONID);
-
-    result = lex_string("##Goodbye");
-    ASSERT_EQ(result.size(), 2);
-    EXPECT_EQ(result[0].kind(), yy::parser::symbol_kind_type::S_VARSYM);
-    EXPECT_EQ(result[1].kind(), yy::parser::symbol_kind_type::S_CONID);
-
-    result = lex_string("hello##");
-    ASSERT_EQ(result.size(), 2);
-    EXPECT_EQ(result[0].kind(), yy::parser::symbol_kind_type::S_VARID);
-    EXPECT_EQ(result[1].kind(), yy::parser::symbol_kind_type::S_VARSYM);
-
-    result = lex_string("Hello##goodbye");
-    ASSERT_EQ(result.size(), 3);
-    EXPECT_EQ(result[0].kind(), yy::parser::symbol_kind_type::S_CONID);
-    EXPECT_EQ(result[1].kind(), yy::parser::symbol_kind_type::S_VARSYM);
-    EXPECT_EQ(result[2].kind(), yy::parser::symbol_kind_type::S_VARID);
-
-    result = lex_string("##goodbye");
-    ASSERT_EQ(result.size(), 2);
-    EXPECT_EQ(result[0].kind(), yy::parser::symbol_kind_type::S_VARSYM);
-    EXPECT_EQ(result[1].kind(), yy::parser::symbol_kind_type::S_VARID);
-
-    result = lex_string("Hello##");
-    ASSERT_EQ(result.size(), 2);
-    EXPECT_EQ(result[0].kind(), yy::parser::symbol_kind_type::S_CONID);
-    EXPECT_EQ(result[1].kind(), yy::parser::symbol_kind_type::S_VARSYM);
-}
-
-TEST(Lexer, IgnoresWhitespace) {
-    auto result = lex_string("if     I\n\n\n\n\r\n\r\f\v\v\v\t\tam :$ $$");
-    ASSERT_EQ(result.size(), 5);
+TEST(Lexer, HandlesWhitespace) {
+    auto result = lex_string("if     I\n\n\v\v\v\t\tam + +");
+    ASSERT_EQ(result.size(), 7);
     EXPECT_EQ(result[0].kind(), yy::parser::symbol_kind_type::S_IF);
     EXPECT_EQ(result[1].kind(), yy::parser::symbol_kind_type::S_CONID);
-    EXPECT_EQ(result[2].kind(), yy::parser::symbol_kind_type::S_VARID);
-    EXPECT_EQ(result[3].kind(), yy::parser::symbol_kind_type::S_CONSYM);
-    EXPECT_EQ(result[4].kind(), yy::parser::symbol_kind_type::S_VARSYM);
+    EXPECT_EQ(result[2].kind(), yy::parser::symbol_kind_type::S_NEWLINE);
+    EXPECT_EQ(result[3].kind(), yy::parser::symbol_kind_type::S_NEWLINE);
+    EXPECT_EQ(result[4].kind(), yy::parser::symbol_kind_type::S_VARID);
+    EXPECT_EQ(result[5].kind(), yy::parser::symbol_kind_type::S_PLUS);
+    EXPECT_EQ(result[6].kind(), yy::parser::symbol_kind_type::S_PLUS);
 }
 
 TEST(Lexer, IgnoresSingleLineComments) {
@@ -363,35 +296,50 @@ TEST(Lexer, TracksLocations) {
     EXPECT_EQ(result[1].location.end.column, 15);
 
     result = lex_string("\tif\n  \tif\tdefault\"hey\\\n\\howdy\"\ndefault{-\n\n\n-}\n--sup\n\tif");
-    ASSERT_EQ(result.size(), 6);
+    ASSERT_EQ(result.size(), 9);
     EXPECT_EQ(result[0].kind(), yy::parser::symbol_kind_type::S_IF);
     EXPECT_EQ(result[0].location.begin.line, 1);
     EXPECT_EQ(result[0].location.begin.column, 9);
     EXPECT_EQ(result[0].location.end.line, 1);
     EXPECT_EQ(result[0].location.end.column, 11);
-    EXPECT_EQ(result[1].kind(), yy::parser::symbol_kind_type::S_IF);
-    EXPECT_EQ(result[1].location.begin.line, 2);
-    EXPECT_EQ(result[1].location.begin.column, 9);
+    EXPECT_EQ(result[1].kind(), yy::parser::symbol_kind_type::S_NEWLINE);
+    EXPECT_EQ(result[1].location.begin.line, 1);
+    EXPECT_EQ(result[1].location.begin.column, 11);
     EXPECT_EQ(result[1].location.end.line, 2);
-    EXPECT_EQ(result[1].location.end.column, 11);
-    EXPECT_EQ(result[2].kind(), yy::parser::symbol_kind_type::S_DEFAULT);
+    EXPECT_EQ(result[1].location.end.column, 1);
+    EXPECT_EQ(result[2].kind(), yy::parser::symbol_kind_type::S_IF);
     EXPECT_EQ(result[2].location.begin.line, 2);
-    EXPECT_EQ(result[2].location.begin.column, 17);
+    EXPECT_EQ(result[2].location.begin.column, 9);
     EXPECT_EQ(result[2].location.end.line, 2);
-    EXPECT_EQ(result[2].location.end.column, 24);
-    EXPECT_EQ(result[3].kind(), yy::parser::symbol_kind_type::S_STRING);
+    EXPECT_EQ(result[2].location.end.column, 11);
+    EXPECT_EQ(result[3].kind(), yy::parser::symbol_kind_type::S_DEFAULT);
     EXPECT_EQ(result[3].location.begin.line, 2);
-    EXPECT_EQ(result[3].location.begin.column, 24);
-    EXPECT_EQ(result[3].location.end.line, 3);
-    EXPECT_EQ(result[3].location.end.column, 8);
-    EXPECT_EQ(result[4].kind(), yy::parser::symbol_kind_type::S_DEFAULT);
-    EXPECT_EQ(result[4].location.begin.line, 4);
-    EXPECT_EQ(result[4].location.begin.column, 1);
-    EXPECT_EQ(result[4].location.end.line, 4);
+    EXPECT_EQ(result[3].location.begin.column, 17);
+    EXPECT_EQ(result[3].location.end.line, 2);
+    EXPECT_EQ(result[3].location.end.column, 24);
+    EXPECT_EQ(result[4].kind(), yy::parser::symbol_kind_type::S_STRING);
+    EXPECT_EQ(result[4].location.begin.line, 2);
+    EXPECT_EQ(result[4].location.begin.column, 24);
+    EXPECT_EQ(result[4].location.end.line, 3);
     EXPECT_EQ(result[4].location.end.column, 8);
-    EXPECT_EQ(result[5].kind(), yy::parser::symbol_kind_type::S_IF);
-    EXPECT_EQ(result[5].location.begin.line, 9);
-    EXPECT_EQ(result[5].location.begin.column, 9);
-    EXPECT_EQ(result[5].location.end.line, 9);
-    EXPECT_EQ(result[5].location.end.column, 11);
+    EXPECT_EQ(result[5].kind(), yy::parser::symbol_kind_type::S_NEWLINE);
+    EXPECT_EQ(result[5].location.begin.line, 3);
+    EXPECT_EQ(result[5].location.begin.column, 8);
+    EXPECT_EQ(result[5].location.end.line, 4);
+    EXPECT_EQ(result[5].location.end.column, 1);
+    EXPECT_EQ(result[6].kind(), yy::parser::symbol_kind_type::S_DEFAULT);
+    EXPECT_EQ(result[6].location.begin.line, 4);
+    EXPECT_EQ(result[6].location.begin.column, 1);
+    EXPECT_EQ(result[6].location.end.line, 4);
+    EXPECT_EQ(result[6].location.end.column, 8);
+    EXPECT_EQ(result[7].kind(), yy::parser::symbol_kind_type::S_NEWLINE);
+    EXPECT_EQ(result[7].location.begin.line, 7);
+    EXPECT_EQ(result[7].location.begin.column, 3);
+    EXPECT_EQ(result[7].location.end.line, 8);
+    EXPECT_EQ(result[7].location.end.column, 1);
+    EXPECT_EQ(result[8].kind(), yy::parser::symbol_kind_type::S_IF);
+    EXPECT_EQ(result[8].location.begin.line, 9);
+    EXPECT_EQ(result[8].location.begin.column, 9);
+    EXPECT_EQ(result[8].location.end.line, 9);
+    EXPECT_EQ(result[8].location.end.column, 11);
 }

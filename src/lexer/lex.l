@@ -9,9 +9,9 @@
 %}
 %option noyywrap nounput noinput batch debug stack
 %{
-yy::parser::symbol_type parse_integer(const std::string &s, const yy::parser::location_type& loc);
-yy::parser::symbol_type parse_character(const std::string &s, const yy::parser::location_type& loc);
-char parse_escape(const std::string e, const yy::parser::location_type& loc);
+yy::parser::symbol_type parse_integer(const std::string &s, const yy::parser::location_type &loc);
+yy::parser::symbol_type parse_character(const std::string &s, const yy::parser::location_type &loc);
+char parse_escape(const std::string e, const yy::parser::location_type &loc);
 %}
 
 %x incomment
@@ -32,8 +32,6 @@ NEWLINE     \r\n|\r|\n|\f
 
 VARID       {SMALL}({SMALL}|{LARGE}|{DIGIT}|\')*
 CONID       {LARGE}({SMALL}|{LARGE}|{DIGIT}|\')*
-VARSYM      [!#\$%&\*\+\.\/\<=\>\?@\\\^\|\-~]{SYMBOL}*
-CONSYM      ":"{SYMBOL}*
 
 COMMENT     "--""-"*(({SMALL}|{LARGE}|{DIGIT}|{SPECIAL}|\"|\'|" "|\t){ANY}*)?{NEWLINE}
 OPENCOM     "{""-"+
@@ -58,7 +56,7 @@ STRCHAR     {SMALL}|{LARGE}|[!#\$%&\*\+\.\/\<=\>\?@\^\|\-~\:]|{DIGIT}|{SPECIAL}|
 %}
 %%
 %{
-yy::location& loc = drv.location;
+yy::location &loc = drv.location;
 loc.step();
 std::string strliteral;
 %}
@@ -109,10 +107,20 @@ std::string strliteral;
 "`"         return yy::parser::make_BACKTICK(loc);
 "{"         return yy::parser::make_LEFTBRACE(loc);
 "}"         return yy::parser::make_RIGHTBRACE(loc);
+"+"         return yy::parser::make_PLUS(loc);
+"-"         return yy::parser::make_MINUS(loc);
+"*"         return yy::parser::make_TIMES(loc);
+"/"         return yy::parser::make_DIVIDE(loc);
+"=="        return yy::parser::make_EQUALITY(loc);
+"/="        return yy::parser::make_INEQUALITY(loc);
+"<"         return yy::parser::make_LT(loc);
+"<="        return yy::parser::make_LTE(loc);
+">"         return yy::parser::make_GT(loc);
+">="        return yy::parser::make_GTE(loc);
+"&&"        return yy::parser::make_AND(loc);
+"||"        return yy::parser::make_OR(loc);
 {VARID}     return yy::parser::make_VARID(yytext, loc);
 {CONID}     return yy::parser::make_CONID(yytext, loc);
-{VARSYM}    return yy::parser::make_VARSYM(yytext, loc);
-{CONSYM}    return yy::parser::make_CONSYM(yytext, loc);
 {OPENCOM}   yy_push_state(incomment);
 <incomment>{
     {OPENCOM}           yy_push_state(incomment);
