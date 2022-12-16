@@ -11,7 +11,7 @@
 %{
 yy::parser::symbol_type parse_integer(const std::string &s, const yy::parser::location_type &loc);
 yy::parser::symbol_type parse_character(const std::string &s, const yy::parser::location_type &loc);
-char parse_escape(const std::string e, const yy::parser::location_type &loc);
+char parse_escape(const std::string &escape, const yy::parser::location_type &loc);
 %}
 
 %x incomment
@@ -166,121 +166,121 @@ yy::parser::symbol_type parse_integer(const std::string &s, const yy::parser::lo
     }
 }
 
-char parse_escape(const std::string e, const yy::parser::location_type& loc) {
+char parse_escape(const std::string &escape, const yy::parser::location_type& loc) {
     int c = -1;
 
-    if (isdigit(e[1])) {
-        c = std::stoi(e.substr(1));
-    } else if (e[1] == 'o') {
-        c = std::stoi(e.substr(2), nullptr, 8);
-    } else if (e[1] == 'x') {
-        c = std::stoi(e.substr(2), nullptr, 16);
-    } else if (e == "\\a") {
+    if (isdigit(escape[1])) {
+        c = std::stoi(escape.substr(1));
+    } else if (escape[1] == 'o') {
+        c = std::stoi(escape.substr(2), nullptr, 8);
+    } else if (escape[1] == 'x') {
+        c = std::stoi(escape.substr(2), nullptr, 16);
+    } else if (escape == "\\a") {
         c = 0x07;
-    } else if (e == "\\b") {
+    } else if (escape == "\\b") {
         c = 0x08;
-    } else if (e == "\\f") {
+    } else if (escape == "\\f") {
         c = 0x0C;
-    } else if (e == "\\n") {
+    } else if (escape == "\\n") {
         c = 0x0A;
-    } else if (e == "\\r") {
+    } else if (escape == "\\r") {
         c = 0x0D;
-    } else if (e == "\\t") {
+    } else if (escape == "\\t") {
         c = 0x09;
-    } else if (e == "\\v") {
+    } else if (escape == "\\v") {
         c = 0x0B;
-    } else if (e == "\\\"") {
+    } else if (escape == "\\\"") {
         c = 0x22;
-    } else if (e == "\\'") {
+    } else if (escape == "\\'") {
         c = 0x27;
-    } else if (e == "\\\\") {
+    } else if (escape == "\\\\") {
         c = 0x5C;
-    } else if (e == "\\NUL") {
+    } else if (escape == "\\NUL") {
         c = 0x00;
-    } else if (e == "\\SOH") {
+    } else if (escape == "\\SOH") {
         c = 0x01;
-    } else if (e == "\\STX") {
+    } else if (escape == "\\STX") {
         c = 0x02;
-    } else if (e == "\\ETX") {
+    } else if (escape == "\\ETX") {
         c = 0x03;
-    } else if (e == "\\EOT") {
+    } else if (escape == "\\EOT") {
         c = 0x04;
-    } else if (e == "\\ENQ") {
+    } else if (escape == "\\ENQ") {
         c = 0x05;
-    } else if (e == "\\ACK") {
+    } else if (escape == "\\ACK") {
         c = 0x06;
-    } else if (e == "\\BEL") {
+    } else if (escape == "\\BEL") {
         c = 0x07;
-    } else if (e == "\\BS") {
+    } else if (escape == "\\BS") {
         c = 0x08;
-    } else if (e == "\\HT") {
+    } else if (escape == "\\HT") {
         c = 0x09;
-    } else if (e == "\\LF") {
+    } else if (escape == "\\LF") {
         c = 0x0A;
-    } else if (e == "\\VT") {
+    } else if (escape == "\\VT") {
         c = 0x0B;
-    } else if (e == "\\FF") {
+    } else if (escape == "\\FF") {
         c = 0x0C;
-    } else if (e == "\\CR") {
+    } else if (escape == "\\CR") {
         c = 0x0D;
-    } else if (e == "\\SO") {
+    } else if (escape == "\\SO") {
         c = 0x0E;
-    } else if (e == "\\SI") {
+    } else if (escape == "\\SI") {
         c = 0x0F;
-    } else if (e == "\\DLE") {
+    } else if (escape == "\\DLE") {
         c = 0x10;
-    } else if (e == "\\DC1") {
+    } else if (escape == "\\DC1") {
         c = 0x11;
-    } else if (e == "\\DC2") {
+    } else if (escape == "\\DC2") {
         c = 0x12;
-    } else if (e == "\\DC3") {
+    } else if (escape == "\\DC3") {
         c = 0x13;
-    } else if (e == "\\DC4") {
+    } else if (escape == "\\DC4") {
         c = 0x14;
-    } else if (e == "\\NAK") {
+    } else if (escape == "\\NAK") {
         c = 0x15;
-    } else if (e == "\\SYN") {
+    } else if (escape == "\\SYN") {
         c = 0x16;
-    } else if (e == "\\ETB") {
+    } else if (escape == "\\ETB") {
         c = 0x17;
-    } else if (e == "\\CAN") {
+    } else if (escape == "\\CAN") {
         c = 0x18;
-    } else if (e == "\\EM") {
+    } else if (escape == "\\EM") {
         c = 0x19;
-    } else if (e == "\\SUB") {
+    } else if (escape == "\\SUB") {
         c = 0x1A;
-    } else if (e == "\\ESC") {
+    } else if (escape == "\\ESC") {
         c = 0x1B;
-    } else if (e == "\\FS") {
+    } else if (escape == "\\FS") {
         c = 0x1C;
-    } else if (e == "\\GS") {
+    } else if (escape == "\\GS") {
         c = 0x1D;
-    } else if (e == "\\RS") {
+    } else if (escape == "\\RS") {
         c = 0x1E;
-    } else if (e == "\\US") {
+    } else if (escape == "\\US") {
         c = 0x1F;
-    } else if (e == "\\SP") {
+    } else if (escape == "\\SP") {
         c = 0x20;
-    } else if (e == "\\DEL") {
+    } else if (escape == "\\DEL") {
         c = 0x7F;
-    } else if (e == "\\^@") {
+    } else if (escape == "\\^@") {
         c = 0x00;
-    } else if (e == "\\^[") {
+    } else if (escape == "\\^[") {
         c = 0x1B;
-    } else if (e == "\\^\\") {
+    } else if (escape == "\\^\\") {
         c = 0x1C;
-    } else if (e == "\\^]") {
+    } else if (escape == "\\^]") {
         c = 0x1D;
-    } else if (e == "\\^^") {
+    } else if (escape == "\\^^") {
         c = 0x1E;
-    } else if (e == "\\^_") {
+    } else if (escape == "\\^_") {
         c = 0x1F;
-    } else if (e[1] == '^' && isupper(e[2])) {
-        c = e[2] - 0x40;
+    } else if (escape[1] == '^' && isupper(escape[2])) {
+        c = escape[2] - 0x40;
     }
 
     if (c < 0 || c > 127) {
-        throw yy::parser::syntax_error(loc, "Invalid escape sequence: " + e);
+        throw yy::parser::syntax_error(loc, "Invalid escape sequence: " + escape);
     }
     return c;
 }

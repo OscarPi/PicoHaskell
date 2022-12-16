@@ -3,34 +3,6 @@
 #include "parser/driver.hpp"
 #include "lexer/lexer.hpp"
 
-bool sameType_ignoreKinds(const type &a, const type &b) {
-    std::shared_ptr<const TypeVariable> variable1;
-    std::shared_ptr<const TypeVariable> variable2;
-    std::shared_ptr<const TypeConstructor> constructor1;
-    std::shared_ptr<const TypeConstructor> constructor2;
-    std::shared_ptr<const TypeApplication> application1;
-    std::shared_ptr<const TypeApplication> application2;
-    if (a->getType() != b->getType()) {
-        return false;
-    }
-    switch (a->getType()) {
-        case ttype::var:
-            variable1 = std::dynamic_pointer_cast<const TypeVariable>(a);
-            variable2 = std::dynamic_pointer_cast<const TypeVariable>(b);
-            return variable1->getId() == variable2->getId();
-        case ttype::con:
-            constructor1 = std::dynamic_pointer_cast<const TypeConstructor>(a);
-            constructor2 = std::dynamic_pointer_cast<const TypeConstructor>(b);
-            return constructor1->getId() == constructor2->getId();
-        case ttype::ap:
-            application1 = std::dynamic_pointer_cast<const TypeApplication>(a);
-            application2 = std::dynamic_pointer_cast<const TypeApplication>(b);
-            return sameType_ignoreKinds(application1->getLeft(), application2->getLeft()) && sameType_ignoreKinds(application1->getRight(), application2->getRight());
-        case ttype::gen:
-            return std::dynamic_pointer_cast<const TypeGeneric>(a)->getN() == std::dynamic_pointer_cast<const TypeGeneric>(b)->getN();
-    }
-}
-
 void reset_start_condition();
 
 int parse_string(const char* str, const std::shared_ptr<Program> &program) {
@@ -48,67 +20,67 @@ TEST(Parser, ParsesTypeSignatures) {
     std::shared_ptr<Program> program = std::make_shared<Program>();
     int result = parse_string("a :: ()", program);
     ASSERT_EQ(result, 0);
-    ASSERT_NE(program->typeSignatures["a"], nullptr);
-    EXPECT_TRUE(sameType(program->typeSignatures["a"], tUnit));
+    ASSERT_NE(program->type_signatures["a"], nullptr);
+    EXPECT_TRUE(same_type(program->type_signatures["a"], tUnit));
 
     program = std::make_shared<Program>();
     result = parse_string("a :: [] Int", program);
     ASSERT_EQ(result, 0);
-    ASSERT_NE(program->typeSignatures["a"], nullptr);
-    EXPECT_TRUE(sameType_ignoreKinds(program->typeSignatures["a"], makeListType(tInt)));
+    ASSERT_NE(program->type_signatures["a"], nullptr);
+    EXPECT_TRUE(same_type(program->type_signatures["a"], make_list_type(tInt)));
 
     program = std::make_shared<Program>();
     result = parse_string("a :: [Int]", program);
     ASSERT_EQ(result, 0);
-    ASSERT_NE(program->typeSignatures["a"], nullptr);
-    EXPECT_TRUE(sameType_ignoreKinds(program->typeSignatures["a"], makeListType(tInt)));
+    ASSERT_NE(program->type_signatures["a"], nullptr);
+    EXPECT_TRUE(same_type(program->type_signatures["a"], make_list_type(tInt)));
 
     program = std::make_shared<Program>();
     result = parse_string("a :: Int -> Int -> Int", program);
     ASSERT_EQ(result, 0);
-    ASSERT_NE(program->typeSignatures["a"], nullptr);
-    type expected = makeFunctionType(tInt, makeFunctionType(tInt, tInt));
-    EXPECT_TRUE(sameType_ignoreKinds(program->typeSignatures["a"], expected));
+    ASSERT_NE(program->type_signatures["a"], nullptr);
+    type expected = make_function_type(tInt, make_function_type(tInt, tInt));
+    EXPECT_TRUE(same_type(program->type_signatures["a"], expected));
 
     program = std::make_shared<Program>();
     result = parse_string("a :: (->) Int (Int -> Int)", program);
     ASSERT_EQ(result, 0);
-    ASSERT_NE(program->typeSignatures["a"], nullptr);
-    expected = makeFunctionType(tInt, makeFunctionType(tInt, tInt));
-    EXPECT_TRUE(sameType_ignoreKinds(program->typeSignatures["a"], expected));
+    ASSERT_NE(program->type_signatures["a"], nullptr);
+    expected = make_function_type(tInt, make_function_type(tInt, tInt));
+    EXPECT_TRUE(same_type(program->type_signatures["a"], expected));
 
     program = std::make_shared<Program>();
     result = parse_string("a :: (Int -> Int) -> Int", program);
     ASSERT_EQ(result, 0);
-    ASSERT_NE(program->typeSignatures["a"], nullptr);
-    expected = makeFunctionType(makeFunctionType(tInt, tInt), tInt);
-    EXPECT_TRUE(sameType_ignoreKinds(program->typeSignatures["a"], expected));
+    ASSERT_NE(program->type_signatures["a"], nullptr);
+    expected = make_function_type(make_function_type(tInt, tInt), tInt);
+    EXPECT_TRUE(same_type(program->type_signatures["a"], expected));
 
     program = std::make_shared<Program>();
     result = parse_string("a :: cheesecake -> cheesecake", program);
     ASSERT_EQ(result, 0);
-    ASSERT_NE(program->typeSignatures["a"], nullptr);
-    type cheesecake = std::make_shared<const TypeVariable>("cheesecake", nullptr);
-    expected = makeFunctionType(cheesecake, cheesecake);
-    EXPECT_TRUE(sameType_ignoreKinds(program->typeSignatures["a"], expected));
+    ASSERT_NE(program->type_signatures["a"], nullptr);
+    type cheesecake = std::make_shared<const TypeVariable>("cheesecake");
+    expected = make_function_type(cheesecake, cheesecake);
+    EXPECT_TRUE(same_type(program->type_signatures["a"], expected));
 
     program = std::make_shared<Program>();
     result = parse_string("a :: (Int,Double)", program);
     ASSERT_EQ(result, 0);
-    ASSERT_NE(program->typeSignatures["a"], nullptr);
-    EXPECT_TRUE(sameType_ignoreKinds(program->typeSignatures["a"], makePairType(tInt, tDouble)));
+    ASSERT_NE(program->type_signatures["a"], nullptr);
+    EXPECT_TRUE(same_type(program->type_signatures["a"], make_pair_type(tInt, tDouble)));
 
     program = std::make_shared<Program>();
     result = parse_string("a :: (Int,Double,Int)", program);
     ASSERT_EQ(result, 0);
-    ASSERT_NE(program->typeSignatures["a"], nullptr);
-    EXPECT_TRUE(sameType_ignoreKinds(program->typeSignatures["a"], makeTupleType({tInt, tDouble, tInt})));
+    ASSERT_NE(program->type_signatures["a"], nullptr);
+    EXPECT_TRUE(same_type(program->type_signatures["a"], make_tuple_type({tInt, tDouble, tInt})));
 
     program = std::make_shared<Program>();
     result = parse_string("a :: (,,) Int Double Int", program);
     ASSERT_EQ(result, 0);
-    ASSERT_NE(program->typeSignatures["a"], nullptr);
-    EXPECT_TRUE(sameType_ignoreKinds(program->typeSignatures["a"], makeTupleType({tInt, tDouble, tInt})));
+    ASSERT_NE(program->type_signatures["a"], nullptr);
+    EXPECT_TRUE(same_type(program->type_signatures["a"], make_tuple_type({tInt, tDouble, tInt})));
 }
 
 TEST(Parser, ParsesDataDecls) {
@@ -119,58 +91,52 @@ TEST(Parser, ParsesDataDecls) {
     program = std::make_shared<Program>();
     result = parse_string("data Hi", program);
     ASSERT_EQ(result, 0);
-    auto tConstructor = program->typeConstructors["Hi"];
-    ASSERT_NE(tConstructor, nullptr);
-    EXPECT_EQ(tConstructor->getLineNo(), 1);
-    EXPECT_EQ(tConstructor->getName(), "Hi");
-    EXPECT_EQ(tConstructor->getArgumentVariables().size(), 0);
-    EXPECT_EQ(tConstructor->getDataConstructors().size(), 0);
-
-    program = std::make_shared<Program>();
-    EXPECT_THROW(parse_string("data Hi a a", program), ParseError);
-
-    program = std::make_shared<Program>();
-    EXPECT_THROW(parse_string("data Hi a = Bye b", program), ParseError);
+    const auto &hi = program->type_constructors["Hi"];
+    ASSERT_NE(hi, nullptr);
+    EXPECT_EQ(hi->line, 1);
+    EXPECT_EQ(hi->name, "Hi");
+    EXPECT_EQ(hi->argument_variables.size(), 0);
+    EXPECT_EQ(hi->data_constructors.size(), 0);
 
     program = std::make_shared<Program>();
     result = parse_string("data Hi = Bye | No", program);
     ASSERT_EQ(result, 0);
-    tConstructor = program->typeConstructors["Hi"];
-    ASSERT_NE(tConstructor, nullptr);
-    EXPECT_EQ(tConstructor->getLineNo(), 1);
-    EXPECT_EQ(tConstructor->getName(), "Hi");
-    EXPECT_EQ(tConstructor->getArgumentVariables().size(), 0);
-    ASSERT_EQ(tConstructor->getDataConstructors().size(), 2);
-    auto dConstructor = tConstructor->getDataConstructors()[0];
-    EXPECT_EQ(dConstructor->getLineNo(), 1);
-    EXPECT_EQ(dConstructor->getName(), "Bye");
-    EXPECT_EQ(dConstructor->getTypes().size(), 0);
-    EXPECT_EQ(dConstructor->getTConstructor(), tConstructor);
-    dConstructor = tConstructor->getDataConstructors()[1];
-    EXPECT_EQ(dConstructor->getLineNo(), 1);
-    EXPECT_EQ(dConstructor->getName(), "No");
-    EXPECT_EQ(dConstructor->getTypes().size(), 0);
-    EXPECT_EQ(dConstructor->getTConstructor(), tConstructor);
+    const auto &hi2 = program->type_constructors["Hi"];
+    ASSERT_NE(hi2, nullptr);
+    EXPECT_EQ(hi2->line, 1);
+    EXPECT_EQ(hi2->name, "Hi");
+    EXPECT_EQ(hi2->argument_variables.size(), 0);
+    ASSERT_EQ(hi2->data_constructors.size(), 2);
+    const auto &bye = program->data_constructors["Bye"];
+    EXPECT_EQ(bye->line, 1);
+    EXPECT_EQ(bye->name, "Bye");
+    EXPECT_EQ(bye->types.size(), 0);
+    EXPECT_EQ(bye->type_constructor, "Hi");
+    const auto &no = program->data_constructors["No"];
+    EXPECT_EQ(no->line, 1);
+    EXPECT_EQ(no->name, "No");
+    EXPECT_EQ(no->types.size(), 0);
+    EXPECT_EQ(no->type_constructor, "Hi");
 
     program = std::make_shared<Program>();
     result = parse_string("data Hi a b = Bye a | No", program);
     ASSERT_EQ(result, 0);
-    tConstructor = program->typeConstructors["Hi"];
-    ASSERT_NE(tConstructor, nullptr);
-    EXPECT_EQ(tConstructor->getLineNo(), 1);
-    EXPECT_EQ(tConstructor->getName(), "Hi");
-    EXPECT_EQ(tConstructor->getArgumentVariables().size(), 2);
-    ASSERT_EQ(tConstructor->getDataConstructors().size(), 2);
-    dConstructor = tConstructor->getDataConstructors()[0];
-    EXPECT_EQ(dConstructor->getLineNo(), 1);
-    EXPECT_EQ(dConstructor->getName(), "Bye");
-    EXPECT_EQ(dConstructor->getTypes().size(), 1);
-    EXPECT_EQ(dConstructor->getTConstructor(), tConstructor);
-    dConstructor = tConstructor->getDataConstructors()[1];
-    EXPECT_EQ(dConstructor->getLineNo(), 1);
-    EXPECT_EQ(dConstructor->getName(), "No");
-    EXPECT_EQ(dConstructor->getTypes().size(), 0);
-    EXPECT_EQ(dConstructor->getTConstructor(), tConstructor);
+    const auto &hi3 = program->type_constructors["Hi"];
+    ASSERT_NE(hi3, nullptr);
+    EXPECT_EQ(hi3->line, 1);
+    EXPECT_EQ(hi3->name, "Hi");
+    EXPECT_EQ(hi3->argument_variables.size(), 2);
+    ASSERT_EQ(hi3->data_constructors.size(), 2);
+    const auto &bye2 = program->data_constructors["Bye"];
+    EXPECT_EQ(bye2->line, 1);
+    EXPECT_EQ(bye2->name, "Bye");
+    EXPECT_EQ(bye2->types.size(), 1);
+    EXPECT_EQ(bye2->type_constructor, "Hi");
+    const auto &no2 = program->data_constructors["No"];
+    EXPECT_EQ(no2->line, 1);
+    EXPECT_EQ(no2->name, "No");
+    EXPECT_EQ(no2->types.size(), 0);
+    EXPECT_EQ(no2->type_constructor, "Hi");
 
     program = std::make_shared<Program>();
     EXPECT_THROW(parse_string("data Hi a\n;data Hi", program), ParseError);
@@ -181,28 +147,28 @@ TEST(Parser, ParsesDataDecls) {
     program = std::make_shared<Program>();
     result = parse_string("data Hi = Bye\n;data Bye = Hi", program);
     ASSERT_EQ(result, 0);
-    tConstructor = program->typeConstructors["Hi"];
-    ASSERT_NE(tConstructor, nullptr);
-    EXPECT_EQ(tConstructor->getLineNo(), 1);
-    EXPECT_EQ(tConstructor->getName(), "Hi");
-    EXPECT_EQ(tConstructor->getArgumentVariables().size(), 0);
-    ASSERT_EQ(tConstructor->getDataConstructors().size(), 1);
-    dConstructor = tConstructor->getDataConstructors()[0];
-    EXPECT_EQ(dConstructor->getLineNo(), 1);
-    EXPECT_EQ(dConstructor->getName(), "Bye");
-    EXPECT_EQ(dConstructor->getTypes().size(), 0);
-    EXPECT_EQ(dConstructor->getTConstructor(), tConstructor);
-    tConstructor = program->typeConstructors["Bye"];
-    ASSERT_NE(tConstructor, nullptr);
-    EXPECT_EQ(tConstructor->getLineNo(), 2);
-    EXPECT_EQ(tConstructor->getName(), "Bye");
-    EXPECT_EQ(tConstructor->getArgumentVariables().size(), 0);
-    ASSERT_EQ(tConstructor->getDataConstructors().size(), 1);
-    dConstructor = tConstructor->getDataConstructors()[0];
-    EXPECT_EQ(dConstructor->getLineNo(), 2);
-    EXPECT_EQ(dConstructor->getName(), "Hi");
-    EXPECT_EQ(dConstructor->getTypes().size(), 0);
-    EXPECT_EQ(dConstructor->getTConstructor(), tConstructor);
+    const auto &hi4 = program->type_constructors["Hi"];
+    ASSERT_NE(hi4, nullptr);
+    EXPECT_EQ(hi4->line, 1);
+    EXPECT_EQ(hi4->name, "Hi");
+    EXPECT_EQ(hi4->argument_variables.size(), 0);
+    ASSERT_EQ(hi4->data_constructors.size(), 1);
+    const auto &bye3 = program->data_constructors["Bye"];
+    EXPECT_EQ(bye3->line, 1);
+    EXPECT_EQ(bye3->name, "Bye");
+    EXPECT_EQ(bye3->types.size(), 0);
+    EXPECT_EQ(bye3->type_constructor, "Hi");
+    const auto &bye4 = program->type_constructors["Bye"];
+    ASSERT_NE(bye4, nullptr);
+    EXPECT_EQ(bye4->line, 2);
+    EXPECT_EQ(bye4->name, "Bye");
+    EXPECT_EQ(bye4->argument_variables.size(), 0);
+    ASSERT_EQ(bye4->data_constructors.size(), 1);
+    const auto &hi5 = program->data_constructors["Hi"];
+    EXPECT_EQ(hi5->line, 2);
+    EXPECT_EQ(hi5->name, "Hi");
+    EXPECT_EQ(hi5->types.size(), 0);
+    EXPECT_EQ(hi5->type_constructor, "Bye");
 }
 
 TEST(Parser, ParsesVariableExpressions) {
@@ -211,13 +177,12 @@ TEST(Parser, ParsesVariableExpressions) {
     ASSERT_EQ(result, 0);
     EXPECT_EQ(program->bindings.size(), 2);
     ASSERT_NE(program->bindings["a"], nullptr);
-    auto a = program->bindings["a"];
-    ASSERT_EQ(a->getForm(), expform::var);
-    EXPECT_EQ(std::dynamic_pointer_cast<Variable>(a)->name, "b");
+    const auto &a = program->bindings["a"];
+    EXPECT_EQ(dynamic_cast<Variable*>(a.get())->name, "b");
     ASSERT_NE(program->bindings["c"], nullptr);
-    auto c = program->bindings["c"];
-    ASSERT_EQ(c->getForm(), expform::var);
-    EXPECT_EQ(std::dynamic_pointer_cast<Variable>(c)->name, "d");
+    const auto &c = program->bindings["c"];
+    ASSERT_EQ(c->getForm(), expform::variable);
+    EXPECT_EQ(dynamic_cast<Variable*>(c.get())->name, "d");
 
     program = std::make_shared<Program>();
     EXPECT_THROW(parse_string("a = b \n;a = d", program), ParseError);
@@ -229,23 +194,14 @@ TEST(Parser, ParsesLiteralExpressions) {
     ASSERT_EQ(result, 0);
     EXPECT_EQ(program->bindings.size(), 3);
 
-    ASSERT_NE(program->bindings["a"], nullptr);
-    auto a = program->bindings["a"];
-    ASSERT_EQ(a->getForm(), expform::lit);
-    ASSERT_TRUE(std::holds_alternative<int>(std::dynamic_pointer_cast<Literal>(a)->value));
-    EXPECT_EQ(std::get<int>(std::dynamic_pointer_cast<Literal>(a)->value), 1);
+    const auto &a = program->bindings["a"];
+    EXPECT_EQ(std::get<int>(dynamic_cast<Literal*>(a.get())->value), 1);
 
-    ASSERT_NE(program->bindings["b"], nullptr);
-    auto b = program->bindings["b"];
-    ASSERT_EQ(b->getForm(), expform::lit);
-    ASSERT_TRUE(std::holds_alternative<char>(std::dynamic_pointer_cast<Literal>(b)->value));
-    EXPECT_EQ(std::get<char>(std::dynamic_pointer_cast<Literal>(b)->value), 'a');
+    const auto &b = program->bindings["b"];
+    EXPECT_EQ(std::get<char>(dynamic_cast<Literal*>(b.get())->value), 'a');
 
-    ASSERT_NE(program->bindings["c"], nullptr);
-    auto c = program->bindings["c"];
-    ASSERT_EQ(c->getForm(), expform::lit);
-    ASSERT_TRUE(std::holds_alternative<std::string>(std::dynamic_pointer_cast<Literal>(c)->value));
-    EXPECT_EQ(std::get<std::string>(std::dynamic_pointer_cast<Literal>(c)->value), "hi");
+    const auto &c = program->bindings["c"];
+    EXPECT_EQ(std::get<std::string>(dynamic_cast<Literal*>(c.get())->value), "hi");
 }
 
 TEST(Parser, ParsesConstructorExpressions) {
@@ -254,25 +210,17 @@ TEST(Parser, ParsesConstructorExpressions) {
     ASSERT_EQ(result, 0);
     EXPECT_EQ(program->bindings.size(), 4);
 
-    ASSERT_NE(program->bindings["a"], nullptr);
-    auto a = program->bindings["a"];
-    ASSERT_EQ(a->getForm(), expform::con);
-    EXPECT_EQ(std::dynamic_pointer_cast<Constructor>(a)->name, "()");
+    const auto &a = program->bindings["a"];
+    EXPECT_EQ(dynamic_cast<Constructor*>(a.get())->name, "()");
 
-    ASSERT_NE(program->bindings["b"], nullptr);
-    auto b = program->bindings["b"];
-    ASSERT_EQ(b->getForm(), expform::con);
-    EXPECT_EQ(std::dynamic_pointer_cast<Constructor>(b)->name, "[]");
+    const auto &b = program->bindings["b"];
+    EXPECT_EQ(dynamic_cast<Constructor*>(b.get())->name, "[]");
 
-    ASSERT_NE(program->bindings["c"], nullptr);
-    auto c = program->bindings["c"];
-    ASSERT_EQ(c->getForm(), expform::con);
-    EXPECT_EQ(std::dynamic_pointer_cast<Constructor>(c)->name, "(,,)");
+    const auto &c = program->bindings["c"];
+    EXPECT_EQ(dynamic_cast<Constructor*>(c.get())->name, "(,,)");
 
-    ASSERT_NE(program->bindings["d"], nullptr);
-    auto d = program->bindings["d"];
-    ASSERT_EQ(d->getForm(), expform::con);
-    EXPECT_EQ(std::dynamic_pointer_cast<Constructor>(d)->name, "Toast");
+    const auto &d = program->bindings["d"];
+    EXPECT_EQ(dynamic_cast<Constructor*>(d.get())->name, "Toast");
 }
 
 TEST(Parser, ParsesApplicationExpressions) {
@@ -281,17 +229,11 @@ TEST(Parser, ParsesApplicationExpressions) {
     ASSERT_EQ(result, 0);
     EXPECT_EQ(program->bindings.size(), 1);
 
-    ASSERT_NE(program->bindings["a"], nullptr);
-    ASSERT_EQ(program->bindings["a"]->getForm(), expform::app);
-    auto a = std::dynamic_pointer_cast<Application>(program->bindings["a"]);
-    ASSERT_EQ(a->right->getForm(), expform::var);
-    EXPECT_EQ(std::dynamic_pointer_cast<Variable>(a->right)->name, "d");
-    ASSERT_EQ(a->left->getForm(), expform::app);
-    auto l = std::dynamic_pointer_cast<Application>(a->left);
-    ASSERT_EQ(l->left->getForm(), expform::var);
-    EXPECT_EQ(std::dynamic_pointer_cast<Variable>(l->left)->name, "b");
-    ASSERT_EQ(l->right->getForm(), expform::var);
-    EXPECT_EQ(std::dynamic_pointer_cast<Variable>(l->right)->name, "c");
+    const auto &a = dynamic_cast<Application*>(program->bindings["a"].get());
+    EXPECT_EQ(dynamic_cast<Variable*>(a->right.get())->name, "d");
+    auto l = dynamic_cast<Application*>(a->left.get());
+    EXPECT_EQ(dynamic_cast<Variable*>(l->left.get())->name, "b");
+    EXPECT_EQ(dynamic_cast<Variable*>(l->right.get())->name, "c");
 }
 
 TEST(Parser, ParsesLambdaAbstractions) {
@@ -301,29 +243,25 @@ TEST(Parser, ParsesLambdaAbstractions) {
     EXPECT_EQ(program->bindings.size(), 1);
 
     ASSERT_NE(program->bindings["l"], nullptr);
-    ASSERT_EQ(program->bindings["l"]->getForm(), expform::lam);
-    auto l = std::dynamic_pointer_cast<Lambda>(program->bindings["l"]);
+    ASSERT_EQ(program->bindings["l"]->getForm(), expform::abstraction);
+    auto l = dynamic_cast<Lambda*>(program->bindings["l"].get());
     auto args = l->args;
     EXPECT_EQ(args.size(), 2);
     EXPECT_EQ(std::count(args.begin(), args.end(), "a"), 1);
     EXPECT_EQ(std::count(args.begin(), args.end(), "b"), 1);
-    ASSERT_EQ(l->body->getForm(), expform::var);
-    EXPECT_EQ(std::dynamic_pointer_cast<Variable>(l->body)->name, "a");
+    ASSERT_EQ(l->body->getForm(), expform::variable);
+    EXPECT_EQ(dynamic_cast<Variable*>(l->body.get())->name, "a");
 }
 
 #define TESTINFIXOP(opstr, oper) { \
-    auto program = std::make_shared<Program>();                            \
-    auto result = parse_string("a = b " opstr " c", program);              \
-    ASSERT_EQ(result, 0);                                                  \
-    EXPECT_EQ(program->bindings.size(), 1);                                \
-    ASSERT_NE(program->bindings["a"], nullptr);                            \
-    ASSERT_EQ(program->bindings["a"]->getForm(), expform::bop);            \
-    auto a = std::dynamic_pointer_cast<BuiltInOp>(program->bindings["a"]); \
-    ASSERT_EQ(a->left->getForm(), expform::var);                           \
-    EXPECT_EQ(std::dynamic_pointer_cast<Variable>(a->left)->name, "b");    \
-    ASSERT_EQ(a->right->getForm(), expform::var);                          \
-    EXPECT_EQ(std::dynamic_pointer_cast<Variable>(a->right)->name, "c");   \
-    EXPECT_EQ(a->op, (oper));                                              \
+    auto program = std::make_shared<Program>();                      \
+    auto result = parse_string("a = b " opstr " c", program);        \
+    ASSERT_EQ(result, 0);                                            \
+    EXPECT_EQ(program->bindings.size(), 1);                          \
+    auto a = dynamic_cast<BuiltInOp*>(program->bindings["a"].get()); \
+    EXPECT_EQ(dynamic_cast<Variable*>(a->left.get())->name, "b");    \
+    EXPECT_EQ(dynamic_cast<Variable*>(a->right.get())->name, "c");   \
+    EXPECT_EQ(a->op, (oper));                                        \
 }
 
 TEST(Parser, ParsesInfix) {
@@ -345,11 +283,11 @@ TEST(Parser, ParsesInfix) {
     ASSERT_EQ(result, 0);
     EXPECT_EQ(program->bindings.size(), 1);
     ASSERT_NE(program->bindings["a"], nullptr);
-    ASSERT_EQ(program->bindings["a"]->getForm(), expform::bop);
-    auto a = std::dynamic_pointer_cast<BuiltInOp>(program->bindings["a"]);
+    ASSERT_EQ(program->bindings["a"]->getForm(), expform::builtinop);
+    auto a = dynamic_cast<BuiltInOp*>(program->bindings["a"].get());
     EXPECT_EQ(a->left, nullptr);
-    ASSERT_EQ(a->right->getForm(), expform::var);
-    EXPECT_EQ(std::dynamic_pointer_cast<Variable>(a->right)->name, "c");
+    ASSERT_EQ(a->right->getForm(), expform::variable);
+    EXPECT_EQ(dynamic_cast<Variable*>(a->right.get())->name, "c");
     EXPECT_EQ(a->op, builtinop::negate);
 
     program = std::make_shared<Program>();
@@ -357,32 +295,32 @@ TEST(Parser, ParsesInfix) {
     ASSERT_EQ(result, 0);
     EXPECT_EQ(program->bindings.size(), 1);
     ASSERT_NE(program->bindings["a"], nullptr);
-    ASSERT_EQ(program->bindings["a"]->getForm(), expform::app);
-    auto b = std::dynamic_pointer_cast<Application>(program->bindings["a"]);
-    ASSERT_EQ(b->left->getForm(), expform::app);
-    auto l = std::dynamic_pointer_cast<Application>(b->left);
-    ASSERT_EQ(l->left->getForm(), expform::con);
-    EXPECT_EQ(std::dynamic_pointer_cast<Constructor>(l->left)->name, ":");
-    ASSERT_EQ(l->right->getForm(), expform::var);
-    EXPECT_EQ(std::dynamic_pointer_cast<Variable>(l->right)->name, "b");
-    ASSERT_EQ(b->right->getForm(), expform::var);
-    EXPECT_EQ(std::dynamic_pointer_cast<Variable>(b->right)->name, "c");
+    ASSERT_EQ(program->bindings["a"]->getForm(), expform::application);
+    auto b = dynamic_cast<Application*>(program->bindings["a"].get());
+    ASSERT_EQ(b->left->getForm(), expform::application);
+    auto l = dynamic_cast<Application*>(b->left.get());
+    ASSERT_EQ(l->left->getForm(), expform::constructor);
+    EXPECT_EQ(dynamic_cast<Constructor*>(l->left.get())->name, ":");
+    ASSERT_EQ(l->right->getForm(), expform::variable);
+    EXPECT_EQ(dynamic_cast<Variable*>(l->right.get())->name, "b");
+    ASSERT_EQ(b->right->getForm(), expform::variable);
+    EXPECT_EQ(dynamic_cast<Variable*>(b->right.get())->name, "c");
 
     program = std::make_shared<Program>();
     result = parse_string("a = b.c", program);
     ASSERT_EQ(result, 0);
     EXPECT_EQ(program->bindings.size(), 1);
     ASSERT_NE(program->bindings["a"], nullptr);
-    ASSERT_EQ(program->bindings["a"]->getForm(), expform::app);
-    b = std::dynamic_pointer_cast<Application>(program->bindings["a"]);
-    ASSERT_EQ(b->left->getForm(), expform::app);
-    l = std::dynamic_pointer_cast<Application>(b->left);
-    ASSERT_EQ(l->left->getForm(), expform::var);
-    EXPECT_EQ(std::dynamic_pointer_cast<Variable>(l->left)->name, ".");
-    ASSERT_EQ(l->right->getForm(), expform::var);
-    EXPECT_EQ(std::dynamic_pointer_cast<Variable>(l->right)->name, "b");
-    ASSERT_EQ(b->right->getForm(), expform::var);
-    EXPECT_EQ(std::dynamic_pointer_cast<Variable>(b->right)->name, "c");
+    ASSERT_EQ(program->bindings["a"]->getForm(), expform::application);
+    b = dynamic_cast<Application*>(program->bindings["a"].get());
+    ASSERT_EQ(b->left->getForm(), expform::application);
+    l = dynamic_cast<Application*>(b->left.get());
+    ASSERT_EQ(l->left->getForm(), expform::variable);
+    EXPECT_EQ(dynamic_cast<Variable*>(l->left.get())->name, ".");
+    ASSERT_EQ(l->right->getForm(), expform::variable);
+    EXPECT_EQ(dynamic_cast<Variable*>(l->right.get())->name, "b");
+    ASSERT_EQ(b->right->getForm(), expform::variable);
+    EXPECT_EQ(dynamic_cast<Variable*>(b->right.get())->name, "c");
 }
 
 TEST(Parser, ParsesConditionals) {
@@ -392,27 +330,27 @@ TEST(Parser, ParsesConditionals) {
     EXPECT_EQ(program->bindings.size(), 1);
 
     ASSERT_NE(program->bindings["i"], nullptr);
-    ASSERT_EQ(program->bindings["i"]->getForm(), expform::cas);
-    auto i = std::dynamic_pointer_cast<Case>(program->bindings["i"]);
-    ASSERT_EQ(i->exp->getForm(), expform::var);
-    EXPECT_EQ(std::dynamic_pointer_cast<Variable>(i->exp)->name, "a");
+    ASSERT_EQ(program->bindings["i"]->getForm(), expform::cAsE);
+    auto i = dynamic_cast<Case*>(program->bindings["i"].get());
+    ASSERT_EQ(i->exp->getForm(), expform::variable);
+    EXPECT_EQ(dynamic_cast<Variable*>(i->exp.get())->name, "a");
 
-    auto alts = i->alts;
+    const auto &alts = i->alts;
     ASSERT_EQ(alts.size(), 2);
-    ASSERT_EQ(alts[0].first->getForm(), patform::con);
-    auto p = std::dynamic_pointer_cast<ConPattern>(alts[0].first);
+    ASSERT_EQ(alts[0].first->getForm(), patternform::constructor);
+    auto p = dynamic_cast<ConstructorPattern*>(alts[0].first.get());
     EXPECT_EQ(p->name, "True");
     EXPECT_EQ(p->args.size(), 0);
-    ASSERT_EQ(alts[0].second->getForm(), expform::lit);
-    auto l = std::dynamic_pointer_cast<Literal>(alts[0].second);
+    ASSERT_EQ(alts[0].second->getForm(), expform::literal);
+    auto l = dynamic_cast<Literal*>(alts[0].second.get());
     EXPECT_EQ(std::get<int>(l->value), 1);
 
-    ASSERT_EQ(alts[1].first->getForm(), patform::con);
-    p = std::dynamic_pointer_cast<ConPattern>(alts[1].first);
+    ASSERT_EQ(alts[1].first->getForm(), patternform::constructor);
+    p = dynamic_cast<ConstructorPattern*>(alts[1].first.get());
     EXPECT_EQ(p->name, "False");
     EXPECT_EQ(p->args.size(), 0);
-    ASSERT_EQ(alts[1].second->getForm(), expform::lit);
-    l = std::dynamic_pointer_cast<Literal>(alts[1].second);
+    ASSERT_EQ(alts[1].second->getForm(), expform::literal);
+    l = dynamic_cast<Literal*>(alts[1].second.get());
     EXPECT_EQ(std::get<int>(l->value), 2);
 }
 
@@ -423,26 +361,26 @@ TEST(Parser, ParsesLists) {
     EXPECT_EQ(program->bindings.size(), 1);
 
     ASSERT_NE(program->bindings["l"], nullptr);
-    ASSERT_EQ(program->bindings["l"]->getForm(), expform::app);
-    auto l = std::dynamic_pointer_cast<Application>(program->bindings["l"]);
+    ASSERT_EQ(program->bindings["l"]->getForm(), expform::application);
+    auto l = dynamic_cast<Application*>(program->bindings["l"].get());
 
-    ASSERT_EQ(l->left->getForm(), expform::app);
-    auto ll = std::dynamic_pointer_cast<Application>(l->left);
-    ASSERT_EQ(ll->left->getForm(), expform::con);
-    EXPECT_EQ(std::dynamic_pointer_cast<Constructor>(ll->left)->name, ":");
-    ASSERT_EQ(ll->right->getForm(), expform::lit);
-    EXPECT_EQ(std::get<int>(std::dynamic_pointer_cast<Literal>(ll->right)->value), 1);
+    ASSERT_EQ(l->left->getForm(), expform::application);
+    auto ll = dynamic_cast<Application*>(l->left.get());
+    ASSERT_EQ(ll->left->getForm(), expform::constructor);
+    EXPECT_EQ(dynamic_cast<Constructor*>(ll->left.get())->name, ":");
+    ASSERT_EQ(ll->right->getForm(), expform::literal);
+    EXPECT_EQ(std::get<int>(dynamic_cast<Literal*>(ll->right.get())->value), 1);
 
-    ASSERT_EQ(l->right->getForm(), expform::app);
-    auto r = std::dynamic_pointer_cast<Application>(l->right);
-    ASSERT_EQ(r->left->getForm(), expform::app);
-    auto rl = std::dynamic_pointer_cast<Application>(r->left);
-    ASSERT_EQ(rl->left->getForm(), expform::con);
-    EXPECT_EQ(std::dynamic_pointer_cast<Constructor>(rl->left)->name, ":");
-    ASSERT_EQ(rl->right->getForm(), expform::lit);
-    EXPECT_EQ(std::get<int>(std::dynamic_pointer_cast<Literal>(rl->right)->value), 2);
-    ASSERT_EQ(r->right->getForm(), expform::con);
-    EXPECT_EQ(std::dynamic_pointer_cast<Constructor>(r->right)->name, "[]");
+    ASSERT_EQ(l->right->getForm(), expform::application);
+    auto r = dynamic_cast<Application*>(l->right.get());
+    ASSERT_EQ(r->left->getForm(), expform::application);
+    auto rl = dynamic_cast<Application*>(r->left.get());
+    ASSERT_EQ(rl->left->getForm(), expform::constructor);
+    EXPECT_EQ(dynamic_cast<Constructor*>(rl->left.get())->name, ":");
+    ASSERT_EQ(rl->right->getForm(), expform::literal);
+    EXPECT_EQ(std::get<int>(dynamic_cast<Literal*>(rl->right.get())->value), 2);
+    ASSERT_EQ(r->right->getForm(), expform::constructor);
+    EXPECT_EQ(dynamic_cast<Constructor*>(r->right.get())->name, "[]");
 }
 
 TEST(Parser, ParsesTuples) {
@@ -452,18 +390,18 @@ TEST(Parser, ParsesTuples) {
     EXPECT_EQ(program->bindings.size(), 1);
 
     ASSERT_NE(program->bindings["l"], nullptr);
-    ASSERT_EQ(program->bindings["l"]->getForm(), expform::app);
-    auto l = std::dynamic_pointer_cast<Application>(program->bindings["l"]);
+    ASSERT_EQ(program->bindings["l"]->getForm(), expform::application);
+    auto l = dynamic_cast<Application*>(program->bindings["l"].get());
 
-    ASSERT_EQ(l->left->getForm(), expform::app);
-    auto ll = std::dynamic_pointer_cast<Application>(l->left);
-    ASSERT_EQ(ll->left->getForm(), expform::con);
-    EXPECT_EQ(std::dynamic_pointer_cast<Constructor>(ll->left)->name, "(,)");
-    ASSERT_EQ(ll->right->getForm(), expform::lit);
-    EXPECT_EQ(std::get<int>(std::dynamic_pointer_cast<Literal>(ll->right)->value), 1);
+    ASSERT_EQ(l->left->getForm(), expform::application);
+    auto ll = dynamic_cast<Application*>(l->left.get());
+    ASSERT_EQ(ll->left->getForm(), expform::constructor);
+    EXPECT_EQ(dynamic_cast<Constructor*>(ll->left.get())->name, "(,)");
+    ASSERT_EQ(ll->right->getForm(), expform::literal);
+    EXPECT_EQ(std::get<int>(dynamic_cast<Literal*>(ll->right.get())->value), 1);
 
-    ASSERT_EQ(l->right->getForm(), expform::lit);
-    EXPECT_EQ(std::get<int>(std::dynamic_pointer_cast<Literal>(l->right)->value), 2);
+    ASSERT_EQ(l->right->getForm(), expform::literal);
+    EXPECT_EQ(std::get<int>(dynamic_cast<Literal*>(l->right.get())->value), 2);
 }
 
 TEST(Parser, ParsesLetExpressions) {
@@ -485,29 +423,29 @@ TEST(Parser, ParsesLetExpressions) {
     EXPECT_EQ(program->bindings.size(), 1);
     ASSERT_NE(program->bindings["a"], nullptr);
     ASSERT_EQ(program->bindings["a"]->getForm(), expform::let);
-    auto l = std::dynamic_pointer_cast<Let>(program->bindings["a"]);
+    auto l = dynamic_cast<Let*>(program->bindings["a"].get());
 
-    ASSERT_EQ(l->e->getForm(), expform::var);
-    EXPECT_EQ(std::dynamic_pointer_cast<Variable>(l->e)->name, "p");
+    ASSERT_EQ(l->e->getForm(), expform::variable);
+    EXPECT_EQ(dynamic_cast<Variable*>(l->e.get())->name, "p");
 
     EXPECT_EQ(l->bindings.size(), 2);
 
-    EXPECT_EQ(l->bindings.at("a")->getForm(), expform::lam);
-    auto lam = std::dynamic_pointer_cast<Lambda>(l->bindings.at("a"));
+    EXPECT_EQ(l->bindings.at("a")->getForm(), expform::abstraction);
+    auto lam = dynamic_cast<Lambda*>(l->bindings.at("a").get());
     auto args = lam->args;
     EXPECT_EQ(args.size(), 1);
     EXPECT_EQ(std::count(args.begin(), args.end(), "x"), 1);
-    ASSERT_EQ(lam->body->getForm(), expform::var);
-    EXPECT_EQ(std::dynamic_pointer_cast<Variable>(lam->body)->name, "x");
+    ASSERT_EQ(lam->body->getForm(), expform::variable);
+    EXPECT_EQ(dynamic_cast<Variable*>(lam->body.get())->name, "x");
 
-    EXPECT_EQ(l->bindings.at("p")->getForm(), expform::lit);
-    EXPECT_EQ(std::get<int>(std::dynamic_pointer_cast<Literal>(l->bindings.at("p"))->value), 1);
+    EXPECT_EQ(l->bindings.at("p")->getForm(), expform::literal);
+    EXPECT_EQ(std::get<int>(dynamic_cast<Literal*>(l->bindings.at("p").get())->value), 1);
 
-    EXPECT_EQ(l->typeSignatures.size(), 1);
+    EXPECT_EQ(l->type_signatures.size(), 1);
 
-    type b = std::make_shared<const TypeVariable>("b", nullptr);
-    type expected =makeFunctionType(b, b);
-    EXPECT_TRUE(sameType_ignoreKinds(l->typeSignatures.at("a"), expected));
+    type b = std::make_shared<const TypeVariable>("b");
+    type expected =make_function_type(b, b);
+    EXPECT_TRUE(same_type(l->type_signatures.at("a"), expected));
 }
 
 TEST(Parser, ParsesCaseExpressions) {
@@ -516,73 +454,73 @@ TEST(Parser, ParsesCaseExpressions) {
     ASSERT_EQ(result, 0);
     EXPECT_EQ(program->bindings.size(), 1);
     ASSERT_NE(program->bindings["a"], nullptr);
-    ASSERT_EQ(program->bindings["a"]->getForm(), expform::cas);
-    auto c = std::dynamic_pointer_cast<Case>(program->bindings["a"]);
+    ASSERT_EQ(program->bindings["a"]->getForm(), expform::cAsE);
+    auto c = dynamic_cast<Case*>(program->bindings["a"].get());
 
-    EXPECT_EQ(c->exp->getForm(), expform::lit);
-    EXPECT_EQ(std::get<int>(std::dynamic_pointer_cast<Literal>(c->exp)->value), 1);
+    EXPECT_EQ(c->exp->getForm(), expform::literal);
+    EXPECT_EQ(std::get<int>(dynamic_cast<Literal*>(c->exp.get())->value), 1);
 
     EXPECT_EQ(c->alts.size(), 2);
-    EXPECT_EQ(c->alts[0].first->getForm(), patform::wild);
-    EXPECT_EQ(c->alts[1].first->getForm(), patform::wild);
+    EXPECT_EQ(c->alts[0].first->getForm(), patternform::wild);
+    EXPECT_EQ(c->alts[1].first->getForm(), patternform::wild);
 
-    EXPECT_EQ(c->alts[0].second->getForm(), expform::lit);
-    EXPECT_EQ(std::get<int>(std::dynamic_pointer_cast<Literal>(c->alts[0].second)->value), 2);
+    EXPECT_EQ(c->alts[0].second->getForm(), expform::literal);
+    EXPECT_EQ(std::get<int>(dynamic_cast<Literal*>(c->alts[0].second.get())->value), 2);
 
-    EXPECT_EQ(c->alts[1].second->getForm(), expform::lit);
-    EXPECT_EQ(std::get<int>(std::dynamic_pointer_cast<Literal>(c->alts[1].second)->value), 3);
+    EXPECT_EQ(c->alts[1].second->getForm(), expform::literal);
+    EXPECT_EQ(std::get<int>(dynamic_cast<Literal*>(c->alts[1].second.get())->value), 3);
 }
 
 TEST(Parser, ParsesPatterns) {
     auto program = std::make_shared<Program>();
     auto result = parse_string("a = case 1 of {[1,2] -> 2}", program);
     ASSERT_EQ(result, 0);
-    auto p = std::dynamic_pointer_cast<Case>(program->bindings["a"])->alts[0].first;
-    ASSERT_EQ(p->getForm(), patform::con);
-    auto c = std::dynamic_pointer_cast<ConPattern>(p);
+    const auto &p = dynamic_cast<Case*>(program->bindings["a"].get())->alts[0].first;
+    ASSERT_EQ(p->getForm(), patternform::constructor);
+    auto c = dynamic_cast<ConstructorPattern*>(p.get());
     EXPECT_EQ(c->name, ":");
     EXPECT_EQ(c->args.size(), 2);
-    ASSERT_EQ(c->args[0]->getForm(), patform::lit);
-    EXPECT_EQ(std::get<int>(std::dynamic_pointer_cast<LiteralPattern>(c->args[0])->value), 1);
-    ASSERT_EQ(c->args[1]->getForm(), patform::con);
-    c = std::dynamic_pointer_cast<ConPattern>(c->args[1]);
+    ASSERT_EQ(c->args[0]->getForm(), patternform::literal);
+    EXPECT_EQ(std::get<int>(dynamic_cast<LiteralPattern*>(c->args[0].get())->value), 1);
+    ASSERT_EQ(c->args[1]->getForm(), patternform::constructor);
+    c = dynamic_cast<ConstructorPattern*>(c->args[1].get());
     EXPECT_EQ(c->name, ":");
     EXPECT_EQ(c->args.size(), 2);
-    ASSERT_EQ(c->args[0]->getForm(), patform::lit);
-    EXPECT_EQ(std::get<int>(std::dynamic_pointer_cast<LiteralPattern>(c->args[0])->value), 2);
-    ASSERT_EQ(c->args[1]->getForm(), patform::con);
-    c = std::dynamic_pointer_cast<ConPattern>(c->args[1]);
+    ASSERT_EQ(c->args[0]->getForm(), patternform::literal);
+    EXPECT_EQ(std::get<int>(dynamic_cast<LiteralPattern*>(c->args[0].get())->value), 2);
+    ASSERT_EQ(c->args[1]->getForm(), patternform::constructor);
+    c = dynamic_cast<ConstructorPattern*>(c->args[1].get());
     EXPECT_EQ(c->name, "[]");
     EXPECT_EQ(c->args.size(), 0);
 
     program = std::make_shared<Program>();
     result = parse_string("a = case 1 of {(1,2) -> 2}", program);
     ASSERT_EQ(result, 0);
-    p = std::dynamic_pointer_cast<Case>(program->bindings["a"])->alts[0].first;
-    ASSERT_EQ(p->getForm(), patform::con);
-    c = std::dynamic_pointer_cast<ConPattern>(p);
+    const auto &p1 = dynamic_cast<Case*>(program->bindings["a"].get())->alts[0].first;
+    ASSERT_EQ(p1->getForm(), patternform::constructor);
+    c = dynamic_cast<ConstructorPattern*>(p1.get());
     EXPECT_EQ(c->name, "(,)");
     EXPECT_EQ(c->args.size(), 2);
-    ASSERT_EQ(c->args[0]->getForm(), patform::lit);
-    EXPECT_EQ(std::get<int>(std::dynamic_pointer_cast<LiteralPattern>(c->args[0])->value), 1);
-    ASSERT_EQ(c->args[1]->getForm(), patform::lit);
-    EXPECT_EQ(std::get<int>(std::dynamic_pointer_cast<LiteralPattern>(c->args[1])->value), 2);
+    ASSERT_EQ(c->args[0]->getForm(), patternform::literal);
+    EXPECT_EQ(std::get<int>(dynamic_cast<LiteralPattern*>(c->args[0].get())->value), 1);
+    ASSERT_EQ(c->args[1]->getForm(), patternform::literal);
+    EXPECT_EQ(std::get<int>(dynamic_cast<LiteralPattern*>(c->args[1].get())->value), 2);
 
     program = std::make_shared<Program>();
     result = parse_string("a = case 1 of {Hi -> 2}", program);
     ASSERT_EQ(result, 0);
-    p = std::dynamic_pointer_cast<Case>(program->bindings["a"])->alts[0].first;
-    ASSERT_EQ(p->getForm(), patform::con);
-    c = std::dynamic_pointer_cast<ConPattern>(p);
+    const auto &p2 = dynamic_cast<Case*>(program->bindings["a"].get())->alts[0].first;
+    ASSERT_EQ(p2->getForm(), patternform::constructor);
+    c = dynamic_cast<ConstructorPattern*>(p2.get());
     EXPECT_EQ(c->name, "Hi");
     EXPECT_EQ(c->args.size(), 0);
 
     program = std::make_shared<Program>();
     result = parse_string("a = case 1 of {a@Hi -> 2}", program);
     ASSERT_EQ(result, 0);
-    p = std::dynamic_pointer_cast<Case>(program->bindings["a"])->alts[0].first;
-    ASSERT_EQ(p->getForm(), patform::con);
-    c = std::dynamic_pointer_cast<ConPattern>(p);
+    const auto &p3 = dynamic_cast<Case*>(program->bindings["a"].get())->alts[0].first;
+    ASSERT_EQ(p3->getForm(), patternform::constructor);
+    c = dynamic_cast<ConstructorPattern*>(p3.get());
     EXPECT_EQ(c->name, "Hi");
     EXPECT_EQ(c->args.size(), 0);
     ASSERT_EQ(c->as.size(), 1);
@@ -591,32 +529,32 @@ TEST(Parser, ParsesPatterns) {
     program = std::make_shared<Program>();
     result = parse_string("a = case 1 of {Hi a -> 2}", program);
     ASSERT_EQ(result, 0);
-    p = std::dynamic_pointer_cast<Case>(program->bindings["a"])->alts[0].first;
-    ASSERT_EQ(p->getForm(), patform::con);
-    c = std::dynamic_pointer_cast<ConPattern>(p);
+    const auto &p4 = dynamic_cast<Case*>(program->bindings["a"].get())->alts[0].first;
+    ASSERT_EQ(p4->getForm(), patternform::constructor);
+    c = dynamic_cast<ConstructorPattern*>(p4.get());
     EXPECT_EQ(c->name, "Hi");
     ASSERT_EQ(c->args.size(), 1);
-    ASSERT_EQ(c->args[0]->getForm(), patform::var);
-    auto v = std::dynamic_pointer_cast<VarPattern>(c->args[0]);
+    ASSERT_EQ(c->args[0]->getForm(), patternform::variable);
+    auto v = dynamic_cast<VariablePattern*>(c->args[0].get());
     EXPECT_EQ(v->name, "a");
 
     program = std::make_shared<Program>();
     result = parse_string("a = case 1 of {(-2) -> 2}", program);
     ASSERT_EQ(result, 0);
-    p = std::dynamic_pointer_cast<Case>(program->bindings["a"])->alts[0].first;
-    ASSERT_EQ(p->getForm(), patform::lit);
-    EXPECT_EQ(std::get<int>(std::dynamic_pointer_cast<LiteralPattern>(p)->value), -2);
+    const auto &p5 = dynamic_cast<Case*>(program->bindings["a"].get())->alts[0].first;
+    ASSERT_EQ(p5->getForm(), patternform::literal);
+    EXPECT_EQ(std::get<int>(dynamic_cast<LiteralPattern*>(p5.get())->value), -2);
 
     program = std::make_shared<Program>();
     result = parse_string("a = case 1 of {a:b -> 2}", program);
     ASSERT_EQ(result, 0);
-    p = std::dynamic_pointer_cast<Case>(program->bindings["a"])->alts[0].first;
-    ASSERT_EQ(p->getForm(), patform::con);
-    c = std::dynamic_pointer_cast<ConPattern>(p);
+    const auto &p6 = dynamic_cast<Case*>(program->bindings["a"].get())->alts[0].first;
+    ASSERT_EQ(p6->getForm(), patternform::constructor);
+    c = dynamic_cast<ConstructorPattern*>(p6.get());
     EXPECT_EQ(c->name, ":");
     ASSERT_EQ(c->args.size(), 2);
-    ASSERT_EQ(c->args[0]->getForm(), patform::var);
-    EXPECT_EQ(std::dynamic_pointer_cast<VarPattern>(c->args[0])->name, "a");
-    ASSERT_EQ(c->args[1]->getForm(), patform::var);
-    EXPECT_EQ(std::dynamic_pointer_cast<VarPattern>(c->args[1])->name, "b");
+    ASSERT_EQ(c->args[0]->getForm(), patternform::variable);
+    EXPECT_EQ(dynamic_cast<VariablePattern*>(c->args[0].get())->name, "a");
+    ASSERT_EQ(c->args[1]->getForm(), patternform::variable);
+    EXPECT_EQ(dynamic_cast<VariablePattern*>(c->args[1].get())->name, "b");
 }

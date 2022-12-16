@@ -1,230 +1,199 @@
 #include <algorithm>
 #include "parser/syntax.hpp"
 
-DConstructor::DConstructor(const int &lineNo, const std::string &name, const std::vector<type> &types): lineNo(lineNo), name(name), types(types) {}
-
-int DConstructor::getLineNo() const {
-    return lineNo;
-}
-
-std::string DConstructor::getName() const {
-    return name;
-}
-
-std::vector<type> DConstructor::getTypes() const {
-    return types;
-}
-
-void DConstructor::setTConstructor(const std::shared_ptr<TConstructor> &constructor) {
-    tConstructor = constructor;
-    auto argvars = tConstructor->getArgumentVariables();
-    for (auto t: getTypes()) {
-        for (auto v: findTypeVariables(t)) {
-            if (std::count(argvars.begin(), argvars.end(), v) == 0) {
-                throw ParseError(
-                        "Line " +
-                        std::to_string(lineNo) +
-                        ": unbound type variable."
-                );
-            }
-        }
+ConstructorPattern::ConstructorPattern(
+        const int &line, std::string name,
+        const std::vector<Pattern *> &args): Pattern(line), name(std::move(name)) {
+    for (const auto &arg: args) {
+        this->args.emplace_back(arg);
     }
 }
 
-std::shared_ptr<TConstructor> DConstructor::getTConstructor() const {
-    return tConstructor;
-}
-
-TConstructor::TConstructor(const int &lineNo, const std::string &name,
-                           const std::vector<std::string> &argumentVariables,
-                           const std::vector<std::shared_ptr<DConstructor>> &dConstructors): lineNo(lineNo), name(name), argumentVariables(argumentVariables), dConstructors(dConstructors) {
-    if (std::set<std::string>(argumentVariables.begin(), argumentVariables.end()).size() < argumentVariables.size()) {
-        throw ParseError(
-                "Line " +
-                std::to_string(lineNo) +
-                ": duplicate type variables not allowed."
-        );
+Case::Case(
+        const int &line,
+        Expression * const &exp,
+        const std::vector<std::pair<Pattern*, Expression*>> &alts): Expression(line), exp(exp) {
+    for (const auto &alt: alts) {
+        this->alts.emplace_back(alt.first, alt.second);
     }
 }
 
-std::string TConstructor::getName() {
-    return name;
+Let::Let(
+        const int &line,
+        const std::map<std::string, Expression*> &bindings,
+        const std::map<std::string, type> &type_signatures,
+        Expression * const &e): Expression(line), type_signatures(type_signatures), e(e) {
+    for (auto const &[name, exp] : bindings) {
+        this->bindings.emplace(name, exp);
+    }
 }
 
-std::vector<std::string> TConstructor::getArgumentVariables() {
-    return argumentVariables;
-}
-
-int TConstructor::getLineNo() {
-    return lineNo;
-}
-
-std::vector<std::shared_ptr<DConstructor>> TConstructor::getDataConstructors() {
-    return dConstructors;
-}
-
-void Program::addTypeSignatures(const std::vector<std::string> &names, const type &t) {
+void Program::add_type_signatures(const std::vector<std::string> &names, const type &t) {
     for (const auto& name: names) {
-        if (typeSignatures.count(name) > 0) {
+        if (type_signatures.count(name) > 0) {
             throw ParseError("Multiple type signatures for the same name are not allowed.");
         }
-        typeSignatures[name] = t;
+        type_signatures[name] = t;
     }
 }
 
-void Program::addTypeConstructor(
-        int lineNo,
+void Program::add_type_constructor(
+        int line,
         const std::string &name,
-        const std::vector<std::string> &argvars,
-        const std::vector<std::shared_ptr<DConstructor>> &dConstructors) {
-    auto tConstructor = std::make_shared<TConstructor>(lineNo, name, argvars, dConstructors);
-    for (const auto& constructor: dConstructors) {
-        constructor->setTConstructor(tConstructor);
-        if (dataConstructors.count(constructor->getName()) > 0) {
+        const std::vector<std::string> &argument_variables,
+        const std::vector<DConstructor*> &new_data_constructors) {
+
+    std::vector<std::string> data_constructor_names;
+    for (const auto& constructor: new_data_constructors) {
+        constructor->type_constructor = name;
+        if (data_constructors.count(constructor->name) > 0) {
             throw ParseError(
                     "Line " +
-                    std::to_string(constructor->getLineNo()) +
+                    std::to_string(constructor->line) +
                     ": data constructor called " +
-                    constructor->getName() +
+                    constructor->name +
                     " already exists."
             );
         }
-        dataConstructors[constructor->getName()] = constructor;
+        data_constructor_names.push_back(constructor->name);
+        data_constructors.emplace(constructor->name, constructor);
     }
-    if (typeConstructors.count(tConstructor->getName()) > 0) {
+
+    auto type_constructor = std::make_unique<TConstructor>(line, name, argument_variables, data_constructor_names);
+    if (type_constructors.count(type_constructor->name) > 0) {
         throw ParseError(
                 "Line " +
-                std::to_string(tConstructor->getLineNo()) +
+                std::to_string(type_constructor->line) +
                 ": type constructor called " +
-                tConstructor->getName() +
+                type_constructor->name +
                 " already exists."
         );
     }
-    typeConstructors[tConstructor->getName()] = tConstructor;
+    type_constructors[type_constructor->name] = std::move(type_constructor);
 }
 
-void Program::addVariable(const int &lineNo, const std::string &name, const std::shared_ptr<Expression> &exp) {
+void Program::add_variable(const int &line, const std::string &name, Expression * const &exp) {
     if (bindings.count(name) > 0) {
         throw ParseError(
                 "Line " +
-                std::to_string(lineNo) +
+                std::to_string(line) +
                 ": multiple bindings to the name " +
                 name +
                 "."
         );
     }
-    bindings[name] = exp;
+    bindings.emplace(name, exp);
 }
 
-void Program::addNamedFunction(const int &lineNo, const std::string &name, const std::vector<std::string> &args,
-                               const std::shared_ptr<Expression> &body) {
+void Program::add_named_function(const int &line, const std::string &name, const std::vector<std::string> &args,
+                                 Expression * const &body) {
     if (bindings.count(name) > 0) {
         throw ParseError(
                 "Line " +
-                std::to_string(lineNo) +
+                std::to_string(line) +
                 ": multiple bindings to the name " +
                 name +
                 "."
         );
     }
-    bindings[name] = std::make_shared<Lambda>(lineNo, args, body);
+    bindings[name] = std::make_unique<Lambda>(line, args, body);
 }
 
-std::shared_ptr<Expression> makeIf(
-        const int &lineNo,
-        const std::shared_ptr<Expression> &e1,
-        const std::shared_ptr<Expression> &e2,
-        const std::shared_ptr<Expression> &e3) {
-    const auto t = std::make_shared<ConPattern>(lineNo, "True", std::vector<std::shared_ptr<Pattern>>());
-    const auto f = std::make_shared<ConPattern>(lineNo, "False", std::vector<std::shared_ptr<Pattern>>());
+Expression *make_if_expression(
+        const int &line,
+        Expression * const &e1,
+        Expression * const &e2,
+        Expression * const &e3) {
+    const auto t = new ConstructorPattern(line, "True", std::vector<Pattern*>());
+    const auto f = new ConstructorPattern(line, "False", std::vector<Pattern*>());
     const auto alt1 = std::make_pair(t, e2);
     const auto alt2 = std::make_pair(f, e3);
-    const std::vector<std::pair<std::shared_ptr<Pattern>, std::shared_ptr<Expression>>> alts = {alt1, alt2};
-    return std::make_shared<Case>(lineNo, e1, alts);
+    const std::vector<std::pair<Pattern*, Expression*>> alts = {alt1, alt2};
+    return new Case(line, e1, alts);
 }
 
-std::shared_ptr<Expression> makeList(const int &lineNo, const std::vector<std::shared_ptr<Expression>> &elts) {
-    std::shared_ptr<Expression> list = std::make_shared<Constructor>(lineNo, "[]");
-    for (int i = elts.size() - 1; i >= 0; i--) {
-        list = std::make_shared<Application>(
-                lineNo,
-                std::make_shared<Application>(
-                        lineNo,
-                        std::make_shared<Constructor>(lineNo, ":"),
-                        elts[i]),
+Expression *make_list_expression(const int &line, const std::vector<Expression *> &elements) {
+    Expression *list = new Constructor(line, "[]");
+    for (int i = elements.size() - 1; i >= 0; i--) {
+        list = new Application(
+                line,
+                new Application(
+                        line,
+                        new Constructor(line, ":"),
+                        elements[i]),
                 list);
     }
     return list;
 }
 
-std::shared_ptr<Expression> makeTuple(const int &lineNo, const std::vector<std::shared_ptr<Expression>> &elts) {
-    std::shared_ptr<Expression> tuple = std::make_shared<Constructor>(
-            lineNo,
-            "(" + std::string(elts.size() - 1, ',') + ")");
+Expression *make_tuple_expression(const int &line, const std::vector<Expression*> &elements) {
+    Expression *tuple = new Constructor(
+            line,
+            "(" + std::string(elements.size() - 1, ',') + ")");
 
-    for (const auto &e: elts) {
-        tuple = std::make_shared<Application>(lineNo, tuple, e);
+    for (const auto &e: elements) {
+        tuple = new Application(line, tuple, e);
     }
     return tuple;
 }
 
-std::shared_ptr<Expression> makeLet(const int &lineNo, const declist &decls, const std::shared_ptr<Expression> &e) {
-    std::map<std::string, std::shared_ptr<Expression>> bindings;
-    std::map<std::string, type> typeSignatures;
+Expression *make_let_expression(const int &line, const declist &decls, Expression * const &e) {
+    std::map<std::string, Expression*> bindings;
+    std::map<std::string, type> type_signatures;
 
-    for (const auto &sig: std::get<0>(decls)) {
-        for (const auto &name: sig.first) {
-            if (typeSignatures.count(name) > 0) {
+    for (const auto &signature: std::get<0>(decls)) {
+        for (const auto &name: signature.first) {
+            if (type_signatures.count(name) > 0) {
                 throw ParseError(
                         "Line " +
-                        std::to_string(lineNo) +
+                        std::to_string(line) +
                         ": multiple type signatures for the same name are not allowed."
                 );
             }
-            typeSignatures[name] = sig.second;
+            type_signatures[name] = signature.second;
         }
     }
 
-    for (const auto &f: std::get<1>(decls)) {
-        if (bindings.count(std::get<0>(f)) > 0) {
+    for (const auto &function: std::get<1>(decls)) {
+        if (bindings.count(std::get<0>(function)) > 0) {
             throw ParseError(
                     "Line " +
-                    std::to_string(lineNo) +
+                    std::to_string(line) +
                     ": multiple bindings to the name " +
-                    std::get<0>(f) +
+                    std::get<0>(function) +
                     "."
             );
         }
-        bindings[std::get<0>(f)] = std::make_shared<Lambda>(lineNo, std::get<1>(f), std::get<2>(f));
+        bindings[std::get<0>(function)] = new Lambda(line, std::get<1>(function), std::get<2>(function));
     }
 
-    for (const auto &v: std::get<2>(decls)) {
-        if (bindings.count(v.first) > 0) {
+    for (const auto &variable: std::get<2>(decls)) {
+        if (bindings.count(variable.first) > 0) {
             throw ParseError(
                     "Line " +
-                    std::to_string(lineNo) +
+                    std::to_string(line) +
                     ": multiple bindings to the name " +
-                    v.first +
+                    variable.first +
                     "."
             );
         }
-        bindings[v.first] = v.second;
+        bindings[variable.first] = variable.second;
     }
 
-    return std::make_shared<Let>(lineNo, bindings, typeSignatures, e);
+    return new Let(line, bindings, type_signatures, e);
 }
 
-std::shared_ptr<Pattern> makeListPat(const int &lineNo, const std::vector<std::shared_ptr<Pattern>> &elts) {
-    std::shared_ptr<Pattern> list = std::make_shared<ConPattern>(lineNo, "[]", std::vector<std::shared_ptr<Pattern>>{});
-    for (int i = elts.size() - 1; i >= 0; i--) {
-        list = std::make_shared<ConPattern>(
-                lineNo,
+Pattern *make_list_pattern(const int &line, const std::vector<Pattern*> &elements) {
+    Pattern *list = new ConstructorPattern(line, "[]", {});
+    for (int i = elements.size() - 1; i >= 0; i--) {
+        list = new ConstructorPattern(
+                line,
                 ":",
-                std::vector<std::shared_ptr<Pattern>>{elts[i], list});
+                {elements[i], list});
     }
     return list;
 }
 
-std::shared_ptr<Pattern> makeTuplePat(const int &lineNo, const std::vector<std::shared_ptr<Pattern>> &elts) {
-    return std::make_shared<ConPattern>(lineNo, "(" + std::string(elts.size() - 1, ',') + ")", elts);
+Pattern *make_tuple_pattern(const int &line, const std::vector<Pattern*> &elements) {
+    return new ConstructorPattern(line, "(" + std::string(elements.size() - 1, ',') + ")", elements);
 }

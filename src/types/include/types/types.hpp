@@ -6,143 +6,126 @@
 #include <set>
 #include <vector>
 
-enum class kindtype {star, arrow};
-enum class ttype {var, con, ap, gen};
+//enum class kindform {star, arrow};
+enum class typeform {variable, constructor, application}; //, gen};
 
-class Kind {
-public:
-    virtual ~Kind() = default;
-    virtual kindtype getType() const = 0;
-};
-
-typedef std::shared_ptr<const Kind> kind;
-
-class StarKind : public Kind {
-public:
-    kindtype getType() const override;
-};
-
-class ArrowKind : public Kind {
-private:
-    const kind arg;
-    const kind result;
-public:
-    ArrowKind(kind arg, kind result);
-    kindtype getType() const override;
-    kind getArg() const;
-    kind getResult() const;
-};
+//class Kind {
+//public:
+//    virtual ~Kind() = default;
+//    virtual kindform get_form() const = 0;
+//};
+//
+//typedef std::shared_ptr<const Kind> kind;
+//
+//class StarKind : public Kind {
+//public:
+//    kindform get_form() const override;
+//};
+//
+//class ArrowKind : public Kind {
+//private:
+//    const kind arg;
+//    const kind result;
+//public:
+//    ArrowKind(kind arg, kind result);
+//    kindform get_form() const override;
+//    kind getArg() const;
+//    kind getResult() const;
+//};
 
 class Type;
 typedef std::shared_ptr<const Type> type;
-typedef std::map<std::string, type> substitution;
+//typedef std::map<std::string, type> substitution;
 
-class Type {
-public:
+struct Type {
     virtual ~Type() = default;
-    virtual ttype getType() const = 0;
-    virtual kind getKind() const = 0;
+    virtual typeform get_form() const = 0;
 };
 
-class TypeVariable : public Type {
-private:
+struct TypeVariable : public Type {
     const std::string id;
-    const kind k;
-public:
-    TypeVariable(std::string id, kind k);
-    ttype getType() const override;
-    std::string getId() const;
-    kind getKind() const override;
+    explicit TypeVariable(std::string id): id(id) {}
+    typeform get_form() const override { return typeform::variable; }
 };
 
-class TypeConstructor : public Type {
-private:
+struct TypeConstructor : public Type {
     const std::string id;
-    const kind k;
-public:
-    TypeConstructor(std::string id, kind k);
-    ttype getType() const override;
-    std::string getId() const;
-    kind getKind() const override;
+    explicit TypeConstructor(std::string id): id(id) {}
+    typeform get_form() const override { return typeform::constructor; }
 };
 
-class TypeApplication : public Type {
-private:
+struct TypeApplication : public Type {
     const type left;
     const type right;
-public:
-    TypeApplication(type left, type right);
-    ttype getType() const override;
-    type getLeft() const;
-    type getRight() const;
-    kind getKind() const override;
+    TypeApplication(type left, type right): left(left), right(right) {}
+    typeform get_form() const override { return typeform::application; }
 };
 
-class TypeGeneric : public Type {
-private:
-    const int n;
-    const kind k;
-public:
-    TypeGeneric(int n, kind k);
-    ttype getType() const override;
-    int getN() const;
-    kind getKind() const override;
-};
+//class TypeGeneric : public Type {
+//private:
+//    const int n;
+//    const kind k;
+//public:
+//    TypeGeneric(int n, kind k);
+//    typeform get_form() const override;
+//    int getN() const;
+//    kind getKind() const override;
+//};
+//
+//class Scheme {
+//private:
+//    type t;
+//public:
+//    Scheme(const std::vector<std::shared_ptr<const TypeVariable>> &variables, const type &t);
+//    explicit Scheme(type t);
+//    Scheme applySubstitution(const substitution &s) const;
+//    std::vector<std::string> findTypeVariables() const;
+//    type getType() const;
+//};
+//bool operator==(const Scheme &lhs, const Scheme &rhs);
+//bool operator!=(const Scheme &lhs, const Scheme &rhs);
+//
+//class Assumptions {
+//private:
+//    const std::map<std::string, Scheme> assumptions;
+//    explicit Assumptions(const std::map<std::string, Scheme> &assumptions);
+//public:
+//    Assumptions() = default;
+//    Assumptions add(const std::string &v, const Scheme &scheme) const;
+//    Assumptions applySubstitution(const substitution &s) const;
+//    std::vector<std::string> findTypeVariables() const;
+//    Scheme find(const std::string &v) const;
+//};
 
-class Scheme {
-private:
-    type t;
-public:
-    Scheme(const std::vector<std::shared_ptr<const TypeVariable>> &variables, const type &t);
-    explicit Scheme(type t);
-    Scheme applySubstitution(const substitution &s) const;
-    std::vector<std::string> findTypeVariables() const;
-    type getType() const;
-};
-bool operator==(const Scheme &lhs, const Scheme &rhs);
-bool operator!=(const Scheme &lhs, const Scheme &rhs);
+//const kind kStar = std::make_shared<const StarKind>();
+//const kind kStarToStar = std::make_shared<const ArrowKind>(kStar, kStar);
+//const kind kStarToStarToStar = std::make_shared<const ArrowKind>(kStar, kStarToStar);
 
-class Assumptions {
-private:
-    const std::map<std::string, Scheme> assumptions;
-    explicit Assumptions(const std::map<std::string, Scheme> &assumptions);
-public:
-    Assumptions() = default;
-    Assumptions add(const std::string &v, const Scheme &scheme) const;
-    Assumptions applySubstitution(const substitution &s) const;
-    std::vector<std::string> findTypeVariables() const;
-    Scheme find(const std::string &v) const;
-};
+const type tUnit = std::make_shared<const TypeConstructor>("()");
+const type tChar = std::make_shared<const TypeConstructor>("Char");
+const type tInt = std::make_shared<const TypeConstructor>("Int");
+const type tFloat = std::make_shared<const TypeConstructor>("Float");
+const type tDouble = std::make_shared<const TypeConstructor>("Double");
 
-const kind kStar = std::make_shared<const StarKind>();
-const kind kStarToStar = std::make_shared<const ArrowKind>(kStar, kStar);
-const kind kStarToStarToStar = std::make_shared<const ArrowKind>(kStar, kStarToStar);
+const type tList = std::make_shared<const TypeConstructor>("[]");
+const type tArrow = std::make_shared<const TypeConstructor>("(->)");
+const type tTuple2 = std::make_shared<const TypeConstructor>("(,)");
 
-const type tUnit = std::make_shared<const TypeConstructor>("()", kStar);
-const type tChar = std::make_shared<const TypeConstructor>("Char", kStar);
-const type tInt = std::make_shared<const TypeConstructor>("Int", kStar);
-const type tFloat = std::make_shared<const TypeConstructor>("Float", kStar);
-const type tDouble = std::make_shared<const TypeConstructor>("Double", kStar);
+type make_function_type(const type &argType, const type &resultType);
+type make_list_type(const type &elementType);
+type make_pair_type(const type &leftType, const type &rightType);
+//kind makeTupleConstructorKind(size_t size);
+type make_tuple_type(const std::vector<type> &components);
 
-const type tList = std::make_shared<const TypeConstructor>("[]", kStarToStar);
-const type tArrow = std::make_shared<const TypeConstructor>("(->)", kStarToStarToStar);
-const type tTuple2 = std::make_shared<const TypeConstructor>("(,)", kStarToStarToStar);
-
-type makeFunctionType(const type &argType, const type &resultType);
-type makeListType(const type &elementType);
-type makePairType(const type &leftType, const type &rightType);
-kind makeTupleConstructorKind(size_t size);
-type makeTupleType(const std::vector<type> &components);
-
-bool sameKind(const kind &a, const kind &b);
-bool sameType(const type &a, const type &b);
-type applySubstitution(const type &t, const substitution &s);
-std::vector<std::string> findTypeVariables(const type &t);
-std::vector<type> applySubstitution(const std::vector<type> &ts, const substitution &s);
-std::vector<std::string> findTypeVariables(const std::vector<type> &ts);
-substitution compose(const substitution &s1, const substitution &s2);
-substitution merge(const substitution &s1, const substitution &s2);
-substitution mostGeneralUnifier(const type &t1, const type &t2);
-substitution match(const type &t1, const type &t2);
+//bool sameKind(const kind &a, const kind &b);
+bool same_type(const type &a, const type &b);
+//type applySubstitution(const type &t, const substitution &s);
+//std::vector<std::string> findTypeVariables(const type &t);
+//std::vector<type> applySubstitution(const std::vector<type> &ts, const substitution &s);
+//std::vector<std::string> findTypeVariables(const std::vector<type> &ts);
+//substitution compose(const substitution &s1, const substitution &s2);
+//substitution merge(const substitution &s1, const substitution &s2);
+//substitution mostGeneralUnifier(const type &t1, const type &t2);
+//substitution match(const type &t1, const type &t2);
 
 #endif //PICOHASKELL_TYPES_HPP

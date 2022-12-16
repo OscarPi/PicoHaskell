@@ -9,8 +9,8 @@
 #include <variant>
 #include "types/types.hpp"
 
-enum class patform {con, wild, lit, var};
-enum class expform {var, con, lit, lam, app, cas, let, bop};
+enum class patternform {constructor, wild, literal, variable};
+enum class expform {variable, constructor, literal, abstraction, application, cAsE, let, builtinop};
 enum class builtinop {add, subtract, times, divide, equality, inequality, lt, lte, gt, gte, land, lor, negate};
 
 class ParseError : public std::runtime_error {
@@ -18,190 +18,175 @@ public:
     explicit ParseError(const std::string &s): std::runtime_error(s) {}
 };
 
-class TConstructor;
-
-class DConstructor {
-private:
-    const int lineNo;
+struct DConstructor {
+    const int line;
     const std::string name;
     const std::vector<type> types;
-    std::shared_ptr<TConstructor> tConstructor;
-public:
-    DConstructor(const int &lineNo, const std::string &name, const std::vector<type> &types);
-    int getLineNo() const;
-    std::string getName() const;
-    std::vector<type> getTypes() const;
-    void setTConstructor(const std::shared_ptr<TConstructor> &tConstructor);
-    std::shared_ptr<TConstructor> getTConstructor() const;
+    std::string type_constructor;
+    DConstructor(
+            const int &line,
+            std::string name,
+            const std::vector<type> &types): line(line), name(std::move(name)), types(types) {};
 };
 
-class TConstructor {
-private:
+struct TConstructor {
     const std::string name;
-    const std::vector<std::string> argumentVariables;
-    const std::vector<std::shared_ptr<DConstructor>> dConstructors;
-    const int lineNo;
-public:
-    TConstructor(const int &lineNo, const std::string &name, const std::vector<std::string> &argumentVariables, const std::vector<std::shared_ptr<DConstructor>> &dConstructors);
-    int getLineNo();
-    std::string getName();
-    std::vector<std::string> getArgumentVariables();
-    std::vector<std::shared_ptr<DConstructor>> getDataConstructors();
+    const std::vector<std::string> argument_variables;
+    const std::vector<std::string> data_constructors;
+    const int line;
+    TConstructor(
+            const int &line,
+            std::string name,
+            const std::vector<std::string> &argument_variables,
+            const std::vector<std::string> &data_constructors):
+            line(line),
+            name(std::move(name)),
+            argument_variables(argument_variables),
+            data_constructors(data_constructors) {}
 };
 
 struct Pattern {
-    const int lineNo;
+    const int line;
     std::vector<std::string> as;
-    explicit Pattern(const int &lineNo): lineNo(lineNo) {}
-    virtual patform getForm() = 0;
+    explicit Pattern(const int &line): line(line) {}
+    virtual patternform getForm() = 0;
     virtual ~Pattern() = default;
 };
 
-struct ConPattern : Pattern {
+struct ConstructorPattern : Pattern {
     const std::string name;
-    const std::vector<std::shared_ptr<Pattern>> args;
-    ConPattern(
-            const int &lineNo,
-            const std::string &name,
-            const std::vector<std::shared_ptr<Pattern>> &args): Pattern(lineNo), name(name), args(args) {}
-    patform getForm() override { return patform::con; }
+    std::vector<std::unique_ptr<Pattern>> args;
+    ConstructorPattern(const int &line, std::string name, const std::vector<Pattern*> &args);
+    patternform getForm() override { return patternform::constructor; }
 };
 
 struct WildPattern : Pattern {
-    WildPattern(const int &lineNo): Pattern(lineNo) {}
-    patform getForm() override { return patform::wild; }
+    WildPattern(const int &line): Pattern(line) {}
+    patternform getForm() override { return patternform::wild; }
 };
 
 struct LiteralPattern : Pattern {
     const std::variant<int, std::string, char> value;
-    LiteralPattern(const int &lineNo, int value): Pattern(lineNo), value(value) {}
-    LiteralPattern(const int &lineNo, char value): Pattern(lineNo), value(value) {}
-    LiteralPattern(const int &lineNo, std::string value): Pattern(lineNo), value(value) {}
-    patform getForm() override { return patform::lit; }
+    LiteralPattern(const int &line, int value): Pattern(line), value(value) {}
+    LiteralPattern(const int &line, char value): Pattern(line), value(value) {}
+    LiteralPattern(const int &line, std::string value): Pattern(line), value(value) {}
+    patternform getForm() override { return patternform::literal; }
 };
 
-struct VarPattern : Pattern {
+struct VariablePattern : Pattern {
     const std::string name;
-    VarPattern(const int &lineNo, const std::string &name): Pattern(lineNo), name(name) {}
-    patform getForm() override { return patform::var; }
+    VariablePattern(const int &line, std::string name): Pattern(line), name(std::move(name)) {}
+    patternform getForm() override { return patternform::variable; }
 };
 
 struct Expression {
-    const int lineNo;
-    explicit Expression(const int &lineNo): lineNo(lineNo) {}
+    const int line;
+    explicit Expression(const int &line): line(line) {}
     virtual expform getForm() = 0;
     virtual ~Expression() = default;
 };
 
 struct Variable : public Expression {
     const std::string name;
-    Variable(const int &lineNo, const std::string &name): Expression(lineNo), name(name) {}
-    expform getForm() override { return expform::var; }
+    Variable(const int &line, std::string name): Expression(line), name(std::move(name)) {}
+    expform getForm() override { return expform::variable; }
 };
 
 struct Constructor : public Expression {
     const std::string name;
-    Constructor(const int &lineNo, const std::string &name): Expression(lineNo), name(name) {}
-    expform getForm() override { return expform::con; }
+    Constructor(const int &line, std::string name): Expression(line), name(std::move(name)) {}
+    expform getForm() override { return expform::constructor; }
 };
 
 struct Literal : public Expression {
     const std::variant<int, std::string, char> value;
-    Literal(const int &lineNo, int i) : Expression(lineNo), value(i) {}
-    Literal(const int &lineNo, char c) : Expression(lineNo), value(c) {}
-    Literal(const int &lineNo, std::string s) : Expression(lineNo), value(s) {}
-    expform getForm() override { return expform::lit; }
+    Literal(const int &line, int i) : Expression(line), value(i) {}
+    Literal(const int &line, char c) : Expression(line), value(c) {}
+    Literal(const int &line, std::string s) : Expression(line), value(s) {}
+    expform getForm() override { return expform::literal; }
 };
 
 struct Lambda : public Expression {
     const std::vector<std::string> args;
-    const std::shared_ptr<Expression> body;
+    const std::unique_ptr<Expression> body;
     Lambda(
-            const int &lineNo,
+            const int &line,
             const std::vector<std::string> &args,
-            const std::shared_ptr<Expression> &body): Expression(lineNo), args(args), body(body) {}
-    expform getForm() override { return expform::lam; }
+            Expression * const &body): Expression(line), args(args), body(body) {}
+    expform getForm() override { return expform::abstraction; }
 };
 
 struct Application : public Expression {
-    const std::shared_ptr<Expression> left;
-    const std::shared_ptr<Expression> right;
+    const std::unique_ptr<Expression> left;
+    const std::unique_ptr<Expression> right;
     Application(
-            const int &lineNo,
-            const std::shared_ptr<Expression> &left,
-            const std::shared_ptr<Expression> &right): Expression(lineNo), left(left), right(right) {}
-    expform getForm() override { return expform::app; }
+            const int &line,
+            Expression * const &left,
+            Expression * const &right): Expression(line), left(left), right(right) {}
+    expform getForm() override { return expform::application; }
 };
 
 struct Case : public Expression {
-    const std::shared_ptr<Expression> exp;
-    const std::vector<std::pair<std::shared_ptr<Pattern>, std::shared_ptr<Expression>>> alts;
-    Case(
-            const int &lineNo,
-            const std::shared_ptr<Expression> &exp,
-            const std::vector<std::pair<std::shared_ptr<Pattern>, std::shared_ptr<Expression>>> &alts
-            ): Expression(lineNo), exp(exp), alts(alts) {}
-    expform getForm() override { return expform::cas; }
+    const std::unique_ptr<Expression> exp;
+    std::vector<std::pair<std::unique_ptr<Pattern>, std::unique_ptr<Expression>>> alts;
+    Case(const int &line, Expression * const &exp, const std::vector<std::pair<Pattern*, Expression*>> &alts);
+    expform getForm() override { return expform::cAsE; }
 };
 
 struct Let : public Expression {
-    const std::map<std::string, std::shared_ptr<Expression>> bindings;
-    const std::map<std::string, type> typeSignatures;
-    const std::shared_ptr<Expression> e;
+    std::map<std::string, std::unique_ptr<Expression>> bindings;
+    const std::map<std::string, type> type_signatures;
+    const std::unique_ptr<Expression> e;
     Let(
-            const int &lineNo,
-            const std::map<std::string, std::shared_ptr<Expression>> &bindings,
-            const std::map<std::string, type> &typeSignatures,
-            const std::shared_ptr<Expression> &e
-            ): Expression(lineNo), bindings(bindings), typeSignatures(typeSignatures), e(e) {}
+            const int &line,
+            const std::map<std::string, Expression*> &bindings,
+            const std::map<std::string, type> &type_signatures,
+            Expression * const &e
+            );
     expform getForm() override { return expform::let; }
 };
 
 struct BuiltInOp : public Expression {
-    const std::shared_ptr<Expression> left;
-    const std::shared_ptr<Expression> right;
+    const std::unique_ptr<Expression> left;
+    const std::unique_ptr<Expression> right;
     const builtinop op;
     BuiltInOp(
-            const int &lineNo,
-            const std::shared_ptr<Expression> &left,
-            const std::shared_ptr<Expression> &right,
-            const builtinop &op): Expression(lineNo), left(left), right(right), op(op) {}
-    expform getForm() override { return expform::bop; }
+            const int &line,
+            Expression * const &left,
+            Expression * const &right,
+            const builtinop &op): Expression(line), left(left), right(right), op(op) {}
+    expform getForm() override { return expform::builtinop; }
 };
 
 struct Program {
-    std::map<std::string, std::shared_ptr<TConstructor>> typeConstructors;
-    std::map<std::string, std::shared_ptr<DConstructor>> dataConstructors;
-    std::map<std::string, std::shared_ptr<Expression>> bindings;
-    std::map<std::string, type> typeSignatures;
-    void addTypeSignatures(const std::vector<std::string> &names, const type &t);
-    void addTypeConstructor(
-            int lineNo,
+    std::map<std::string, std::unique_ptr<TConstructor>> type_constructors;
+    std::map<std::string, std::unique_ptr<DConstructor>> data_constructors;
+    std::map<std::string, std::unique_ptr<Expression>> bindings;
+    std::map<std::string, type> type_signatures;
+    void add_type_signatures(const std::vector<std::string> &names, const type &t);
+    void add_type_constructor(
+            int line,
             const std::string &name,
-            const std::vector<std::string> &argvars,
-            const std::vector<std::shared_ptr<DConstructor>> &dConstructors);
-    void addVariable(const int &lineNo, const std::string &name, const std::shared_ptr<Expression> &exp);
-    void addNamedFunction(
-            const int &lineNo,
+            const std::vector<std::string> &argument_variables,
+            const std::vector<DConstructor*> &new_data_constructors);
+    void add_variable(const int &line, const std::string &name, Expression * const &exp);
+    void add_named_function(
+            const int &line,
             const std::string &name,
             const std::vector<std::string> &args,
-            const std::shared_ptr<Expression> &body);
+            Expression * const &body);
 };
 
 typedef std::vector<std::pair<std::vector<std::string>, type>> typesigs;
-typedef std::vector<std::tuple<std::string, std::vector<std::string>, std::shared_ptr<Expression>>> funcs;
-typedef std::vector<std::pair<std::string, std::shared_ptr<Expression>>> vars;
+typedef std::vector<std::tuple<std::string, std::vector<std::string>, Expression*>> funcs;
+typedef std::vector<std::pair<std::string, Expression*>> vars;
 typedef std::tuple<typesigs, funcs, vars> declist;
 
-std::shared_ptr<Expression> makeIf(
-        const int &lineNo,
-        const std::shared_ptr<Expression> &e1,
-        const std::shared_ptr<Expression> &e2,
-        const std::shared_ptr<Expression> &e3);
-std::shared_ptr<Expression> makeList(const int &lineNo, const std::vector<std::shared_ptr<Expression>> &elts);
-std::shared_ptr<Expression> makeTuple(const int &lineNo, const std::vector<std::shared_ptr<Expression>> &elts);
-std::shared_ptr<Expression> makeLet(const int &lineNo, const declist &decls, const std::shared_ptr<Expression> &e);
-std::shared_ptr<Pattern> makeListPat(const int &lineNo, const std::vector<std::shared_ptr<Pattern>> &elts);
-std::shared_ptr<Pattern> makeTuplePat(const int &lineNo, const std::vector<std::shared_ptr<Pattern>> &elts);
+Expression *make_if_expression(const int &line, Expression * const &e1, Expression * const &e2, Expression * const &e3);
+Expression *make_list_expression(const int &line, const std::vector<Expression*> &elements);
+Expression *make_tuple_expression(const int &line, const std::vector<Expression*> &elements);
+Expression *make_let_expression(const int &line, const declist &decls, Expression * const &e);
+Pattern *make_list_pattern(const int &line, const std::vector<Pattern*> &elements);
+Pattern *make_tuple_pattern(const int &line, const std::vector<Pattern*> &elements);
 
 #endif //PICOHASKELL_SYNTAX_HPP

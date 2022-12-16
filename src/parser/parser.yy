@@ -99,18 +99,18 @@
 %nterm <std::vector<type>> types atypes
 %nterm <int> commas
 %nterm <std::pair<std::string, std::vector<std::string>>> simpletype
-%nterm <std::vector<std::shared_ptr<DConstructor>>> constrs
-%nterm <std::shared_ptr<DConstructor>> constr
-%nterm <std::shared_ptr<Expression>> exp infixexp lexp fexp aexp
-%nterm <std::pair<std::string, std::shared_ptr<Expression>>> vardecl
-%nterm <std::tuple<std::string, std::vector<std::string>, std::shared_ptr<Expression>>> fundecl
+%nterm <std::vector<DConstructor*>> constrs
+%nterm <DConstructor*> constr
+%nterm <Expression*> exp infixexp lexp fexp aexp
+%nterm <std::pair<std::string, Expression*>> vardecl
+%nterm <std::tuple<std::string, std::vector<std::string>, Expression*>> fundecl
 %nterm <std::pair<std::vector<std::string>, type>> typesig
-%nterm <std::vector<std::shared_ptr<Expression>>> explist
+%nterm <std::vector<Expression*>> explist
 %nterm <declist> decls
-%nterm <std::shared_ptr<Pattern>> pat lpat apat
-%nterm <std::vector<std::shared_ptr<Pattern>>> pats apats
-%nterm <std::pair<std::shared_ptr<Pattern>, std::shared_ptr<Expression>>> alt
-%nterm <std::vector<std::pair<std::shared_ptr<Pattern>, std::shared_ptr<Expression>>>> alts
+%nterm <Pattern*> pat lpat apat
+%nterm <std::vector<Pattern*>> pats apats
+%nterm <std::pair<Pattern*, Expression*>> alt
+%nterm <std::vector<std::pair<Pattern*, Expression*>>> alts
 
 //%printer { yyo << $$; } <*>;
 
@@ -123,11 +123,11 @@ topdecls:
   ;
 
 topdecl:
-    typesig                       { program->addTypeSignatures($1.first, $1.second); }
-  | fundecl                       { program->addNamedFunction(@1.begin.line, std::get<0>($1), std::get<1>($1), std::get<2>($1)); }
-  | vardecl                       { program->addVariable(@1.begin.line, $1.first, $1.second); }
-  | "data" simpletype             { program->addTypeConstructor(@1.begin.line, $2.first, $2.second, {}); }
-  | "data" simpletype "=" constrs { program->addTypeConstructor(@1.begin.line, $2.first, $2.second, $4); }
+    typesig                       { program->add_type_signatures($1.first, $1.second); }
+  | fundecl                       { program->add_named_function(@1.begin.line, std::get<0>($1), std::get<1>($1), std::get<2>($1)); }
+  | vardecl                       { program->add_variable(@1.begin.line, $1.first, $1.second); }
+  | "data" simpletype             { program->add_type_constructor(@1.begin.line, $2.first, $2.second, {}); }
+  | "data" simpletype "=" constrs { program->add_type_constructor(@1.begin.line, $2.first, $2.second, $4); }
   ;
 
 decls:
@@ -148,45 +148,45 @@ exp:
   ;
 
 infixexp:
-    infixexp "+" infixexp  { $$ = std::make_shared<BuiltInOp>(@2.begin.line, $1, $3, builtinop::add); }
-  | infixexp "-" infixexp  { $$ = std::make_shared<BuiltInOp>(@2.begin.line, $1, $3, builtinop::subtract); }
-  | "-" infixexp           { $$ = std::make_shared<BuiltInOp>(@1.begin.line, nullptr, $2, builtinop::negate); }
-  | infixexp "*" infixexp  { $$ = std::make_shared<BuiltInOp>(@2.begin.line, $1, $3, builtinop::times); }
-  | infixexp "/" infixexp  { $$ = std::make_shared<BuiltInOp>(@2.begin.line, $1, $3, builtinop::divide); }
-  | infixexp "==" infixexp { $$ = std::make_shared<BuiltInOp>(@2.begin.line, $1, $3, builtinop::equality); }
-  | infixexp "/=" infixexp { $$ = std::make_shared<BuiltInOp>(@2.begin.line, $1, $3, builtinop::inequality); }
-  | infixexp "<" infixexp  { $$ = std::make_shared<BuiltInOp>(@2.begin.line, $1, $3, builtinop::lt); }
-  | infixexp "<=" infixexp { $$ = std::make_shared<BuiltInOp>(@2.begin.line, $1, $3, builtinop::lte); }
-  | infixexp ">" infixexp  { $$ = std::make_shared<BuiltInOp>(@2.begin.line, $1, $3, builtinop::gt); }
-  | infixexp ">=" infixexp { $$ = std::make_shared<BuiltInOp>(@2.begin.line, $1, $3, builtinop::gte); }
-  | infixexp "&&" infixexp { $$ = std::make_shared<BuiltInOp>(@2.begin.line, $1, $3, builtinop::land); }
-  | infixexp "||" infixexp { $$ = std::make_shared<BuiltInOp>(@2.begin.line, $1, $3, builtinop::lor); }
-  | infixexp "." infixexp  { $$ = std::make_shared<Application>(@2.begin.line, std::make_shared<Application>(@2.begin.line, std::make_shared<Variable>(@2.begin.line, "."), $1), $3); }
-  | infixexp ":" infixexp  { $$ = std::make_shared<Application>(@2.begin.line, std::make_shared<Application>(@2.begin.line, std::make_shared<Constructor>(@2.begin.line, ":"), $1), $3); }
+    infixexp "+" infixexp  { $$ = new BuiltInOp(@2.begin.line, $1, $3, builtinop::add); }
+  | infixexp "-" infixexp  { $$ = new BuiltInOp(@2.begin.line, $1, $3, builtinop::subtract); }
+  | "-" infixexp           { $$ = new BuiltInOp(@1.begin.line, nullptr, $2, builtinop::negate); }
+  | infixexp "*" infixexp  { $$ = new BuiltInOp(@2.begin.line, $1, $3, builtinop::times); }
+  | infixexp "/" infixexp  { $$ = new BuiltInOp(@2.begin.line, $1, $3, builtinop::divide); }
+  | infixexp "==" infixexp { $$ = new BuiltInOp(@2.begin.line, $1, $3, builtinop::equality); }
+  | infixexp "/=" infixexp { $$ = new BuiltInOp(@2.begin.line, $1, $3, builtinop::inequality); }
+  | infixexp "<" infixexp  { $$ = new BuiltInOp(@2.begin.line, $1, $3, builtinop::lt); }
+  | infixexp "<=" infixexp { $$ = new BuiltInOp(@2.begin.line, $1, $3, builtinop::lte); }
+  | infixexp ">" infixexp  { $$ = new BuiltInOp(@2.begin.line, $1, $3, builtinop::gt); }
+  | infixexp ">=" infixexp { $$ = new BuiltInOp(@2.begin.line, $1, $3, builtinop::gte); }
+  | infixexp "&&" infixexp { $$ = new BuiltInOp(@2.begin.line, $1, $3, builtinop::land); }
+  | infixexp "||" infixexp { $$ = new BuiltInOp(@2.begin.line, $1, $3, builtinop::lor); }
+  | infixexp "." infixexp  { $$ = new Application(@2.begin.line, new Application(@2.begin.line, new Variable(@2.begin.line, "."), $1), $3); }
+  | infixexp ":" infixexp  { $$ = new Application(@2.begin.line, new Application(@2.begin.line, new Constructor(@2.begin.line, ":"), $1), $3); }
   | lexp                   { $$ = $1; }
   ;
 
 lexp:
     fexp                                                     { $$ = $1; }
-  | "\\" vars "->" exp                                       { $$ = std::make_shared<Lambda>(@1.begin.line, $2, $4); }
-  | "if" exp optsemicolon "then" exp optsemicolon "else" exp { $$ = makeIf(@1.begin.line, $2, $5, $8); }
-  | "let" "{" decls "}" "in" exp                             { $$ = makeLet(@1.begin.line, $3, $6); }
-  | "case" exp "of" "{" alts "}"                             { $$ = std::make_shared<Case>(@1.begin.line, $2, $5); }
+  | "\\" vars "->" exp                                       { $$ = new Lambda(@1.begin.line, $2, $4); }
+  | "if" exp optsemicolon "then" exp optsemicolon "else" exp { $$ = make_if_expression(@1.begin.line, $2, $5, $8); }
+  | "let" "{" decls "}" "in" exp                             { $$ = make_let_expression(@1.begin.line, $3, $6); }
+  | "case" exp "of" "{" alts "}"                             { $$ = new Case(@1.begin.line, $2, $5); }
   ;
 
 fexp:
-    fexp aexp { $$ = std::make_shared<Application>(@2.begin.line, $1, $2); }
+    fexp aexp { $$ = new Application(@2.begin.line, $1, $2); }
   | aexp      { $$ = $1; }
   ;
 
 aexp:
-    var                     { $$ = std::make_shared<Variable>(@1.begin.line, $1); }
-  | INTEGER                 { $$ = std::make_shared<Literal>(@1.begin.line, $1); }
-  | STRING                  { $$ = std::make_shared<Literal>(@1.begin.line, $1); }
-  | CHAR                    { $$ = std::make_shared<Literal>(@1.begin.line, $1); }
-  | gcon                    { $$ = std::make_shared<Constructor>(@1.begin.line, $1); }
-  | "[" explist "]"         { $$ = makeList(@1.begin.line, $2); }
-  | "(" explist "," exp ")" { $2.push_back($4); $$ = makeTuple(@1.begin.line, $2); }
+    var                     { $$ = new Variable(@1.begin.line, $1); }
+  | INTEGER                 { $$ = new Literal(@1.begin.line, $1); }
+  | STRING                  { $$ = new Literal(@1.begin.line, $1); }
+  | CHAR                    { $$ = new Literal(@1.begin.line, $1); }
+  | gcon                    { $$ = new Constructor(@1.begin.line, $1); }
+  | "[" explist "]"         { $$ = make_list_expression(@1.begin.line, $2); }
+  | "(" explist "," exp ")" { $2.push_back($4); $$ = make_tuple_expression(@1.begin.line, $2); }
   | "(" exp ")"             { $$ = $2; }
   ;
 
@@ -204,8 +204,8 @@ constrs:
   | constrs "|" constr { $$ = $1; $$.push_back($3); }
 
 constr:
-    CONID        { $$ = std::make_shared<DConstructor>(@1.begin.line, $1, std::vector<type>()); }
-  | CONID atypes { $$ = std::make_shared<DConstructor>(@1.begin.line, $1, $2); }
+    CONID        { $$ = new DConstructor(@1.begin.line, $1, std::vector<type>()); }
+  | CONID atypes { $$ = new DConstructor(@1.begin.line, $1, $2); }
 
 atypes:
     atype        { $$ = {$1}; }
@@ -223,7 +223,7 @@ tyvars:
 
 ctype:
     btype            { $$ = $1; }
-  | btype "->" ctype { $$ = makeFunctionType($1, $3); }
+  | btype "->" ctype { $$ = make_function_type($1, $3); }
   ;
 
 btype:
@@ -233,9 +233,9 @@ btype:
 
 atype:
    gtycon        { $$ = $1; }
- | VARID         { $$ = std::make_shared<const TypeVariable>($1, nullptr); }
- | "(" types ")" { $$ = makeTupleType($2); }
- | "[" ctype "]" { $$ = makeListType($2); }
+ | VARID         { $$ = std::make_shared<const TypeVariable>($1); }
+ | "(" types ")" { $$ = make_tuple_type($2); }
+ | "[" ctype "]" { $$ = make_list_type($2); }
  | "(" ctype ")" { $$ = $2; }
  ;
 
@@ -245,11 +245,11 @@ types:
   ;
 
 gtycon:
-    CONID          { $$ = std::make_shared<const TypeConstructor>($1, nullptr); }
+    CONID          { $$ = std::make_shared<const TypeConstructor>($1); }
   | "(" ")"        { $$ = tUnit; }
   | "[" "]"        { $$ = tList; }
   | "(" "->" ")"   { $$ = tArrow; }
-  | "(" commas ")" { $$ = std::make_shared<const TypeConstructor>("(" + std::string($2, ',') + ")", makeTupleConstructorKind($2 + 1)); }
+  | "(" commas ")" { $$ = std::make_shared<const TypeConstructor>("(" + std::string($2, ',') + ")"); }
   ;
 
 commas:
@@ -274,27 +274,27 @@ alts:
 alt: pat "->" exp { $$ = std::make_pair($1, $3); };
 
 pat:
-    lpat ":" pat { $$ = std::make_shared<ConPattern>(@1.begin.line, ":", std::vector<std::shared_ptr<Pattern>>{$1, $3}); }
+    lpat ":" pat { $$ = new ConstructorPattern(@1.begin.line, ":", std::vector<Pattern*>{$1, $3}); }
   | lpat         { $$ = $1; }
   ;
 
 lpat:
     apat        { $$ = $1; }
-  | "-" INTEGER { $$ = std::make_shared<LiteralPattern>(@1.begin.line, -$2); }
-  | gcon apats  { $$ = std::make_shared<ConPattern>(@1.begin.line, $1, $2); }
+  | "-" INTEGER { $$ = new LiteralPattern(@1.begin.line, -$2); }
+  | gcon apats  { $$ = new ConstructorPattern(@1.begin.line, $1, $2); }
   ;
 
 apat:
     VARID "@" apat       { $$ = $3; $$->as.push_back($1); }
-  | VARID                { $$ = std::make_shared<VarPattern>(@1.begin.line, $1); }
-  | gcon                 { $$ = std::make_shared<ConPattern>(@1.begin.line, $1, std::vector<std::shared_ptr<Pattern>>{}); }
-  | INTEGER              { $$ = std::make_shared<LiteralPattern>(@1.begin.line, $1); }
-  | STRING               { $$ = std::make_shared<LiteralPattern>(@1.begin.line, $1); }
-  | CHAR                 { $$ = std::make_shared<LiteralPattern>(@1.begin.line, $1); }
-  | "_"                  { $$ = std::make_shared<WildPattern>(@1.begin.line); }
+  | VARID                { $$ = new VariablePattern(@1.begin.line, $1); }
+  | gcon                 { $$ = new ConstructorPattern(@1.begin.line, $1, std::vector<Pattern*>{}); }
+  | INTEGER              { $$ = new LiteralPattern(@1.begin.line, $1); }
+  | STRING               { $$ = new LiteralPattern(@1.begin.line, $1); }
+  | CHAR                 { $$ = new LiteralPattern(@1.begin.line, $1); }
+  | "_"                  { $$ = new WildPattern(@1.begin.line); }
   | "(" pat ")"          { $$ = $2; }
-  | "(" pats "," pat ")" { $2.push_back($4); $$ = makeTuplePat(@1.begin.line, $2); }
-  | "[" pats "]"         { $$ = makeListPat(@1.begin.line, $2); }
+  | "(" pats "," pat ")" { $2.push_back($4); $$ = make_tuple_pattern(@1.begin.line, $2); }
+  | "[" pats "]"         { $$ = make_list_pattern(@1.begin.line, $2); }
   ;
 
 apats:
