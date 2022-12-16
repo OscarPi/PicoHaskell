@@ -93,7 +93,7 @@
 %left "*" "/"
 %right "."
 
-%nterm <std::string> var
+%nterm <std::string> var gcon
 %nterm <std::vector<std::string>> vars tyvars
 %nterm <type> ctype btype atype gtycon
 %nterm <std::vector<type>> types atypes
@@ -101,12 +101,16 @@
 %nterm <std::pair<std::string, std::vector<std::string>>> simpletype
 %nterm <std::vector<std::shared_ptr<DConstructor>>> constrs
 %nterm <std::shared_ptr<DConstructor>> constr
-%nterm <std::shared_ptr<Expression>> exp infixexp lexp fexp aexp gcon
+%nterm <std::shared_ptr<Expression>> exp infixexp lexp fexp aexp
 %nterm <std::pair<std::string, std::shared_ptr<Expression>>> vardecl
 %nterm <std::tuple<std::string, std::vector<std::string>, std::shared_ptr<Expression>>> fundecl
 %nterm <std::pair<std::vector<std::string>, type>> typesig
 %nterm <std::vector<std::shared_ptr<Expression>>> explist
 %nterm <declist> decls
+%nterm <std::shared_ptr<Pattern>> pat lpat apat
+%nterm <std::vector<std::shared_ptr<Pattern>>> pats apats
+%nterm <std::pair<std::shared_ptr<Pattern>, std::shared_ptr<Expression>>> alt
+%nterm <std::vector<std::pair<std::shared_ptr<Pattern>, std::shared_ptr<Expression>>>> alts
 
 //%printer { yyo << $$; } <*>;
 
@@ -167,6 +171,7 @@ lexp:
   | "\\" vars "->" exp                                       { $$ = std::make_shared<Lambda>(@1.begin.line, $2, $4); }
   | "if" exp optsemicolon "then" exp optsemicolon "else" exp { $$ = makeIf(@1.begin.line, $2, $5, $8); }
   | "let" "{" decls "}" "in" exp                             { $$ = makeLet(@1.begin.line, $3, $6); }
+  | "case" exp "of" "{" alts "}"                             { $$ = std::make_shared<Case>(@1.begin.line, $2, $5); }
   ;
 
 fexp:
@@ -179,7 +184,7 @@ aexp:
   | INTEGER                 { $$ = std::make_shared<Literal>(@1.begin.line, $1); }
   | STRING                  { $$ = std::make_shared<Literal>(@1.begin.line, $1); }
   | CHAR                    { $$ = std::make_shared<Literal>(@1.begin.line, $1); }
-  | gcon                    { $$ = $1; }
+  | gcon                    { $$ = std::make_shared<Constructor>(@1.begin.line, $1); }
   | "[" explist "]"         { $$ = makeList(@1.begin.line, $2); }
   | "(" explist "," exp ")" { $2.push_back($4); $$ = makeTuple(@1.begin.line, $2); }
   | "(" exp ")"             { $$ = $2; }
@@ -230,13 +235,13 @@ atype:
    gtycon        { $$ = $1; }
  | VARID         { $$ = std::make_shared<const TypeVariable>($1, nullptr); }
  | "(" types ")" { $$ = makeTupleType($2); }
- | "[" ctype "]"  { $$ = makeListType($2); }
- | "(" ctype ")"  { $$ = $2; }
+ | "[" ctype "]" { $$ = makeListType($2); }
+ | "(" ctype ")" { $$ = $2; }
  ;
 
 types:
     ctype "," ctype  { $$ = {$1, $3}; }
-  | types "," ctype { $$ = $1; $$.push_back($3); }
+  | types "," ctype  { $$ = $1; $$.push_back($3); }
   ;
 
 gtycon:
@@ -254,51 +259,53 @@ commas:
 
 
 gcon:
-    "(" ")"        { $$ = std::make_shared<Constructor>(@1.begin.line, "()"); }
-  | "[" "]"        { $$ = std::make_shared<Constructor>(@1.begin.line, "[]"); }
-  | "(" commas ")" { $$ = std::make_shared<Constructor>(@1.begin.line, "(" + std::string($2, ',') + ")"); }
-  | "(" ":" ")"    { $$ = std::make_shared<Constructor>(@1.begin.line, ":"); }
-  | CONID          { $$ = std::make_shared<Constructor>(@1.begin.line, $1); }
+    "(" ")"        { $$ = "()"; }
+  | "[" "]"        { $$ = "[]"; }
+  | "(" commas ")" { $$ = "(" + std::string($2, ',') + ")"; }
+  | "(" ":" ")"    { $$ = ":"; }
+  | CONID          { $$ = $1; }
   ;
 
+alts:
+    alt          { $$ = {$1}; }
+  | alts ";" alt { $$ = $1; $$.push_back($3); }
   ;
 
-//apatlist: apat | apatlist apat;
+alt: pat "->" exp { $$ = std::make_pair($1, $3); };
 
-//fbindlist: fbind | fbindlist "," fbind;
-//optfbindlist: %empty | fbindlist;
-//quallist: qual | quallist "," qual;
-//explist: exp | explist "," exp;
-//optexp: %empty | exp;
-//optexpcomma: %empty | "," exp;
+pat:
+    lpat ":" pat { $$ = std::make_shared<ConPattern>(@1.begin.line, ":", std::vector<std::shared_ptr<Pattern>>{$1, $3}); }
+  | lpat         { $$ = $1; }
+  ;
 
-//apatlist: apat | apatlist apat;
-//lpat:
-//    apat
-//  | "-" INTEGER
-//  | "-" FLOAT
-//  | gcon apatlist
-//  ;
-//
-//optat: "@" apat | %empty;
-//fpats: fpat | fpats "," fpat;
-//fpatlist: %empty | fpats;
-//optfpatlist: "{" fpatlist "}" | %empty;
-//patlist: pat | patlist "," pat;
-//apat:
-//    qvar optat
-//  | gcon
-//  | qcon optfpatlist
-//  | literal
-//  | "_"
-//  | "(" pat ")"
-//  | "(" pat, patlist ")"
-//  | "[" patlist "]"
-//  | "~" apat
-//  ;
-//
-//fpat: qvar "=" pat;
-//
+lpat:
+    apat        { $$ = $1; }
+  | "-" INTEGER { $$ = std::make_shared<LiteralPattern>(@1.begin.line, -$2); }
+  | gcon apats  { $$ = std::make_shared<ConPattern>(@1.begin.line, $1, $2); }
+  ;
+
+apat:
+    VARID "@" apat       { $$ = $3; $$->as.push_back($1); }
+  | VARID                { $$ = std::make_shared<VarPattern>(@1.begin.line, $1); }
+  | gcon                 { $$ = std::make_shared<ConPattern>(@1.begin.line, $1, std::vector<std::shared_ptr<Pattern>>{}); }
+  | INTEGER              { $$ = std::make_shared<LiteralPattern>(@1.begin.line, $1); }
+  | STRING               { $$ = std::make_shared<LiteralPattern>(@1.begin.line, $1); }
+  | CHAR                 { $$ = std::make_shared<LiteralPattern>(@1.begin.line, $1); }
+  | "_"                  { $$ = std::make_shared<WildPattern>(@1.begin.line); }
+  | "(" pat ")"          { $$ = $2; }
+  | "(" pats "," pat ")" { $2.push_back($4); $$ = makeTuplePat(@1.begin.line, $2); }
+  | "[" pats "]"         { $$ = makeListPat(@1.begin.line, $2); }
+  ;
+
+apats:
+    apat           { $$ = {$1}; }
+  | apats "," apat { $$ = $1; $$.push_back($3); }
+  ;
+
+pats:
+    pat          { $$ = {$1}; }
+  | pats "," pat { $$ = $1; $$.push_back($3); }
+  ;
 
 var:
     VARID        { $$ = $1; }
@@ -315,6 +322,7 @@ var:
   | "(" ">=" ")" { $$ = ">="; }
   | "(" "&&" ")" { $$ = "&&"; }
   | "(" "||" ")" { $$ = "||"; }
+  ;
 
 optsemicolon: %empty | ";";
 

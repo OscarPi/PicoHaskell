@@ -51,8 +51,8 @@ public:
 
 struct Pattern {
     const int lineNo;
-    const std::string as;
-    explicit Pattern(const int &lineNo, const std::string &as): lineNo(lineNo), as(as) {}
+    std::vector<std::string> as;
+    explicit Pattern(const int &lineNo): lineNo(lineNo) {}
     virtual patform getForm() = 0;
     virtual ~Pattern() = default;
 };
@@ -62,28 +62,27 @@ struct ConPattern : Pattern {
     const std::vector<std::shared_ptr<Pattern>> args;
     ConPattern(
             const int &lineNo,
-            const std::string &as,
             const std::string &name,
-            const std::vector<std::shared_ptr<Pattern>> &args): Pattern(lineNo, as), name(name), args(args) {}
+            const std::vector<std::shared_ptr<Pattern>> &args): Pattern(lineNo), name(name), args(args) {}
     patform getForm() override { return patform::con; }
 };
 
 struct WildPattern : Pattern {
-    WildPattern(const int &lineNo, const std::string &as): Pattern(lineNo, as) {}
+    WildPattern(const int &lineNo): Pattern(lineNo) {}
     patform getForm() override { return patform::wild; }
 };
 
 struct LiteralPattern : Pattern {
     const std::variant<int, std::string, char> value;
-    LiteralPattern(const int &lineNo, const std::string &as, int value): Pattern(lineNo, as), value(value) {}
-    LiteralPattern(const int &lineNo, const std::string &as, char value): Pattern(lineNo, as), value(value) {}
-    LiteralPattern(const int &lineNo, const std::string &as, std::string value): Pattern(lineNo, as), value(value) {}
+    LiteralPattern(const int &lineNo, int value): Pattern(lineNo), value(value) {}
+    LiteralPattern(const int &lineNo, char value): Pattern(lineNo), value(value) {}
+    LiteralPattern(const int &lineNo, std::string value): Pattern(lineNo), value(value) {}
     patform getForm() override { return patform::lit; }
 };
 
 struct VarPattern : Pattern {
     const std::string name;
-    VarPattern(const int &lineNo, const std::string &as, const std::string &name): Pattern(lineNo, as), name(name) {}
+    VarPattern(const int &lineNo, const std::string &name): Pattern(lineNo), name(name) {}
     patform getForm() override { return patform::var; }
 };
 
@@ -202,5 +201,7 @@ std::shared_ptr<Expression> makeIf(
 std::shared_ptr<Expression> makeList(const int &lineNo, const std::vector<std::shared_ptr<Expression>> &elts);
 std::shared_ptr<Expression> makeTuple(const int &lineNo, const std::vector<std::shared_ptr<Expression>> &elts);
 std::shared_ptr<Expression> makeLet(const int &lineNo, const declist &decls, const std::shared_ptr<Expression> &e);
+std::shared_ptr<Pattern> makeListPat(const int &lineNo, const std::vector<std::shared_ptr<Pattern>> &elts);
+std::shared_ptr<Pattern> makeTuplePat(const int &lineNo, const std::vector<std::shared_ptr<Pattern>> &elts);
 
 #endif //PICOHASKELL_SYNTAX_HPP

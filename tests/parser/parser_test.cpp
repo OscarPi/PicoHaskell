@@ -509,3 +509,114 @@ TEST(Parser, ParsesLetExpressions) {
     type expected =makeFunctionType(b, b);
     EXPECT_TRUE(sameType_ignoreKinds(l->typeSignatures.at("a"), expected));
 }
+
+TEST(Parser, ParsesCaseExpressions) {
+    auto program = std::make_shared<Program>();
+    auto result = parse_string("a = case 1 of {_ -> 2; _ -> 3}", program);
+    ASSERT_EQ(result, 0);
+    EXPECT_EQ(program->bindings.size(), 1);
+    ASSERT_NE(program->bindings["a"], nullptr);
+    ASSERT_EQ(program->bindings["a"]->getForm(), expform::cas);
+    auto c = std::dynamic_pointer_cast<Case>(program->bindings["a"]);
+
+    EXPECT_EQ(c->exp->getForm(), expform::lit);
+    EXPECT_EQ(std::get<int>(std::dynamic_pointer_cast<Literal>(c->exp)->value), 1);
+
+    EXPECT_EQ(c->alts.size(), 2);
+    EXPECT_EQ(c->alts[0].first->getForm(), patform::wild);
+    EXPECT_EQ(c->alts[1].first->getForm(), patform::wild);
+
+    EXPECT_EQ(c->alts[0].second->getForm(), expform::lit);
+    EXPECT_EQ(std::get<int>(std::dynamic_pointer_cast<Literal>(c->alts[0].second)->value), 2);
+
+    EXPECT_EQ(c->alts[1].second->getForm(), expform::lit);
+    EXPECT_EQ(std::get<int>(std::dynamic_pointer_cast<Literal>(c->alts[1].second)->value), 3);
+}
+
+TEST(Parser, ParsesPatterns) {
+    auto program = std::make_shared<Program>();
+    auto result = parse_string("a = case 1 of {[1,2] -> 2}", program);
+    ASSERT_EQ(result, 0);
+    auto p = std::dynamic_pointer_cast<Case>(program->bindings["a"])->alts[0].first;
+    ASSERT_EQ(p->getForm(), patform::con);
+    auto c = std::dynamic_pointer_cast<ConPattern>(p);
+    EXPECT_EQ(c->name, ":");
+    EXPECT_EQ(c->args.size(), 2);
+    ASSERT_EQ(c->args[0]->getForm(), patform::lit);
+    EXPECT_EQ(std::get<int>(std::dynamic_pointer_cast<LiteralPattern>(c->args[0])->value), 1);
+    ASSERT_EQ(c->args[1]->getForm(), patform::con);
+    c = std::dynamic_pointer_cast<ConPattern>(c->args[1]);
+    EXPECT_EQ(c->name, ":");
+    EXPECT_EQ(c->args.size(), 2);
+    ASSERT_EQ(c->args[0]->getForm(), patform::lit);
+    EXPECT_EQ(std::get<int>(std::dynamic_pointer_cast<LiteralPattern>(c->args[0])->value), 2);
+    ASSERT_EQ(c->args[1]->getForm(), patform::con);
+    c = std::dynamic_pointer_cast<ConPattern>(c->args[1]);
+    EXPECT_EQ(c->name, "[]");
+    EXPECT_EQ(c->args.size(), 0);
+
+    program = std::make_shared<Program>();
+    result = parse_string("a = case 1 of {(1,2) -> 2}", program);
+    ASSERT_EQ(result, 0);
+    p = std::dynamic_pointer_cast<Case>(program->bindings["a"])->alts[0].first;
+    ASSERT_EQ(p->getForm(), patform::con);
+    c = std::dynamic_pointer_cast<ConPattern>(p);
+    EXPECT_EQ(c->name, "(,)");
+    EXPECT_EQ(c->args.size(), 2);
+    ASSERT_EQ(c->args[0]->getForm(), patform::lit);
+    EXPECT_EQ(std::get<int>(std::dynamic_pointer_cast<LiteralPattern>(c->args[0])->value), 1);
+    ASSERT_EQ(c->args[1]->getForm(), patform::lit);
+    EXPECT_EQ(std::get<int>(std::dynamic_pointer_cast<LiteralPattern>(c->args[1])->value), 2);
+
+    program = std::make_shared<Program>();
+    result = parse_string("a = case 1 of {Hi -> 2}", program);
+    ASSERT_EQ(result, 0);
+    p = std::dynamic_pointer_cast<Case>(program->bindings["a"])->alts[0].first;
+    ASSERT_EQ(p->getForm(), patform::con);
+    c = std::dynamic_pointer_cast<ConPattern>(p);
+    EXPECT_EQ(c->name, "Hi");
+    EXPECT_EQ(c->args.size(), 0);
+
+    program = std::make_shared<Program>();
+    result = parse_string("a = case 1 of {a@Hi -> 2}", program);
+    ASSERT_EQ(result, 0);
+    p = std::dynamic_pointer_cast<Case>(program->bindings["a"])->alts[0].first;
+    ASSERT_EQ(p->getForm(), patform::con);
+    c = std::dynamic_pointer_cast<ConPattern>(p);
+    EXPECT_EQ(c->name, "Hi");
+    EXPECT_EQ(c->args.size(), 0);
+    ASSERT_EQ(c->as.size(), 1);
+    EXPECT_EQ(c->as[0], "a");
+
+    program = std::make_shared<Program>();
+    result = parse_string("a = case 1 of {Hi a -> 2}", program);
+    ASSERT_EQ(result, 0);
+    p = std::dynamic_pointer_cast<Case>(program->bindings["a"])->alts[0].first;
+    ASSERT_EQ(p->getForm(), patform::con);
+    c = std::dynamic_pointer_cast<ConPattern>(p);
+    EXPECT_EQ(c->name, "Hi");
+    ASSERT_EQ(c->args.size(), 1);
+    ASSERT_EQ(c->args[0]->getForm(), patform::var);
+    auto v = std::dynamic_pointer_cast<VarPattern>(c->args[0]);
+    EXPECT_EQ(v->name, "a");
+
+    program = std::make_shared<Program>();
+    result = parse_string("a = case 1 of {(-2) -> 2}", program);
+    ASSERT_EQ(result, 0);
+    p = std::dynamic_pointer_cast<Case>(program->bindings["a"])->alts[0].first;
+    ASSERT_EQ(p->getForm(), patform::lit);
+    EXPECT_EQ(std::get<int>(std::dynamic_pointer_cast<LiteralPattern>(p)->value), -2);
+
+    program = std::make_shared<Program>();
+    result = parse_string("a = case 1 of {a:b -> 2}", program);
+    ASSERT_EQ(result, 0);
+    p = std::dynamic_pointer_cast<Case>(program->bindings["a"])->alts[0].first;
+    ASSERT_EQ(p->getForm(), patform::con);
+    c = std::dynamic_pointer_cast<ConPattern>(p);
+    EXPECT_EQ(c->name, ":");
+    ASSERT_EQ(c->args.size(), 2);
+    ASSERT_EQ(c->args[0]->getForm(), patform::var);
+    EXPECT_EQ(std::dynamic_pointer_cast<VarPattern>(c->args[0])->name, "a");
+    ASSERT_EQ(c->args[1]->getForm(), patform::var);
+    EXPECT_EQ(std::dynamic_pointer_cast<VarPattern>(c->args[1])->name, "b");
+}

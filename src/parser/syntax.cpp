@@ -135,8 +135,8 @@ std::shared_ptr<Expression> makeIf(
         const std::shared_ptr<Expression> &e1,
         const std::shared_ptr<Expression> &e2,
         const std::shared_ptr<Expression> &e3) {
-    const auto t = std::make_shared<ConPattern>(lineNo, "", "True", std::vector<std::shared_ptr<Pattern>>());
-    const auto f = std::make_shared<ConPattern>(lineNo, "", "False", std::vector<std::shared_ptr<Pattern>>());
+    const auto t = std::make_shared<ConPattern>(lineNo, "True", std::vector<std::shared_ptr<Pattern>>());
+    const auto f = std::make_shared<ConPattern>(lineNo, "False", std::vector<std::shared_ptr<Pattern>>());
     const auto alt1 = std::make_pair(t, e2);
     const auto alt2 = std::make_pair(f, e3);
     const std::vector<std::pair<std::shared_ptr<Pattern>, std::shared_ptr<Expression>>> alts = {alt1, alt2};
@@ -212,4 +212,19 @@ std::shared_ptr<Expression> makeLet(const int &lineNo, const declist &decls, con
     }
 
     return std::make_shared<Let>(lineNo, bindings, typeSignatures, e);
+}
+
+std::shared_ptr<Pattern> makeListPat(const int &lineNo, const std::vector<std::shared_ptr<Pattern>> &elts) {
+    std::shared_ptr<Pattern> list = std::make_shared<ConPattern>(lineNo, "[]", std::vector<std::shared_ptr<Pattern>>{});
+    for (int i = elts.size() - 1; i >= 0; i--) {
+        list = std::make_shared<ConPattern>(
+                lineNo,
+                ":",
+                std::vector<std::shared_ptr<Pattern>>{elts[i], list});
+    }
+    return list;
+}
+
+std::shared_ptr<Pattern> makeTuplePat(const int &lineNo, const std::vector<std::shared_ptr<Pattern>> &elts) {
+    return std::make_shared<ConPattern>(lineNo, "(" + std::string(elts.size() - 1, ',') + ")", elts);
 }
