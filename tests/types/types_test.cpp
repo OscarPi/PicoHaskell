@@ -17,41 +17,30 @@
 //}
 
 TEST(Types, TypeEquality) {
-    EXPECT_TRUE(same_type(tUnit, tUnit));
-    EXPECT_TRUE(same_type(tUnit, std::make_shared<const TypeConstructor>("()")));
-    EXPECT_TRUE(same_type(tChar, tChar));
-    EXPECT_TRUE(same_type(tList, tList));
-    EXPECT_TRUE(same_type(tArrow, tArrow));
-    EXPECT_TRUE(same_type(tTuple2, tTuple2));
+    EXPECT_TRUE(same_type(
+            std::make_unique<TypeConstructor>("()").get(),
+            std::make_unique<TypeConstructor>("()").get()));
+    EXPECT_TRUE(same_type(
+            std::make_unique<TypeVariable>("a").get(),
+            std::make_unique<TypeVariable>("a").get()));
+    EXPECT_TRUE(same_type(
+            std::make_unique<TypeApplication>(new TypeConstructor("a"), new TypeVariable("b")).get(),
+            std::make_unique<TypeApplication>(new TypeConstructor("a"), new TypeVariable("b")).get()));
 
-    EXPECT_FALSE(same_type(tUnit, tChar));
-    EXPECT_FALSE(same_type(tUnit, tList));
-    EXPECT_FALSE(same_type(tUnit, tArrow));
-    EXPECT_FALSE(same_type(tUnit, tTuple2));
-    EXPECT_FALSE(same_type(tList, tUnit));
-    EXPECT_FALSE(same_type(tList, tArrow));
-    EXPECT_FALSE(same_type(tList, tTuple2));
-    EXPECT_FALSE(same_type(tArrow, tUnit));
-    EXPECT_FALSE(same_type(tArrow, tList));
-    EXPECT_FALSE(same_type(tArrow, tTuple2));
-    EXPECT_FALSE(same_type(tTuple2, tUnit));
-    EXPECT_FALSE(same_type(tTuple2, tList));
-    EXPECT_FALSE(same_type(tTuple2, tArrow));
+    EXPECT_FALSE(same_type(
+            std::make_unique<TypeConstructor>("()").get(),
+            std::make_unique<TypeVariable>("()").get()));
+    EXPECT_FALSE(same_type(
+            std::make_unique<TypeConstructor>("()").get(),
+            std::make_unique<TypeConstructor>("[]").get()));
+    EXPECT_FALSE(same_type(
+            std::make_unique<TypeVariable>("aa").get(),
+            std::make_unique<TypeVariable>("a").get()));
+    EXPECT_FALSE(same_type(
+            std::make_unique<TypeApplication>(new TypeConstructor("a"), new TypeVariable("b")).get(),
+            std::make_unique<TypeApplication>(new TypeConstructor("c"), new TypeVariable("b")).get()));
 }
 
-TEST(Types, MakeFunctionType) {
-    type partial = std::make_shared<const TypeApplication>(tArrow, tDouble);
-    EXPECT_TRUE(same_type(make_function_type(tDouble, tInt), std::make_shared<const TypeApplication>(partial, tInt)));
-}
-
-TEST(Types, MakeListType) {
-    EXPECT_TRUE(same_type(make_list_type(tInt), std::make_shared<const TypeApplication>(tList, tInt)));
-}
-
-TEST(Types, MakePairType) {
-    type partial = std::make_shared<const TypeApplication>(tTuple2, tInt);
-    EXPECT_TRUE(same_type(make_pair_type(tInt, tDouble), std::make_shared<const TypeApplication>(partial, tDouble)));
-}
 //
 //TEST(Types, ApplySubstitution) {
 //    substitution s;
@@ -384,7 +373,3 @@ TEST(Types, MakePairType) {
 //    EXPECT_EQ(d.find("vara"), s3);
 //    EXPECT_EQ(d.find("d"), s2);
 //}
-
-TEST(Types, MakeTuple) {
-    ASSERT_TRUE(same_type(make_pair_type(tInt, tDouble), make_tuple_type({tInt, tDouble})));
-}

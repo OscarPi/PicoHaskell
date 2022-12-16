@@ -77,19 +77,19 @@
 //    return iterator->second;
 //}
 
-type make_function_type(const type &argType, const type &resultType) {
-    type partial = std::make_shared<const TypeApplication>(tArrow, argType);
-    return std::make_shared<const TypeApplication>(partial, resultType);
+Type *make_function_type(Type* const &argType, Type* const &resultType) {
+    Type *partial = new TypeApplication(new TypeConstructor("(->)"), argType);
+    return new TypeApplication(partial, resultType);
 }
 
-type make_list_type(const type &elementType) {
-    return std::make_shared<const TypeApplication>(tList, elementType);
+Type *make_list_type(Type* const &elementType) {
+    return new TypeApplication(new TypeConstructor("[]"), elementType);
 }
 
-type make_pair_type(const type &leftType, const type &rightType) {
-    type partial = std::make_shared<const TypeApplication>(tTuple2, leftType);
-    return std::make_shared<const TypeApplication>(partial, rightType);
-}
+//Type *make_pair_type(const type &leftType, const type &rightType) {
+//    type partial = std::make_shared<const TypeApplication>(tTuple2, leftType);
+//    return std::make_shared<const TypeApplication>(partial, rightType);
+//}
 
 //kind makeTupleConstructorKind(size_t size) {
 //    kind k = kStar;
@@ -99,11 +99,11 @@ type make_pair_type(const type &leftType, const type &rightType) {
 //    return k;
 //}
 
-type make_tuple_type(const std::vector<type> &components) {
+Type *make_tuple_type(const std::vector<Type*> &components) {
     std::string constructor = "(" + std::string(components.size() - 1, ',') + ")";
-    type t = std::make_shared<const TypeConstructor>(constructor);
+    Type *t = new TypeConstructor(constructor);
     for (const auto &c: components) {
-        t = std::make_shared<const TypeApplication>(t, c);
+        t = new TypeApplication(t, c);
     }
     return t;
 }
@@ -126,29 +126,22 @@ type make_tuple_type(const std::vector<type> &components) {
 //    }
 //}
 
-bool same_type(const type &a, const type &b) {
-    std::shared_ptr<const TypeVariable> variable1;
-    std::shared_ptr<const TypeVariable> variable2;
-    std::shared_ptr<const TypeConstructor> constructor1;
-    std::shared_ptr<const TypeConstructor> constructor2;
-    std::shared_ptr<const TypeApplication> application1;
-    std::shared_ptr<const TypeApplication> application2;
+bool same_type(const Type *a, const Type *b) {
     if (a->get_form() != b->get_form()) {
         return false;
     }
     switch (a->get_form()) {
         case typeform::variable:
-            variable1 = std::dynamic_pointer_cast<const TypeVariable>(a);
-            variable2 = std::dynamic_pointer_cast<const TypeVariable>(b);
-            return variable1->id == variable2->id;
+            return dynamic_cast<const TypeVariable*>(a)->id == dynamic_cast<const TypeVariable*>(b)->id;
         case typeform::constructor:
-            constructor1 = std::dynamic_pointer_cast<const TypeConstructor>(a);
-            constructor2 = std::dynamic_pointer_cast<const TypeConstructor>(b);
-            return constructor1->id == constructor2->id;
+            return dynamic_cast<const TypeConstructor*>(a)->id == dynamic_cast<const TypeConstructor*>(b)->id;
         case typeform::application:
-            application1 = std::dynamic_pointer_cast<const TypeApplication>(a);
-            application2 = std::dynamic_pointer_cast<const TypeApplication>(b);
-            return same_type(application1->left, application2->left) && same_type(application1->right, application2->right);
+            return same_type(
+                           dynamic_cast<const TypeApplication*>(a)->left.get(),
+                           dynamic_cast<const TypeApplication*>(b)->left.get()) &&
+                   same_type(
+                           dynamic_cast<const TypeApplication*>(a)->right.get(),
+                           dynamic_cast<const TypeApplication*>(b)->right.get());
     }
 }
 

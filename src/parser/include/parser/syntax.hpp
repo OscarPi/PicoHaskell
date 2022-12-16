@@ -21,12 +21,9 @@ public:
 struct DConstructor {
     const int line;
     const std::string name;
-    const std::vector<type> types;
+    std::vector<std::unique_ptr<Type>> types;
     std::string type_constructor;
-    DConstructor(
-            const int &line,
-            std::string name,
-            const std::vector<type> &types): line(line), name(std::move(name)), types(types) {};
+    DConstructor(const int &line, std::string name, const std::vector<Type*> &types);
 };
 
 struct TConstructor {
@@ -135,12 +132,12 @@ struct Case : public Expression {
 
 struct Let : public Expression {
     std::map<std::string, std::unique_ptr<Expression>> bindings;
-    const std::map<std::string, type> type_signatures;
+    std::map<std::string, std::unique_ptr<Type>> type_signatures;
     const std::unique_ptr<Expression> e;
     Let(
             const int &line,
             const std::map<std::string, Expression*> &bindings,
-            const std::map<std::string, type> &type_signatures,
+            const std::map<std::string, Type*> &type_signatures,
             Expression * const &e
             );
     expform getForm() override { return expform::let; }
@@ -162,10 +159,10 @@ struct Program {
     std::map<std::string, std::unique_ptr<TConstructor>> type_constructors;
     std::map<std::string, std::unique_ptr<DConstructor>> data_constructors;
     std::map<std::string, std::unique_ptr<Expression>> bindings;
-    std::map<std::string, type> type_signatures;
-    void add_type_signatures(const std::vector<std::string> &names, const type &t);
+    std::map<std::string, std::unique_ptr<Type>> type_signatures;
+    void add_type_signature(const int &line, const std::string &name, Type* const &t);
     void add_type_constructor(
-            int line,
+            const int &line,
             const std::string &name,
             const std::vector<std::string> &argument_variables,
             const std::vector<DConstructor*> &new_data_constructors);
@@ -177,15 +174,15 @@ struct Program {
             Expression * const &body);
 };
 
-typedef std::vector<std::pair<std::vector<std::string>, type>> typesigs;
+typedef std::vector<std::pair<std::string, Type*>> typesigs;
 typedef std::vector<std::tuple<std::string, std::vector<std::string>, Expression*>> funcs;
 typedef std::vector<std::pair<std::string, Expression*>> vars;
 typedef std::tuple<typesigs, funcs, vars> declist;
 
-Expression *make_if_expression(const int &line, Expression * const &e1, Expression * const &e2, Expression * const &e3);
+Expression *make_if_expression(const int &line, Expression* const &e1, Expression* const &e2, Expression* const &e3);
 Expression *make_list_expression(const int &line, const std::vector<Expression*> &elements);
 Expression *make_tuple_expression(const int &line, const std::vector<Expression*> &elements);
-Expression *make_let_expression(const int &line, const declist &decls, Expression * const &e);
+Expression *make_let_expression(const int &line, const declist &decls, Expression* const &e);
 Pattern *make_list_pattern(const int &line, const std::vector<Pattern*> &elements);
 Pattern *make_tuple_pattern(const int &line, const std::vector<Pattern*> &elements);
 

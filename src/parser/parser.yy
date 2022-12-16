@@ -95,8 +95,8 @@
 
 %nterm <std::string> var gcon
 %nterm <std::vector<std::string>> vars tyvars
-%nterm <type> ctype btype atype gtycon
-%nterm <std::vector<type>> types atypes
+%nterm <Type*> ctype btype atype gtycon
+%nterm <std::vector<Type*>> types atypes
 %nterm <int> commas
 %nterm <std::pair<std::string, std::vector<std::string>>> simpletype
 %nterm <std::vector<DConstructor*>> constrs
@@ -104,7 +104,7 @@
 %nterm <Expression*> exp infixexp lexp fexp aexp
 %nterm <std::pair<std::string, Expression*>> vardecl
 %nterm <std::tuple<std::string, std::vector<std::string>, Expression*>> fundecl
-%nterm <std::pair<std::vector<std::string>, type>> typesig
+%nterm <std::pair<std::string, Type*>> typesig
 %nterm <std::vector<Expression*>> explist
 %nterm <declist> decls
 %nterm <Pattern*> pat lpat apat
@@ -123,7 +123,7 @@ topdecls:
   ;
 
 topdecl:
-    typesig                       { program->add_type_signatures($1.first, $1.second); }
+    typesig                       { program->add_type_signature(@1.begin.line, $1.first, $1.second); }
   | fundecl                       { program->add_named_function(@1.begin.line, std::get<0>($1), std::get<1>($1), std::get<2>($1)); }
   | vardecl                       { program->add_variable(@1.begin.line, $1.first, $1.second); }
   | "data" simpletype             { program->add_type_constructor(@1.begin.line, $2.first, $2.second, {}); }
@@ -139,7 +139,7 @@ decls:
   | decls ";" fundecl { $$ = $1; std::get<1>($$).push_back($3); }
   | decls ";" vardecl { $$ = $1; std::get<2>($$).push_back($3); }
 
-typesig: vars "::" ctype    { $$ = std::make_pair($1, $3); };
+typesig: VARID "::" ctype   { $$ = std::make_pair($1, $3); };
 fundecl: VARID vars "=" exp { $$ = std::make_tuple($1, $2, $4); };
 vardecl: VARID "=" exp      { $$ =  std::make_pair($1, $3); };
 
@@ -204,7 +204,7 @@ constrs:
   | constrs "|" constr { $$ = $1; $$.push_back($3); }
 
 constr:
-    CONID        { $$ = new DConstructor(@1.begin.line, $1, std::vector<type>()); }
+    CONID        { $$ = new DConstructor(@1.begin.line, $1, {}); }
   | CONID atypes { $$ = new DConstructor(@1.begin.line, $1, $2); }
 
 atypes:
@@ -228,12 +228,12 @@ ctype:
 
 btype:
     atype       { $$ = $1; }
-  | btype atype { $$ = std::make_shared<const TypeApplication>($1, $2); }
+  | btype atype { $$ = new TypeApplication($1, $2); }
   ;
 
 atype:
    gtycon        { $$ = $1; }
- | VARID         { $$ = std::make_shared<const TypeVariable>($1); }
+ | VARID         { $$ = new TypeVariable($1); }
  | "(" types ")" { $$ = make_tuple_type($2); }
  | "[" ctype "]" { $$ = make_list_type($2); }
  | "(" ctype ")" { $$ = $2; }
@@ -245,11 +245,11 @@ types:
   ;
 
 gtycon:
-    CONID          { $$ = std::make_shared<const TypeConstructor>($1); }
-  | "(" ")"        { $$ = tUnit; }
-  | "[" "]"        { $$ = tList; }
-  | "(" "->" ")"   { $$ = tArrow; }
-  | "(" commas ")" { $$ = std::make_shared<const TypeConstructor>("(" + std::string($2, ',') + ")"); }
+    CONID          { $$ = new TypeConstructor($1); }
+  | "(" ")"        { $$ = new TypeConstructor("()"); }
+  | "[" "]"        { $$ = new TypeConstructor("[]"); }
+  | "(" "->" ")"   { $$ = new TypeConstructor("(->)"); }
+  | "(" commas ")" { $$ = new TypeConstructor("(" + std::string($2, ',') + ")"); }
   ;
 
 commas:

@@ -1,6 +1,15 @@
 #include <algorithm>
 #include "parser/syntax.hpp"
 
+DConstructor::DConstructor(
+        const int &line,
+        std::string name,
+        const std::vector<Type*> &types): line(line), name(std::move(name)) {
+    for (const auto &type: types) {
+        this->types.emplace_back(type);
+    }
+};
+
 ConstructorPattern::ConstructorPattern(
         const int &line, std::string name,
         const std::vector<Pattern *> &args): Pattern(line), name(std::move(name)) {
@@ -21,24 +30,28 @@ Case::Case(
 Let::Let(
         const int &line,
         const std::map<std::string, Expression*> &bindings,
-        const std::map<std::string, type> &type_signatures,
-        Expression * const &e): Expression(line), type_signatures(type_signatures), e(e) {
+        const std::map<std::string, Type*> &type_signatures,
+        Expression * const &e): Expression(line), e(e) {
     for (auto const &[name, exp] : bindings) {
         this->bindings.emplace(name, exp);
     }
-}
-
-void Program::add_type_signatures(const std::vector<std::string> &names, const type &t) {
-    for (const auto& name: names) {
-        if (type_signatures.count(name) > 0) {
-            throw ParseError("Multiple type signatures for the same name are not allowed.");
-        }
-        type_signatures[name] = t;
+    for (auto const &[name, signature] : type_signatures) {
+        this->type_signatures.emplace(name, signature);
     }
 }
 
+void Program::add_type_signature(const int &line, const std::string &name, Type* const &t) {
+    if (type_signatures.count(name) > 0) {
+        throw ParseError(
+                "Line " +
+                std::to_string(line) +
+                ": multiple type signatures for the same name are not allowed.");
+    }
+    type_signatures.emplace(name, t);
+}
+
 void Program::add_type_constructor(
-        int line,
+        const int &line,
         const std::string &name,
         const std::vector<std::string> &argument_variables,
         const std::vector<DConstructor*> &new_data_constructors) {
@@ -52,8 +65,7 @@ void Program::add_type_constructor(
                     std::to_string(constructor->line) +
                     ": data constructor called " +
                     constructor->name +
-                    " already exists."
-            );
+                    " already exists.");
         }
         data_constructor_names.push_back(constructor->name);
         data_constructors.emplace(constructor->name, constructor);
@@ -66,8 +78,7 @@ void Program::add_type_constructor(
                 std::to_string(type_constructor->line) +
                 ": type constructor called " +
                 type_constructor->name +
-                " already exists."
-        );
+                " already exists.");
     }
     type_constructors[type_constructor->name] = std::move(type_constructor);
 }
@@ -79,8 +90,7 @@ void Program::add_variable(const int &line, const std::string &name, Expression 
                 std::to_string(line) +
                 ": multiple bindings to the name " +
                 name +
-                "."
-        );
+                ".");
     }
     bindings.emplace(name, exp);
 }
@@ -93,8 +103,7 @@ void Program::add_named_function(const int &line, const std::string &name, const
                 std::to_string(line) +
                 ": multiple bindings to the name " +
                 name +
-                "."
-        );
+                ".");
     }
     bindings[name] = std::make_unique<Lambda>(line, args, body);
 }
@@ -137,21 +146,18 @@ Expression *make_tuple_expression(const int &line, const std::vector<Expression*
     return tuple;
 }
 
-Expression *make_let_expression(const int &line, const declist &decls, Expression * const &e) {
+Expression *make_let_expression(const int &line, const declist &decls, Expression* const &e) {
     std::map<std::string, Expression*> bindings;
-    std::map<std::string, type> type_signatures;
+    std::map<std::string, Type*> type_signatures;
 
     for (const auto &signature: std::get<0>(decls)) {
-        for (const auto &name: signature.first) {
-            if (type_signatures.count(name) > 0) {
-                throw ParseError(
-                        "Line " +
-                        std::to_string(line) +
-                        ": multiple type signatures for the same name are not allowed."
-                );
-            }
-            type_signatures[name] = signature.second;
+        if (type_signatures.count(signature.first) > 0) {
+            throw ParseError(
+                    "Line " +
+                    std::to_string(line) +
+                    ": multiple type signatures for the same name are not allowed.");
         }
+        type_signatures[signature.first] = signature.second;
     }
 
     for (const auto &function: std::get<1>(decls)) {
@@ -161,8 +167,7 @@ Expression *make_let_expression(const int &line, const declist &decls, Expressio
                     std::to_string(line) +
                     ": multiple bindings to the name " +
                     std::get<0>(function) +
-                    "."
-            );
+                    ".");
         }
         bindings[std::get<0>(function)] = new Lambda(line, std::get<1>(function), std::get<2>(function));
     }
@@ -174,8 +179,7 @@ Expression *make_let_expression(const int &line, const declist &decls, Expressio
                     std::to_string(line) +
                     ": multiple bindings to the name " +
                     variable.first +
-                    "."
-            );
+                    ".");
         }
         bindings[variable.first] = variable.second;
     }

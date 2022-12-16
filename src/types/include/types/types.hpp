@@ -33,8 +33,6 @@ enum class typeform {variable, constructor, application}; //, gen};
 //    kind getResult() const;
 //};
 
-class Type;
-typedef std::shared_ptr<const Type> type;
 //typedef std::map<std::string, type> substitution;
 
 struct Type {
@@ -55,9 +53,9 @@ struct TypeConstructor : public Type {
 };
 
 struct TypeApplication : public Type {
-    const type left;
-    const type right;
-    TypeApplication(type left, type right): left(left), right(right) {}
+    const std::unique_ptr<Type> left;
+    const std::unique_ptr<Type> right;
+    TypeApplication(Type* const &left, Type* const &right): left(left), right(right) {}
     typeform get_form() const override { return typeform::application; }
 };
 
@@ -101,24 +99,14 @@ struct TypeApplication : public Type {
 //const kind kStarToStar = std::make_shared<const ArrowKind>(kStar, kStar);
 //const kind kStarToStarToStar = std::make_shared<const ArrowKind>(kStar, kStarToStar);
 
-const type tUnit = std::make_shared<const TypeConstructor>("()");
-const type tChar = std::make_shared<const TypeConstructor>("Char");
-const type tInt = std::make_shared<const TypeConstructor>("Int");
-const type tFloat = std::make_shared<const TypeConstructor>("Float");
-const type tDouble = std::make_shared<const TypeConstructor>("Double");
-
-const type tList = std::make_shared<const TypeConstructor>("[]");
-const type tArrow = std::make_shared<const TypeConstructor>("(->)");
-const type tTuple2 = std::make_shared<const TypeConstructor>("(,)");
-
-type make_function_type(const type &argType, const type &resultType);
-type make_list_type(const type &elementType);
-type make_pair_type(const type &leftType, const type &rightType);
+Type *make_function_type(Type* const &argType, Type* const &resultType);
+Type *make_list_type(Type* const &elementType);
+//type make_pair_type(const type &leftType, const type &rightType);
 //kind makeTupleConstructorKind(size_t size);
-type make_tuple_type(const std::vector<type> &components);
+Type *make_tuple_type(const std::vector<Type*> &components);
 
 //bool sameKind(const kind &a, const kind &b);
-bool same_type(const type &a, const type &b);
+bool same_type(const Type *a, const Type *b);
 //type applySubstitution(const type &t, const substitution &s);
 //std::vector<std::string> findTypeVariables(const type &t);
 //std::vector<type> applySubstitution(const std::vector<type> &ts, const substitution &s);

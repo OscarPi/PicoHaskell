@@ -21,66 +21,66 @@ TEST(Parser, ParsesTypeSignatures) {
     int result = parse_string("a :: ()", program);
     ASSERT_EQ(result, 0);
     ASSERT_NE(program->type_signatures["a"], nullptr);
-    EXPECT_TRUE(same_type(program->type_signatures["a"], tUnit));
+    EXPECT_TRUE(same_type(program->type_signatures["a"].get(), std::make_unique<TypeConstructor>("()").get()));
 
     program = std::make_shared<Program>();
     result = parse_string("a :: [] Int", program);
     ASSERT_EQ(result, 0);
     ASSERT_NE(program->type_signatures["a"], nullptr);
-    EXPECT_TRUE(same_type(program->type_signatures["a"], make_list_type(tInt)));
+    EXPECT_TRUE(same_type(program->type_signatures["a"].get(), make_list_type(new TypeConstructor("Int"))));
 
     program = std::make_shared<Program>();
     result = parse_string("a :: [Int]", program);
     ASSERT_EQ(result, 0);
     ASSERT_NE(program->type_signatures["a"], nullptr);
-    EXPECT_TRUE(same_type(program->type_signatures["a"], make_list_type(tInt)));
+    EXPECT_TRUE(same_type(program->type_signatures["a"].get(), make_list_type(new TypeConstructor("Int"))));
 
     program = std::make_shared<Program>();
     result = parse_string("a :: Int -> Int -> Int", program);
     ASSERT_EQ(result, 0);
     ASSERT_NE(program->type_signatures["a"], nullptr);
-    type expected = make_function_type(tInt, make_function_type(tInt, tInt));
-    EXPECT_TRUE(same_type(program->type_signatures["a"], expected));
+    auto expected = make_function_type(new TypeConstructor("Int"), make_function_type(new TypeConstructor("Int"), new TypeConstructor("Int")));
+    EXPECT_TRUE(same_type(program->type_signatures["a"].get(), expected));
 
     program = std::make_shared<Program>();
     result = parse_string("a :: (->) Int (Int -> Int)", program);
     ASSERT_EQ(result, 0);
     ASSERT_NE(program->type_signatures["a"], nullptr);
-    expected = make_function_type(tInt, make_function_type(tInt, tInt));
-    EXPECT_TRUE(same_type(program->type_signatures["a"], expected));
+    expected = make_function_type(new TypeConstructor("Int"), make_function_type(new TypeConstructor("Int"), new TypeConstructor("Int")));
+    EXPECT_TRUE(same_type(program->type_signatures["a"].get(), expected));
 
     program = std::make_shared<Program>();
     result = parse_string("a :: (Int -> Int) -> Int", program);
     ASSERT_EQ(result, 0);
     ASSERT_NE(program->type_signatures["a"], nullptr);
-    expected = make_function_type(make_function_type(tInt, tInt), tInt);
-    EXPECT_TRUE(same_type(program->type_signatures["a"], expected));
+    expected = make_function_type(make_function_type(new TypeConstructor("Int"), new TypeConstructor("Int")), new TypeConstructor("Int"));
+    EXPECT_TRUE(same_type(program->type_signatures["a"].get(), expected));
 
     program = std::make_shared<Program>();
     result = parse_string("a :: cheesecake -> cheesecake", program);
     ASSERT_EQ(result, 0);
     ASSERT_NE(program->type_signatures["a"], nullptr);
-    type cheesecake = std::make_shared<const TypeVariable>("cheesecake");
+    auto cheesecake = new TypeVariable("cheesecake");
     expected = make_function_type(cheesecake, cheesecake);
-    EXPECT_TRUE(same_type(program->type_signatures["a"], expected));
+    EXPECT_TRUE(same_type(program->type_signatures["a"].get(), expected));
 
     program = std::make_shared<Program>();
     result = parse_string("a :: (Int,Double)", program);
     ASSERT_EQ(result, 0);
     ASSERT_NE(program->type_signatures["a"], nullptr);
-    EXPECT_TRUE(same_type(program->type_signatures["a"], make_pair_type(tInt, tDouble)));
+    EXPECT_TRUE(same_type(program->type_signatures["a"].get(), make_tuple_type({new TypeConstructor("Int"), new TypeConstructor("Double")})));
 
     program = std::make_shared<Program>();
     result = parse_string("a :: (Int,Double,Int)", program);
     ASSERT_EQ(result, 0);
     ASSERT_NE(program->type_signatures["a"], nullptr);
-    EXPECT_TRUE(same_type(program->type_signatures["a"], make_tuple_type({tInt, tDouble, tInt})));
+    EXPECT_TRUE(same_type(program->type_signatures["a"].get(), make_tuple_type({new TypeConstructor("Int"), new TypeConstructor("Double"), new TypeConstructor("Int")})));
 
     program = std::make_shared<Program>();
     result = parse_string("a :: (,,) Int Double Int", program);
     ASSERT_EQ(result, 0);
     ASSERT_NE(program->type_signatures["a"], nullptr);
-    EXPECT_TRUE(same_type(program->type_signatures["a"], make_tuple_type({tInt, tDouble, tInt})));
+    EXPECT_TRUE(same_type(program->type_signatures["a"].get(), make_tuple_type({new TypeConstructor("Int"), new TypeConstructor("Double"), new TypeConstructor("Int")})));
 }
 
 TEST(Parser, ParsesDataDecls) {
@@ -443,9 +443,9 @@ TEST(Parser, ParsesLetExpressions) {
 
     EXPECT_EQ(l->type_signatures.size(), 1);
 
-    type b = std::make_shared<const TypeVariable>("b");
-    type expected =make_function_type(b, b);
-    EXPECT_TRUE(same_type(l->type_signatures.at("a"), expected));
+    auto b = new TypeVariable("b");
+    auto expected =make_function_type(b, b);
+    EXPECT_TRUE(same_type(l->type_signatures.at("a").get(), expected));
 }
 
 TEST(Parser, ParsesCaseExpressions) {
