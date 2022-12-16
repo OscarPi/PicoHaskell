@@ -13,7 +13,7 @@
     class Driver;
 }
 %param { Driver& drv }
-%parse-param { std::shared_ptr<Program> program }
+%parse-param { Program *program }
 %locations
 %define parse.trace
 %define parse.error detailed

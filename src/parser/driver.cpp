@@ -13,8 +13,8 @@ int Driver::parse (const std::string &f)
     file = f;
     location.initialize(&file);
     scan_begin();
-    std::shared_ptr<Program> tree;
-    yy::parser parse(*this, tree);
+    std::unique_ptr<Program> tree;
+    yy::parser parse(*this, tree.get());
     parse.set_debug_level(trace_parsing);
     int res = parse();
     scan_end();

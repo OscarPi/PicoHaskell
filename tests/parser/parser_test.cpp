@@ -5,7 +5,7 @@
 
 void reset_start_condition();
 
-int parse_string(const char* str, const std::shared_ptr<Program> &program) {
+int parse_string(const char* str, Program *program) {
     Driver drv;
     YY_BUFFER_STATE buffer = yy_scan_string(str);
     yy_switch_to_buffer(buffer);
@@ -17,92 +17,82 @@ int parse_string(const char* str, const std::shared_ptr<Program> &program) {
 }
 
 TEST(Parser, ParsesTypeSignatures) {
-    std::shared_ptr<Program> program = std::make_shared<Program>();
-    int result = parse_string("a :: ()", program);
+    std::unique_ptr<Program> program = std::make_unique<Program>();
+    int result = parse_string("a :: ()", program.get());
     ASSERT_EQ(result, 0);
-    ASSERT_NE(program->type_signatures["a"], nullptr);
     EXPECT_TRUE(same_type(program->type_signatures["a"].get(), std::make_unique<TypeConstructor>("()").get()));
 
-    program = std::make_shared<Program>();
-    result = parse_string("a :: [] Int", program);
+    program = std::make_unique<Program>();
+    result = parse_string("a :: [] Int", program.get());
     ASSERT_EQ(result, 0);
-    ASSERT_NE(program->type_signatures["a"], nullptr);
     EXPECT_TRUE(same_type(program->type_signatures["a"].get(), make_list_type(new TypeConstructor("Int"))));
 
-    program = std::make_shared<Program>();
-    result = parse_string("a :: [Int]", program);
+    program = std::make_unique<Program>();
+    result = parse_string("a :: [Int]", program.get());
     ASSERT_EQ(result, 0);
-    ASSERT_NE(program->type_signatures["a"], nullptr);
     EXPECT_TRUE(same_type(program->type_signatures["a"].get(), make_list_type(new TypeConstructor("Int"))));
 
-    program = std::make_shared<Program>();
-    result = parse_string("a :: Int -> Int -> Int", program);
+    program = std::make_unique<Program>();
+    result = parse_string("a :: Int -> Int -> Int", program.get());
     ASSERT_EQ(result, 0);
-    ASSERT_NE(program->type_signatures["a"], nullptr);
     auto expected = make_function_type(new TypeConstructor("Int"), make_function_type(new TypeConstructor("Int"), new TypeConstructor("Int")));
     EXPECT_TRUE(same_type(program->type_signatures["a"].get(), expected));
 
-    program = std::make_shared<Program>();
-    result = parse_string("a :: (->) Int (Int -> Int)", program);
+    program = std::make_unique<Program>();
+    result = parse_string("a :: (->) Int (Int -> Int)", program.get());
     ASSERT_EQ(result, 0);
-    ASSERT_NE(program->type_signatures["a"], nullptr);
     expected = make_function_type(new TypeConstructor("Int"), make_function_type(new TypeConstructor("Int"), new TypeConstructor("Int")));
     EXPECT_TRUE(same_type(program->type_signatures["a"].get(), expected));
 
-    program = std::make_shared<Program>();
-    result = parse_string("a :: (Int -> Int) -> Int", program);
+    program = std::make_unique<Program>();
+    result = parse_string("a :: (Int -> Int) -> Int", program.get());
     ASSERT_EQ(result, 0);
-    ASSERT_NE(program->type_signatures["a"], nullptr);
     expected = make_function_type(make_function_type(new TypeConstructor("Int"), new TypeConstructor("Int")), new TypeConstructor("Int"));
     EXPECT_TRUE(same_type(program->type_signatures["a"].get(), expected));
 
-    program = std::make_shared<Program>();
-    result = parse_string("a :: cheesecake -> cheesecake", program);
+    program = std::make_unique<Program>();
+    result = parse_string("a :: cheesecake -> cheesecake", program.get());
     ASSERT_EQ(result, 0);
-    ASSERT_NE(program->type_signatures["a"], nullptr);
     auto cheesecake = new TypeVariable("cheesecake");
     expected = make_function_type(cheesecake, cheesecake);
     EXPECT_TRUE(same_type(program->type_signatures["a"].get(), expected));
 
-    program = std::make_shared<Program>();
-    result = parse_string("a :: (Int,Double)", program);
+    program = std::make_unique<Program>();
+    result = parse_string("a :: (Int,Double)", program.get());
     ASSERT_EQ(result, 0);
-    ASSERT_NE(program->type_signatures["a"], nullptr);
     EXPECT_TRUE(same_type(program->type_signatures["a"].get(), make_tuple_type({new TypeConstructor("Int"), new TypeConstructor("Double")})));
 
-    program = std::make_shared<Program>();
-    result = parse_string("a :: (Int,Double,Int)", program);
+    program = std::make_unique<Program>();
+    result = parse_string("a :: (Int,Double,Int)", program.get());
     ASSERT_EQ(result, 0);
-    ASSERT_NE(program->type_signatures["a"], nullptr);
     EXPECT_TRUE(same_type(program->type_signatures["a"].get(), make_tuple_type({new TypeConstructor("Int"), new TypeConstructor("Double"), new TypeConstructor("Int")})));
 
-    program = std::make_shared<Program>();
-    result = parse_string("a :: (,,) Int Double Int", program);
+    program = std::make_unique<Program>();
+    result = parse_string("a :: (,,) Int Double Int", program.get());
     ASSERT_EQ(result, 0);
-    ASSERT_NE(program->type_signatures["a"], nullptr);
     EXPECT_TRUE(same_type(program->type_signatures["a"].get(), make_tuple_type({new TypeConstructor("Int"), new TypeConstructor("Double"), new TypeConstructor("Int")})));
 }
 
 TEST(Parser, ParsesDataDecls) {
-    std::shared_ptr<Program> program = std::make_shared<Program>();
-    int result = parse_string("data hey", program);
+    std::unique_ptr<Program> program = std::make_unique<Program>();
+    int result = parse_string("data hey", program.get());
     ASSERT_EQ(result, 1);
 
-    program = std::make_shared<Program>();
-    result = parse_string("data Hi", program);
+    program = std::make_unique<Program>();
+    result = parse_string("data Hi", program.get());
     ASSERT_EQ(result, 0);
     const auto &hi = program->type_constructors["Hi"];
-    ASSERT_NE(hi, nullptr);
+
     EXPECT_EQ(hi->line, 1);
     EXPECT_EQ(hi->name, "Hi");
     EXPECT_EQ(hi->argument_variables.size(), 0);
     EXPECT_EQ(hi->data_constructors.size(), 0);
 
-    program = std::make_shared<Program>();
-    result = parse_string("data Hi = Bye | No", program);
+    program = std::make_unique<Program>();
+    result = parse_string("data Hi = Bye | No", program.get());
     ASSERT_EQ(result, 0);
     const auto &hi2 = program->type_constructors["Hi"];
-    ASSERT_NE(hi2, nullptr);
+
     EXPECT_EQ(hi2->line, 1);
     EXPECT_EQ(hi2->name, "Hi");
     EXPECT_EQ(hi2->argument_variables.size(), 0);
@@ -118,11 +108,11 @@ TEST(Parser, ParsesDataDecls) {
     EXPECT_EQ(no->types.size(), 0);
     EXPECT_EQ(no->type_constructor, "Hi");
 
-    program = std::make_shared<Program>();
-    result = parse_string("data Hi a b = Bye a | No", program);
+    program = std::make_unique<Program>();
+    result = parse_string("data Hi a b = Bye a | No", program.get());
     ASSERT_EQ(result, 0);
     const auto &hi3 = program->type_constructors["Hi"];
-    ASSERT_NE(hi3, nullptr);
+
     EXPECT_EQ(hi3->line, 1);
     EXPECT_EQ(hi3->name, "Hi");
     EXPECT_EQ(hi3->argument_variables.size(), 2);
@@ -138,17 +128,17 @@ TEST(Parser, ParsesDataDecls) {
     EXPECT_EQ(no2->types.size(), 0);
     EXPECT_EQ(no2->type_constructor, "Hi");
 
-    program = std::make_shared<Program>();
-    EXPECT_THROW(parse_string("data Hi a\n;data Hi", program), ParseError);
+    program = std::make_unique<Program>();
+    EXPECT_THROW(parse_string("data Hi a\n;data Hi", program.get()), ParseError);
 
-    program = std::make_shared<Program>();
-    EXPECT_THROW(parse_string("data Hi = One\n;data Bye = One", program), ParseError);
+    program = std::make_unique<Program>();
+    EXPECT_THROW(parse_string("data Hi = One\n;data Bye = One", program.get()), ParseError);
 
-    program = std::make_shared<Program>();
-    result = parse_string("data Hi = Bye\n;data Bye = Hi", program);
+    program = std::make_unique<Program>();
+    result = parse_string("data Hi = Bye\n;data Bye = Hi", program.get());
     ASSERT_EQ(result, 0);
     const auto &hi4 = program->type_constructors["Hi"];
-    ASSERT_NE(hi4, nullptr);
+
     EXPECT_EQ(hi4->line, 1);
     EXPECT_EQ(hi4->name, "Hi");
     EXPECT_EQ(hi4->argument_variables.size(), 0);
@@ -159,7 +149,7 @@ TEST(Parser, ParsesDataDecls) {
     EXPECT_EQ(bye3->types.size(), 0);
     EXPECT_EQ(bye3->type_constructor, "Hi");
     const auto &bye4 = program->type_constructors["Bye"];
-    ASSERT_NE(bye4, nullptr);
+
     EXPECT_EQ(bye4->line, 2);
     EXPECT_EQ(bye4->name, "Bye");
     EXPECT_EQ(bye4->argument_variables.size(), 0);
@@ -172,25 +162,25 @@ TEST(Parser, ParsesDataDecls) {
 }
 
 TEST(Parser, ParsesVariableExpressions) {
-    auto program = std::make_shared<Program>();
-    auto result = parse_string("a = b \n;c = d", program);
+    auto program = std::make_unique<Program>();
+    auto result = parse_string("a = b \n;c = d", program.get());
     ASSERT_EQ(result, 0);
     EXPECT_EQ(program->bindings.size(), 2);
-    ASSERT_NE(program->bindings["a"], nullptr);
+
     const auto &a = program->bindings["a"];
     EXPECT_EQ(dynamic_cast<Variable*>(a.get())->name, "b");
-    ASSERT_NE(program->bindings["c"], nullptr);
+
     const auto &c = program->bindings["c"];
     ASSERT_EQ(c->getForm(), expform::variable);
     EXPECT_EQ(dynamic_cast<Variable*>(c.get())->name, "d");
 
-    program = std::make_shared<Program>();
-    EXPECT_THROW(parse_string("a = b \n;a = d", program), ParseError);
+    program = std::make_unique<Program>();
+    EXPECT_THROW(parse_string("a = b \n;a = d", program.get()), ParseError);
 }
 
 TEST(Parser, ParsesLiteralExpressions) {
-    auto program = std::make_shared<Program>();
-    auto result = parse_string("a = 1\n;b = 'a'\n;c = \"hi\"", program);
+    auto program = std::make_unique<Program>();
+    auto result = parse_string("a = 1\n;b = 'a'\n;c = \"hi\"", program.get());
     ASSERT_EQ(result, 0);
     EXPECT_EQ(program->bindings.size(), 3);
 
@@ -205,8 +195,8 @@ TEST(Parser, ParsesLiteralExpressions) {
 }
 
 TEST(Parser, ParsesConstructorExpressions) {
-    auto program = std::make_shared<Program>();
-    auto result = parse_string("a = ()\n;b = []\n;c = (,,)\n;d = Toast", program);
+    auto program = std::make_unique<Program>();
+    auto result = parse_string("a = ()\n;b = []\n;c = (,,)\n;d = Toast", program.get());
     ASSERT_EQ(result, 0);
     EXPECT_EQ(program->bindings.size(), 4);
 
@@ -224,8 +214,8 @@ TEST(Parser, ParsesConstructorExpressions) {
 }
 
 TEST(Parser, ParsesApplicationExpressions) {
-    auto program = std::make_shared<Program>();
-    auto result = parse_string("a = b c d", program);
+    auto program = std::make_unique<Program>();
+    auto result = parse_string("a = b c d", program.get());
     ASSERT_EQ(result, 0);
     EXPECT_EQ(program->bindings.size(), 1);
 
@@ -237,12 +227,12 @@ TEST(Parser, ParsesApplicationExpressions) {
 }
 
 TEST(Parser, ParsesLambdaAbstractions) {
-    auto program = std::make_shared<Program>();
-    auto result = parse_string("l = \\ a b -> a", program);
+    auto program = std::make_unique<Program>();
+    auto result = parse_string("l = \\ a b -> a", program.get());
     ASSERT_EQ(result, 0);
     EXPECT_EQ(program->bindings.size(), 1);
 
-    ASSERT_NE(program->bindings["l"], nullptr);
+
     ASSERT_EQ(program->bindings["l"]->getForm(), expform::abstraction);
     auto l = dynamic_cast<Lambda*>(program->bindings["l"].get());
     auto args = l->args;
@@ -254,8 +244,8 @@ TEST(Parser, ParsesLambdaAbstractions) {
 }
 
 #define TESTINFIXOP(opstr, oper) { \
-    auto program = std::make_shared<Program>();                      \
-    auto result = parse_string("a = b " opstr " c", program);        \
+    auto program = std::make_unique<Program>();                      \
+    auto result = parse_string("a = b " opstr " c", program.get());        \
     ASSERT_EQ(result, 0);                                            \
     EXPECT_EQ(program->bindings.size(), 1);                          \
     auto a = dynamic_cast<BuiltInOp*>(program->bindings["a"].get()); \
@@ -278,11 +268,11 @@ TEST(Parser, ParsesInfix) {
     TESTINFIXOP("&&", builtinop::land);
     TESTINFIXOP("||", builtinop::lor);
 
-    auto program = std::make_shared<Program>();
-    auto result = parse_string("a = -c", program);
+    auto program = std::make_unique<Program>();
+    auto result = parse_string("a = -c", program.get());
     ASSERT_EQ(result, 0);
     EXPECT_EQ(program->bindings.size(), 1);
-    ASSERT_NE(program->bindings["a"], nullptr);
+
     ASSERT_EQ(program->bindings["a"]->getForm(), expform::builtinop);
     auto a = dynamic_cast<BuiltInOp*>(program->bindings["a"].get());
     EXPECT_EQ(a->left, nullptr);
@@ -290,11 +280,11 @@ TEST(Parser, ParsesInfix) {
     EXPECT_EQ(dynamic_cast<Variable*>(a->right.get())->name, "c");
     EXPECT_EQ(a->op, builtinop::negate);
 
-    program = std::make_shared<Program>();
-    result = parse_string("a = b:c", program);
+    program = std::make_unique<Program>();
+    result = parse_string("a = b:c", program.get());
     ASSERT_EQ(result, 0);
     EXPECT_EQ(program->bindings.size(), 1);
-    ASSERT_NE(program->bindings["a"], nullptr);
+
     ASSERT_EQ(program->bindings["a"]->getForm(), expform::application);
     auto b = dynamic_cast<Application*>(program->bindings["a"].get());
     ASSERT_EQ(b->left->getForm(), expform::application);
@@ -306,11 +296,11 @@ TEST(Parser, ParsesInfix) {
     ASSERT_EQ(b->right->getForm(), expform::variable);
     EXPECT_EQ(dynamic_cast<Variable*>(b->right.get())->name, "c");
 
-    program = std::make_shared<Program>();
-    result = parse_string("a = b.c", program);
+    program = std::make_unique<Program>();
+    result = parse_string("a = b.c", program.get());
     ASSERT_EQ(result, 0);
     EXPECT_EQ(program->bindings.size(), 1);
-    ASSERT_NE(program->bindings["a"], nullptr);
+
     ASSERT_EQ(program->bindings["a"]->getForm(), expform::application);
     b = dynamic_cast<Application*>(program->bindings["a"].get());
     ASSERT_EQ(b->left->getForm(), expform::application);
@@ -324,12 +314,12 @@ TEST(Parser, ParsesInfix) {
 }
 
 TEST(Parser, ParsesConditionals) {
-    auto program = std::make_shared<Program>();
-    auto result = parse_string("i = if a then 1 else 2", program);
+    auto program = std::make_unique<Program>();
+    auto result = parse_string("i = if a then 1 else 2", program.get());
     ASSERT_EQ(result, 0);
     EXPECT_EQ(program->bindings.size(), 1);
 
-    ASSERT_NE(program->bindings["i"], nullptr);
+
     ASSERT_EQ(program->bindings["i"]->getForm(), expform::cAsE);
     auto i = dynamic_cast<Case*>(program->bindings["i"].get());
     ASSERT_EQ(i->exp->getForm(), expform::variable);
@@ -355,12 +345,12 @@ TEST(Parser, ParsesConditionals) {
 }
 
 TEST(Parser, ParsesLists) {
-    auto program = std::make_shared<Program>();
-    auto result = parse_string("l = [1,2]", program);
+    auto program = std::make_unique<Program>();
+    auto result = parse_string("l = [1,2]", program.get());
     ASSERT_EQ(result, 0);
     EXPECT_EQ(program->bindings.size(), 1);
 
-    ASSERT_NE(program->bindings["l"], nullptr);
+
     ASSERT_EQ(program->bindings["l"]->getForm(), expform::application);
     auto l = dynamic_cast<Application*>(program->bindings["l"].get());
 
@@ -384,12 +374,12 @@ TEST(Parser, ParsesLists) {
 }
 
 TEST(Parser, ParsesTuples) {
-    auto program = std::make_shared<Program>();
-    auto result = parse_string("l = (1,2)", program);
+    auto program = std::make_unique<Program>();
+    auto result = parse_string("l = (1,2)", program.get());
     ASSERT_EQ(result, 0);
     EXPECT_EQ(program->bindings.size(), 1);
 
-    ASSERT_NE(program->bindings["l"], nullptr);
+
     ASSERT_EQ(program->bindings["l"]->getForm(), expform::application);
     auto l = dynamic_cast<Application*>(program->bindings["l"].get());
 
@@ -405,23 +395,23 @@ TEST(Parser, ParsesTuples) {
 }
 
 TEST(Parser, ParsesLetExpressions) {
-    auto program = std::make_shared<Program>();
-    EXPECT_THROW(parse_string("a = let {c=1;c=2} in c", program), ParseError);
+    auto program = std::make_unique<Program>();
+    EXPECT_THROW(parse_string("a = let {c=1;c=2} in c", program.get()), ParseError);
 
-    program = std::make_shared<Program>();
-    EXPECT_THROW(parse_string("a = let {c a = a; c=2} in c", program), ParseError);
+    program = std::make_unique<Program>();
+    EXPECT_THROW(parse_string("a = let {c a = a; c=2} in c", program.get()), ParseError);
 
-    program = std::make_shared<Program>();
-    EXPECT_THROW(parse_string("a = let {c = a; c a =2} in c", program), ParseError);
+    program = std::make_unique<Program>();
+    EXPECT_THROW(parse_string("a = let {c = a; c a =2} in c", program.get()), ParseError);
 
-    program = std::make_shared<Program>();
-    EXPECT_THROW(parse_string("a = let {c::Int; c::Double} in c", program), ParseError);
+    program = std::make_unique<Program>();
+    EXPECT_THROW(parse_string("a = let {c::Int; c::Double} in c", program.get()), ParseError);
 
-    program = std::make_shared<Program>();
-    auto result = parse_string("a = let {a :: b -> b; a x = x; p = 1} in p", program);
+    program = std::make_unique<Program>();
+    auto result = parse_string("a = let {a :: b -> b; a x = x; p = 1} in p", program.get());
     ASSERT_EQ(result, 0);
     EXPECT_EQ(program->bindings.size(), 1);
-    ASSERT_NE(program->bindings["a"], nullptr);
+
     ASSERT_EQ(program->bindings["a"]->getForm(), expform::let);
     auto l = dynamic_cast<Let*>(program->bindings["a"].get());
 
@@ -449,11 +439,11 @@ TEST(Parser, ParsesLetExpressions) {
 }
 
 TEST(Parser, ParsesCaseExpressions) {
-    auto program = std::make_shared<Program>();
-    auto result = parse_string("a = case 1 of {_ -> 2; _ -> 3}", program);
+    auto program = std::make_unique<Program>();
+    auto result = parse_string("a = case 1 of {_ -> 2; _ -> 3}", program.get());
     ASSERT_EQ(result, 0);
     EXPECT_EQ(program->bindings.size(), 1);
-    ASSERT_NE(program->bindings["a"], nullptr);
+
     ASSERT_EQ(program->bindings["a"]->getForm(), expform::cAsE);
     auto c = dynamic_cast<Case*>(program->bindings["a"].get());
 
@@ -472,8 +462,8 @@ TEST(Parser, ParsesCaseExpressions) {
 }
 
 TEST(Parser, ParsesPatterns) {
-    auto program = std::make_shared<Program>();
-    auto result = parse_string("a = case 1 of {[1,2] -> 2}", program);
+    auto program = std::make_unique<Program>();
+    auto result = parse_string("a = case 1 of {[1,2] -> 2}", program.get());
     ASSERT_EQ(result, 0);
     const auto &p = dynamic_cast<Case*>(program->bindings["a"].get())->alts[0].first;
     ASSERT_EQ(p->getForm(), patternform::constructor);
@@ -493,8 +483,8 @@ TEST(Parser, ParsesPatterns) {
     EXPECT_EQ(c->name, "[]");
     EXPECT_EQ(c->args.size(), 0);
 
-    program = std::make_shared<Program>();
-    result = parse_string("a = case 1 of {(1,2) -> 2}", program);
+    program = std::make_unique<Program>();
+    result = parse_string("a = case 1 of {(1,2) -> 2}", program.get());
     ASSERT_EQ(result, 0);
     const auto &p1 = dynamic_cast<Case*>(program->bindings["a"].get())->alts[0].first;
     ASSERT_EQ(p1->getForm(), patternform::constructor);
@@ -506,8 +496,8 @@ TEST(Parser, ParsesPatterns) {
     ASSERT_EQ(c->args[1]->getForm(), patternform::literal);
     EXPECT_EQ(std::get<int>(dynamic_cast<LiteralPattern*>(c->args[1].get())->value), 2);
 
-    program = std::make_shared<Program>();
-    result = parse_string("a = case 1 of {Hi -> 2}", program);
+    program = std::make_unique<Program>();
+    result = parse_string("a = case 1 of {Hi -> 2}", program.get());
     ASSERT_EQ(result, 0);
     const auto &p2 = dynamic_cast<Case*>(program->bindings["a"].get())->alts[0].first;
     ASSERT_EQ(p2->getForm(), patternform::constructor);
@@ -515,8 +505,8 @@ TEST(Parser, ParsesPatterns) {
     EXPECT_EQ(c->name, "Hi");
     EXPECT_EQ(c->args.size(), 0);
 
-    program = std::make_shared<Program>();
-    result = parse_string("a = case 1 of {a@Hi -> 2}", program);
+    program = std::make_unique<Program>();
+    result = parse_string("a = case 1 of {a@Hi -> 2}", program.get());
     ASSERT_EQ(result, 0);
     const auto &p3 = dynamic_cast<Case*>(program->bindings["a"].get())->alts[0].first;
     ASSERT_EQ(p3->getForm(), patternform::constructor);
@@ -526,8 +516,8 @@ TEST(Parser, ParsesPatterns) {
     ASSERT_EQ(c->as.size(), 1);
     EXPECT_EQ(c->as[0], "a");
 
-    program = std::make_shared<Program>();
-    result = parse_string("a = case 1 of {Hi a -> 2}", program);
+    program = std::make_unique<Program>();
+    result = parse_string("a = case 1 of {Hi a -> 2}", program.get());
     ASSERT_EQ(result, 0);
     const auto &p4 = dynamic_cast<Case*>(program->bindings["a"].get())->alts[0].first;
     ASSERT_EQ(p4->getForm(), patternform::constructor);
@@ -538,15 +528,15 @@ TEST(Parser, ParsesPatterns) {
     auto v = dynamic_cast<VariablePattern*>(c->args[0].get());
     EXPECT_EQ(v->name, "a");
 
-    program = std::make_shared<Program>();
-    result = parse_string("a = case 1 of {(-2) -> 2}", program);
+    program = std::make_unique<Program>();
+    result = parse_string("a = case 1 of {(-2) -> 2}", program.get());
     ASSERT_EQ(result, 0);
     const auto &p5 = dynamic_cast<Case*>(program->bindings["a"].get())->alts[0].first;
     ASSERT_EQ(p5->getForm(), patternform::literal);
     EXPECT_EQ(std::get<int>(dynamic_cast<LiteralPattern*>(p5.get())->value), -2);
 
-    program = std::make_shared<Program>();
-    result = parse_string("a = case 1 of {a:b -> 2}", program);
+    program = std::make_unique<Program>();
+    result = parse_string("a = case 1 of {a:b -> 2}", program.get());
     ASSERT_EQ(result, 0);
     const auto &p6 = dynamic_cast<Case*>(program->bindings["a"].get())->alts[0].first;
     ASSERT_EQ(p6->getForm(), patternform::constructor);
