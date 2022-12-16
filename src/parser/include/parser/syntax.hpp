@@ -89,7 +89,6 @@ struct VarPattern : Pattern {
 
 struct Expression {
     const int lineNo;
-    type signature;
     explicit Expression(const int &lineNo): lineNo(lineNo) {}
     virtual expform getForm() = 0;
     virtual ~Expression() = default;
@@ -147,6 +146,15 @@ struct Case : public Expression {
 };
 
 struct Let : public Expression {
+    const std::map<std::string, std::shared_ptr<Expression>> bindings;
+    const std::map<std::string, type> typeSignatures;
+    const std::shared_ptr<Expression> e;
+    Let(
+            const int &lineNo,
+            const std::map<std::string, std::shared_ptr<Expression>> &bindings,
+            const std::map<std::string, type> &typeSignatures,
+            const std::shared_ptr<Expression> &e
+            ): Expression(lineNo), bindings(bindings), typeSignatures(typeSignatures), e(e) {}
     expform getForm() override { return expform::let; }
 };
 
@@ -181,6 +189,11 @@ struct Program {
             const std::shared_ptr<Expression> &body);
 };
 
+typedef std::vector<std::pair<std::vector<std::string>, type>> typesigs;
+typedef std::vector<std::tuple<std::string, std::vector<std::string>, std::shared_ptr<Expression>>> funcs;
+typedef std::vector<std::pair<std::string, std::shared_ptr<Expression>>> vars;
+typedef std::tuple<typesigs, funcs, vars> declist;
+
 std::shared_ptr<Expression> makeIf(
         const int &lineNo,
         const std::shared_ptr<Expression> &e1,
@@ -188,5 +201,6 @@ std::shared_ptr<Expression> makeIf(
         const std::shared_ptr<Expression> &e3);
 std::shared_ptr<Expression> makeList(const int &lineNo, const std::vector<std::shared_ptr<Expression>> &elts);
 std::shared_ptr<Expression> makeTuple(const int &lineNo, const std::vector<std::shared_ptr<Expression>> &elts);
+std::shared_ptr<Expression> makeLet(const int &lineNo, const declist &decls, const std::shared_ptr<Expression> &e);
 
 #endif //PICOHASKELL_SYNTAX_HPP

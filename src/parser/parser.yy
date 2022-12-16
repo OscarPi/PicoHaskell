@@ -106,6 +106,7 @@
 %nterm <std::tuple<std::string, std::vector<std::string>, std::shared_ptr<Expression>>> fundecl
 %nterm <std::pair<std::vector<std::string>, type>> typesig
 %nterm <std::vector<std::shared_ptr<Expression>>> explist
+%nterm <declist> decls
 
 //%printer { yyo << $$; } <*>;
 
@@ -124,6 +125,15 @@ topdecl:
   | "data" simpletype             { program->addTypeConstructor(@1.begin.line, $2.first, $2.second, {}); }
   | "data" simpletype "=" constrs { program->addTypeConstructor(@1.begin.line, $2.first, $2.second, $4); }
   ;
+
+decls:
+    %empty            { $$ = std::make_tuple<typesigs, funcs, vars>({}, {}, {}); }
+  | typesig           { $$ = std::make_tuple<typesigs, funcs, vars>({$1}, {}, {}); }
+  | fundecl           { $$ = std::make_tuple<typesigs, funcs, vars>({}, {$1}, {}); }
+  | vardecl           { $$ = std::make_tuple<typesigs, funcs, vars>({}, {}, {$1}); }
+  | decls ";" typesig { $$ = $1; std::get<0>($$).push_back($3); }
+  | decls ";" fundecl { $$ = $1; std::get<1>($$).push_back($3); }
+  | decls ";" vardecl { $$ = $1; std::get<2>($$).push_back($3); }
 
 typesig: vars "::" ctype    { $$ = std::make_pair($1, $3); };
 fundecl: VARID vars "=" exp { $$ = std::make_tuple($1, $2, $4); };
@@ -156,6 +166,7 @@ lexp:
     fexp                                                     { $$ = $1; }
   | "\\" vars "->" exp                                       { $$ = std::make_shared<Lambda>(@1.begin.line, $2, $4); }
   | "if" exp optsemicolon "then" exp optsemicolon "else" exp { $$ = makeIf(@1.begin.line, $2, $5, $8); }
+  | "let" "{" decls "}" "in" exp                             { $$ = makeLet(@1.begin.line, $3, $6); }
   ;
 
 fexp:

@@ -167,3 +167,49 @@ std::shared_ptr<Expression> makeTuple(const int &lineNo, const std::vector<std::
     }
     return tuple;
 }
+
+std::shared_ptr<Expression> makeLet(const int &lineNo, const declist &decls, const std::shared_ptr<Expression> &e) {
+    std::map<std::string, std::shared_ptr<Expression>> bindings;
+    std::map<std::string, type> typeSignatures;
+
+    for (const auto &sig: std::get<0>(decls)) {
+        for (const auto &name: sig.first) {
+            if (typeSignatures.count(name) > 0) {
+                throw ParseError(
+                        "Line " +
+                        std::to_string(lineNo) +
+                        ": multiple type signatures for the same name are not allowed."
+                );
+            }
+            typeSignatures[name] = sig.second;
+        }
+    }
+
+    for (const auto &f: std::get<1>(decls)) {
+        if (bindings.count(std::get<0>(f)) > 0) {
+            throw ParseError(
+                    "Line " +
+                    std::to_string(lineNo) +
+                    ": multiple bindings to the name " +
+                    std::get<0>(f) +
+                    "."
+            );
+        }
+        bindings[std::get<0>(f)] = std::make_shared<Lambda>(lineNo, std::get<1>(f), std::get<2>(f));
+    }
+
+    for (const auto &v: std::get<2>(decls)) {
+        if (bindings.count(v.first) > 0) {
+            throw ParseError(
+                    "Line " +
+                    std::to_string(lineNo) +
+                    ": multiple bindings to the name " +
+                    v.first +
+                    "."
+            );
+        }
+        bindings[v.first] = v.second;
+    }
+
+    return std::make_shared<Let>(lineNo, bindings, typeSignatures, e);
+}

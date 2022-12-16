@@ -465,3 +465,47 @@ TEST(Parser, ParsesTuples) {
     ASSERT_EQ(l->right->getForm(), expform::lit);
     EXPECT_EQ(std::get<int>(std::dynamic_pointer_cast<Literal>(l->right)->value), 2);
 }
+
+TEST(Parser, ParsesLetExpressions) {
+    auto program = std::make_shared<Program>();
+    EXPECT_THROW(parse_string("a = let {c=1;c=2} in c", program), ParseError);
+
+    program = std::make_shared<Program>();
+    EXPECT_THROW(parse_string("a = let {c a = a; c=2} in c", program), ParseError);
+
+    program = std::make_shared<Program>();
+    EXPECT_THROW(parse_string("a = let {c = a; c a =2} in c", program), ParseError);
+
+    program = std::make_shared<Program>();
+    EXPECT_THROW(parse_string("a = let {c::Int; c::Double} in c", program), ParseError);
+
+    program = std::make_shared<Program>();
+    auto result = parse_string("a = let {a :: b -> b; a x = x; p = 1} in p", program);
+    ASSERT_EQ(result, 0);
+    EXPECT_EQ(program->bindings.size(), 1);
+    ASSERT_NE(program->bindings["a"], nullptr);
+    ASSERT_EQ(program->bindings["a"]->getForm(), expform::let);
+    auto l = std::dynamic_pointer_cast<Let>(program->bindings["a"]);
+
+    ASSERT_EQ(l->e->getForm(), expform::var);
+    EXPECT_EQ(std::dynamic_pointer_cast<Variable>(l->e)->name, "p");
+
+    EXPECT_EQ(l->bindings.size(), 2);
+
+    EXPECT_EQ(l->bindings.at("a")->getForm(), expform::lam);
+    auto lam = std::dynamic_pointer_cast<Lambda>(l->bindings.at("a"));
+    auto args = lam->args;
+    EXPECT_EQ(args.size(), 1);
+    EXPECT_EQ(std::count(args.begin(), args.end(), "x"), 1);
+    ASSERT_EQ(lam->body->getForm(), expform::var);
+    EXPECT_EQ(std::dynamic_pointer_cast<Variable>(lam->body)->name, "x");
+
+    EXPECT_EQ(l->bindings.at("p")->getForm(), expform::lit);
+    EXPECT_EQ(std::get<int>(std::dynamic_pointer_cast<Literal>(l->bindings.at("p"))->value), 1);
+
+    EXPECT_EQ(l->typeSignatures.size(), 1);
+
+    type b = std::make_shared<const TypeVariable>("b", nullptr);
+    type expected =makeFunctionType(b, b);
+    EXPECT_TRUE(sameType_ignoreKinds(l->typeSignatures.at("a"), expected));
+}
