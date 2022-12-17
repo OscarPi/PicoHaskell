@@ -105,7 +105,7 @@ void Program::add_named_function(const int &line, const std::string &name, const
                 name +
                 ".");
     }
-    bindings[name] = std::make_unique<Lambda>(line, args, body);
+    bindings[name] = std::make_unique<Abstraction>(line, args, body);
 }
 
 Expression *make_if_expression(
@@ -169,7 +169,7 @@ Expression *make_let_expression(const int &line, const declist &decls, Expressio
                     std::get<0>(function) +
                     ".");
         }
-        bindings[std::get<0>(function)] = new Lambda(line, std::get<1>(function), std::get<2>(function));
+        bindings[std::get<0>(function)] = new Abstraction(line, std::get<1>(function), std::get<2>(function));
     }
 
     for (const auto &variable: std::get<2>(decls)) {

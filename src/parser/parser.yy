@@ -168,7 +168,7 @@ infixexp:
 
 lexp:
     fexp                                                     { $$ = $1; }
-  | "\\" vars "->" exp                                       { $$ = new Lambda(@1.begin.line, $2, $4); }
+  | "\\" vars "->" exp                                       { $$ = new Abstraction(@1.begin.line, $2, $4); }
   | "if" exp optsemicolon "then" exp optsemicolon "else" exp { $$ = make_if_expression(@1.begin.line, $2, $5, $8); }
   | "let" "{" decls "}" "in" exp                             { $$ = make_let_expression(@1.begin.line, $3, $6); }
   | "case" exp "of" "{" alts "}"                             { $$ = new Case(@1.begin.line, $2, $5); }
@@ -233,7 +233,7 @@ btype:
 
 atype:
    gtycon        { $$ = $1; }
- | VARID         { $$ = new TypeVariable($1); }
+ | VARID         { $$ = new UniversallyQuantifiedVariable($1); }
  | "(" types ")" { $$ = make_tuple_type($2); }
  | "[" ctype "]" { $$ = make_list_type($2); }
  | "(" ctype ")" { $$ = $2; }
@@ -248,7 +248,7 @@ gtycon:
     CONID          { $$ = new TypeConstructor($1); }
   | "(" ")"        { $$ = new TypeConstructor("()"); }
   | "[" "]"        { $$ = new TypeConstructor("[]"); }
-  | "(" "->" ")"   { $$ = new TypeConstructor("(->)"); }
+  | "(" "->" ")"   { $$ = new TypeConstructor("->"); }
   | "(" commas ")" { $$ = new TypeConstructor("(" + std::string($2, ',') + ")"); }
   ;
 

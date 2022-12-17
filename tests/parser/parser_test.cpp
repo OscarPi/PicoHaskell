@@ -20,7 +20,9 @@ TEST(Parser, ParsesTypeSignatures) {
     std::unique_ptr<Program> program = std::make_unique<Program>();
     int result = parse_string("a :: ()", program.get());
     ASSERT_EQ(result, 0);
-    EXPECT_TRUE(same_type(program->type_signatures["a"].get(), std::make_unique<TypeConstructor>("()").get()));
+    EXPECT_TRUE(
+            same_type(program->type_signatures["a"].get(),
+            std::make_unique<TypeConstructor>("()").get()));
 
     program = std::make_unique<Program>();
     result = parse_string("a :: [] Int", program.get());
@@ -53,7 +55,7 @@ TEST(Parser, ParsesTypeSignatures) {
     program = std::make_unique<Program>();
     result = parse_string("a :: cheesecake -> cheesecake", program.get());
     ASSERT_EQ(result, 0);
-    auto cheesecake = new TypeVariable("cheesecake");
+    auto cheesecake = new UniversallyQuantifiedVariable("cheesecake");
     expected = make_function_type(cheesecake, cheesecake);
     EXPECT_TRUE(same_type(program->type_signatures["a"].get(), expected));
 
@@ -234,7 +236,7 @@ TEST(Parser, ParsesLambdaAbstractions) {
 
 
     ASSERT_EQ(program->bindings["l"]->getForm(), expform::abstraction);
-    auto l = dynamic_cast<Lambda*>(program->bindings["l"].get());
+    auto l = dynamic_cast<Abstraction*>(program->bindings["l"].get());
     auto args = l->args;
     EXPECT_EQ(args.size(), 2);
     EXPECT_EQ(std::count(args.begin(), args.end(), "a"), 1);
@@ -421,7 +423,7 @@ TEST(Parser, ParsesLetExpressions) {
     EXPECT_EQ(l->bindings.size(), 2);
 
     EXPECT_EQ(l->bindings.at("a")->getForm(), expform::abstraction);
-    auto lam = dynamic_cast<Lambda*>(l->bindings.at("a").get());
+    auto lam = dynamic_cast<Abstraction*>(l->bindings.at("a").get());
     auto args = lam->args;
     EXPECT_EQ(args.size(), 1);
     EXPECT_EQ(std::count(args.begin(), args.end(), "x"), 1);
@@ -433,7 +435,7 @@ TEST(Parser, ParsesLetExpressions) {
 
     EXPECT_EQ(l->type_signatures.size(), 1);
 
-    auto b = new TypeVariable("b");
+    auto b = new UniversallyQuantifiedVariable("b");
     auto expected =make_function_type(b, b);
     EXPECT_TRUE(same_type(l->type_signatures.at("a").get(), expected));
 }

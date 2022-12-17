@@ -4,10 +4,17 @@
 #include <string>
 #include <map>
 #include <set>
+#include <utility>
 #include <vector>
+#include <stdexcept>
 
 //enum class kindform {star, arrow};
-enum class typeform {variable, constructor, application}; //, gen};
+enum class typeform {variable, universallyquantifiedvariable, constructor, application}; //, gen};
+
+class TypeError : public std::runtime_error {
+public:
+    explicit TypeError(const std::string &s): std::runtime_error(s) {}
+};
 
 //class Kind {
 //public:
@@ -40,23 +47,31 @@ struct Type {
     virtual typeform get_form() const = 0;
 };
 
-struct TypeVariable : public Type {
+struct UniversallyQuantifiedVariable : public Type {
     const std::string id;
-    explicit TypeVariable(std::string id): id(id) {}
-    typeform get_form() const override { return typeform::variable; }
+    explicit UniversallyQuantifiedVariable(std::string id): id(std::move(id)) {}
+    typeform get_form() const override { return typeform::universallyquantifiedvariable; }
 };
 
 struct TypeConstructor : public Type {
     const std::string id;
-    explicit TypeConstructor(std::string id): id(id) {}
+    explicit TypeConstructor(std::string id): id(std::move(id)) {}
     typeform get_form() const override { return typeform::constructor; }
 };
 
 struct TypeApplication : public Type {
-    const std::unique_ptr<Type> left;
-    const std::unique_ptr<Type> right;
+    const std::shared_ptr<Type> left;
+    const std::shared_ptr<Type> right;
     TypeApplication(Type* const &left, Type* const &right): left(left), right(right) {}
+    TypeApplication(
+            std::shared_ptr<Type> left,
+            std::shared_ptr<Type> right): left(std::move(left)), right(std::move(right)) {}
     typeform get_form() const override { return typeform::application; }
+};
+
+struct TypeVariable : public Type {
+    std::shared_ptr<Type> bound_to;
+    typeform get_form() const override { return typeform::variable; }
 };
 
 //class TypeGeneric : public Type {

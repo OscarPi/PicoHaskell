@@ -1,84 +1,11 @@
 #include "types/types.hpp"
+#include "parser/syntax.hpp"
 #include <string>
 #include <algorithm>
 #include <stdexcept>
-//
-//Scheme::Scheme(const std::vector<std::shared_ptr<const TypeVariable>> &variables, const type &tp) {
-//    substitution s;
-//    int i = 0;
-//
-//    for (const auto &variable: ::findTypeVariables(tp)) {
-//        auto p = [&variable](const std::shared_ptr<const TypeVariable> &v) { return v->getId() == variable; };
-//        auto iterator = std::find_if(variables.begin(), variables.end(), p);
-//        if (iterator != variables.end()) {
-//            s[variable] = std::make_shared<TypeGeneric>(i++, iterator->get()->getKind());
-//        }
-//    }
-//
-//    t = ::applySubstitution(tp, s);
-//}
-//
-//Scheme::Scheme(type t): t(t) {}
-//
-//Scheme Scheme::applySubstitution(const substitution &s) const {
-//    return Scheme(::applySubstitution(t, s));
-//}
-//
-//std::vector<std::string> Scheme::findTypeVariables() const {
-//    return ::findTypeVariables(t);
-//}
-//
-//type Scheme::getType() const {
-//    return t;
-//}
-//
-//bool operator==(const Scheme &lhs, const Scheme &rhs) {
-//    return same_type(lhs.getType(), rhs.getType());
-//}
-//
-//bool operator!=(const Scheme &lhs, const Scheme &rhs) {
-//    return !(lhs == rhs);
-//}
-//
-//Assumptions::Assumptions(const std::map<std::string, Scheme> &assumptions): assumptions(assumptions) {}
-//
-//Assumptions Assumptions::add(const std::string &v, const Scheme &scheme) const {
-//    auto newAssumptions = assumptions;
-//    newAssumptions.insert({v, scheme});
-//    return Assumptions(newAssumptions);
-//}
-//
-//Assumptions Assumptions::applySubstitution(const substitution &s) const {
-//    std::map<std::string, Scheme> newAssumptions;
-//    for (const auto& [v, scheme] : assumptions) {
-//        newAssumptions.insert({v, scheme.applySubstitution(s)});
-//    }
-//    return Assumptions(newAssumptions);
-//}
-//
-//std::vector<std::string> Assumptions::findTypeVariables() const {
-//    std::vector<std::string> variables;
-//    for (const auto& [v, scheme] : assumptions) {
-//        auto moreVariables = scheme.findTypeVariables();
-//        for (const auto &v: moreVariables) {
-//            if (std::count(variables.begin(), variables.end(), v) == 0) {
-//                variables.push_back(v);
-//            }
-//        }
-//    }
-//    return variables;
-//}
-//
-//Scheme Assumptions::find(const std::string &v) const {
-//    auto iterator = assumptions.find(v);
-//    if (iterator == assumptions.end()) {
-//        throw std::invalid_argument("Unbound identifier: " + v);
-//    }
-//    return iterator->second;
-//}
 
 Type *make_function_type(Type* const &argType, Type* const &resultType) {
-    Type *partial = new TypeApplication(new TypeConstructor("(->)"), argType);
+    Type *partial = new TypeApplication(new TypeConstructor("->"), argType);
     return new TypeApplication(partial, resultType);
 }
 
@@ -86,10 +13,6 @@ Type *make_list_type(Type* const &elementType) {
     return new TypeApplication(new TypeConstructor("[]"), elementType);
 }
 
-//Type *make_pair_type(const type &leftType, const type &rightType) {
-//    type partial = std::make_shared<const TypeApplication>(tTuple2, leftType);
-//    return std::make_shared<const TypeApplication>(partial, rightType);
-//}
 
 //kind makeTupleConstructorKind(size_t size) {
 //    kind k = kStar;
@@ -131,8 +54,9 @@ bool same_type(const Type *a, const Type *b) {
         return false;
     }
     switch (a->get_form()) {
-        case typeform::variable:
-            return dynamic_cast<const TypeVariable*>(a)->id == dynamic_cast<const TypeVariable*>(b)->id;
+        case typeform::universallyquantifiedvariable:
+            return dynamic_cast<const UniversallyQuantifiedVariable*>(a)->id ==
+                dynamic_cast<const UniversallyQuantifiedVariable*>(b)->id;
         case typeform::constructor:
             return dynamic_cast<const TypeConstructor*>(a)->id == dynamic_cast<const TypeConstructor*>(b)->id;
         case typeform::application:
@@ -145,156 +69,373 @@ bool same_type(const Type *a, const Type *b) {
     }
 }
 
-//type applySubstitution(const type &t, const substitution &s) {
-//    std::string id;
-//    type left;
-//    type newLeft;
-//    type right;
-//    type newRight;
-//    substitution::const_iterator iterator;
-//    switch (t->get_form()) {
-//        case typeform::variable:
-//            id = std::dynamic_pointer_cast<const TypeVariable>(t)->getId();
-//            iterator = s.find(id);
-//            if (iterator != s.end()) {
-//                return iterator->second;
-//            }
-//            return t;
-//        case typeform::constructor:
-//            return t;
-//        case typeform::application:
-//            left = std::dynamic_pointer_cast<const TypeApplication>(t)->getLeft();
-//            newLeft = applySubstitution(left, s);
-//            right = std::dynamic_pointer_cast<const TypeApplication>(t)->getRight();
-//            newRight = applySubstitution(right, s);
-//            if (left == newLeft && right == newRight) {
-//                return t;
-//            }
-//            return std::make_shared<TypeApplication>(newLeft, newRight);
-//        case typeform::gen:
-//            return t;
-//    }
-//}
-//
-//std::vector<std::string> findTypeVariables(const type &t) {
-//    std::vector<std::string> variables;
-//    std::vector<std::string> moreVariables;
-//    switch (t->get_form()) {
-//        case typeform::variable:
-//            variables.push_back(std::dynamic_pointer_cast<const TypeVariable>(t)->getId());
-//            return variables;
-//        case typeform::constructor:
-//            return variables;
-//        case typeform::application:
-//            variables = findTypeVariables(std::dynamic_pointer_cast<const TypeApplication>(t)->getLeft());
-//            moreVariables = findTypeVariables(std::dynamic_pointer_cast<const TypeApplication>(t)->getRight());
-//            for (const auto &v: moreVariables) {
-//                if (std::count(variables.begin(), variables.end(), v) == 0) {
-//                    variables.push_back(v);
-//                }
-//            }
-//            return variables;
-//        case typeform::gen:
-//            return variables;
-//    }
-//}
-//
-//std::vector<type> applySubstitution(const std::vector<type> &ts, const substitution &s) {
-//    std::vector<type> result;
-//    auto substitute = [&s](const type& t) { return applySubstitution(t, s); };
-//    std::transform(ts.cbegin(), ts.cend(), std::back_inserter(result), substitute);
-//    return result;
-//}
-//
-//std::vector<std::string> findTypeVariables(const std::vector<type> &ts) {
-//    std::vector<std::string> variables;
-//    for (const auto& t: ts) {
-//        auto moreVariables = findTypeVariables(t);
-//        for (const auto &v: moreVariables) {
-//            if (std::count(variables.begin(), variables.end(), v) == 0) {
-//                variables.push_back(v);
-//            }
-//        }
-//    }
-//    return variables;
-//}
-//
-//substitution compose(const substitution &s1, const substitution &s2) {
-//    substitution result = s1;
-//
-//    for (const auto& [k, t] : s2) {
-//        result[k] = applySubstitution(t, s1);
-//    }
-//
-//    return result;
-//}
-//
-//substitution merge(const substitution &s1, const substitution &s2) {
-//    substitution result = s1;
-//
-//    for (const auto& [k, t] : s2) {
-//        if (result.count(k) > 0) {
-//            if (!same_type(result[k], t)) {
-//                throw std::invalid_argument("Cannot merge substitutions that do not agree.");
-//            }
-//        } else {
-//            result[k] = t;
-//        }
-//    }
-//    return result;
-//}
-//
-//substitution varBind(const std::shared_ptr<const TypeVariable> &var, const type &t) {
-//    auto variables = findTypeVariables(t);
-//    if (same_type(var, t)) {
-//        substitution empty;
-//        return empty;
-//    } else if (std::count(variables.begin(), variables.end(), var->getId()) > 0) {
-//        throw std::invalid_argument("Occurs check failed.");
-//    } else if (!sameKind(var->getKind(), t->getKind())) {
-//        throw std::invalid_argument("Kinds do not match.");
-//    }
-//    substitution s;
-//    s[var->getId()] = t;
-//    return s;
-//}
-//
-//substitution mostGeneralUnifier(const type &t1, const type &t2) {
-//    if (t1->get_form() == typeform::constructor && same_type(t1, t2)) {
-//        substitution empty;
-//        return empty;
-//    } else if (t1->get_form() == typeform::variable) {
-//        return varBind(std::dynamic_pointer_cast<const TypeVariable>(t1), t2);
-//    } else if (t2->get_form() == typeform::variable) {
-//        return varBind(std::dynamic_pointer_cast<const TypeVariable>(t2), t1);
-//    } else if (t1->get_form() == typeform::application && t2->get_form() == typeform::application) {
-//        const auto ap1 = std::dynamic_pointer_cast<const TypeApplication>(t1);
-//        const auto ap2 = std::dynamic_pointer_cast<const TypeApplication>(t2);
-//        substitution s1 = mostGeneralUnifier(ap1->getLeft(), ap2->getLeft());
-//        substitution s2 = mostGeneralUnifier(applySubstitution(ap1->getRight(), s1), applySubstitution(ap2->getRight(), s1));
-//        return compose(s2, s1);
-//    }
-//    throw std::invalid_argument("Types do not unify.");
-//}
-//
-//substitution match(const type &t1, const type &t2) {
-//    if (t1->get_form() == typeform::constructor && same_type(t1, t2)) {
-//        substitution empty;
-//        return empty;
-//    } else if (t1->get_form() == typeform::variable && sameKind(t1->getKind(), t2->getKind())) {
-//        if (same_type(t1, t2)) {
-//            substitution empty;
-//            return empty;
-//        }
-//        substitution s;
-//        s[std::dynamic_pointer_cast<const TypeVariable>(t1)->getId()] = t2;
-//        return s;
-//    } else if (t1->get_form() == typeform::application && t2->get_form() == typeform::application) {
-//        const auto ap1 = std::dynamic_pointer_cast<const TypeApplication>(t1);
-//        const auto ap2 = std::dynamic_pointer_cast<const TypeApplication>(t2);
-//        substitution s1 = match(ap1->getLeft(), ap2->getLeft());
-//        substitution s2 = match(ap1->getRight(), ap2->getRight());
-//        return merge(s1, s2);
-//    }
-//    throw std::invalid_argument("Types do not match.");
-//}
+std::shared_ptr<Type> follow_substitution(std::shared_ptr<Type> t) {
+    if (t->get_form() != typeform::variable) {
+        return t;
+    }
+    auto v = std::dynamic_pointer_cast<TypeVariable>(t);
+    if (v->bound_to == nullptr) {
+        return v;
+    }
+    return follow_substitution(v->bound_to);
+}
+
+bool occurs_check_ok(std::shared_ptr<TypeVariable> v, std::shared_ptr<Type> t) {
+    if (t == v) {
+        return false;
+    }
+    switch(t->get_form()) {
+        case typeform::variable:
+            if (std::dynamic_pointer_cast<TypeVariable>(t)->bound_to == nullptr) {
+                return true;
+            }
+            return occurs_check_ok(v, std::dynamic_pointer_cast<TypeVariable>(t)->bound_to);
+        case typeform::constructor:
+            return true;
+        case typeform::application:
+            return occurs_check_ok(v, std::dynamic_pointer_cast<TypeApplication>(t)->left) &&
+                   occurs_check_ok(v, std::dynamic_pointer_cast<TypeApplication>(t)->right);
+        case typeform::universallyquantifiedvariable:
+            throw TypeError("Universally quantified variable should not occur in instantiated type.");
+    }
+}
+
+void unify(std::shared_ptr<Type> a, std::shared_ptr<Type> b) {
+    a = follow_substitution(a);
+    b = follow_substitution(b);
+    if (a == b) {
+        return;
+    }
+    if (
+            a->get_form() == typeform::constructor &&
+            b->get_form() == typeform::constructor &&
+            std::dynamic_pointer_cast<TypeConstructor>(a)->id ==std::dynamic_pointer_cast<TypeConstructor>(b)->id) {
+        return;
+    } else if (a->get_form() == typeform::variable) {
+        if (!occurs_check_ok(std::dynamic_pointer_cast<TypeVariable>(a), b)) {
+            throw TypeError("Failed to unify types: occurs check failed.");
+        }
+        std::dynamic_pointer_cast<TypeVariable>(a)->bound_to = b;
+        return;
+    } else if (b->get_form() == typeform::variable) {
+        if (!occurs_check_ok(std::dynamic_pointer_cast<TypeVariable>(b), a)) {
+            throw TypeError("Failed to unify types: occurs check failed.");
+        }
+        std::dynamic_pointer_cast<TypeVariable>(b)->bound_to = a;
+        return;
+    } else if (a->get_form() == typeform::application && b->get_form() == typeform::application) {
+        unify(
+                std::dynamic_pointer_cast<TypeApplication>(a)->left,
+                std::dynamic_pointer_cast<TypeApplication>(b)->left);
+        unify(
+                std::dynamic_pointer_cast<TypeApplication>(a)->right,
+                std::dynamic_pointer_cast<TypeApplication>(b)->right);
+        return;
+    }
+
+    throw TypeError("Failed to unify types.");
+}
+
+std::shared_ptr<Type> instantiate(const std::shared_ptr<Type> &t) {
+    switch(t->get_form()) {
+        case typeform::variable:
+            return t;
+        case typeform::universallyquantifiedvariable:
+            return std::make_shared<TypeVariable>();
+        case typeform::constructor:
+            return t;
+        case typeform::application: {
+            auto left = instantiate(std::dynamic_pointer_cast<TypeApplication>(t)->left);
+            auto right = instantiate(std::dynamic_pointer_cast<TypeApplication>(t)->right);
+            if (
+                    left != std::dynamic_pointer_cast<TypeApplication>(t)->left ||
+                    right != std::dynamic_pointer_cast<TypeApplication>(t)->right) {
+                return std::make_shared<TypeApplication>(left, right);
+            } else {
+                return t;
+            }
+        }
+    }
+}
+
+std::pair<std::shared_ptr<Type>, std::map<std::string, std::shared_ptr<Type>>> type_inference_pattern(
+        const std::map<std::string, std::shared_ptr<Type>> &constructor_types,
+        const std::unique_ptr<Pattern> &p);
+
+std::pair<std::vector<std::shared_ptr<Type>>, std::map<std::string, std::shared_ptr<Type>>> type_inference_patterns(
+        const std::map<std::string, std::shared_ptr<Type>> &constructor_types,
+        const std::vector<std::unique_ptr<Pattern>> &ps) {
+    std::vector<std::shared_ptr<Type>> types_matched;
+    std::map<std::string, std::shared_ptr<Type>> new_assumptions;
+
+    for (const auto &p: ps) {
+        auto inferred = type_inference_pattern(constructor_types, p);
+        types_matched.push_back(inferred.first);
+        for (auto const &[name, type]: inferred.second) {
+            new_assumptions[name] = type;
+        }
+    }
+
+    return std::make_pair(types_matched, new_assumptions);
+}
+
+std::pair<std::shared_ptr<Type>, std::map<std::string, std::shared_ptr<Type>>> type_inference_pattern(
+        const std::map<std::string, std::shared_ptr<Type>> &constructor_types,
+        const std::unique_ptr<Pattern> &p) {
+    std::shared_ptr<Type> type_matched;
+    std::map<std::string, std::shared_ptr<Type>> new_assumptions;
+    switch (p->getForm()) {
+        case patternform::constructor: {
+            auto sub_patterns = type_inference_patterns(
+                    constructor_types,
+                    dynamic_cast<ConstructorPattern *>(p.get())->args);
+            type_matched = std::make_shared<TypeVariable>();
+            new_assumptions = sub_patterns.second;
+            auto expected_constructor_type = type_matched;
+            for (int i = sub_patterns.first.size() - 1; i >= 0; i--) {
+                expected_constructor_type = std::make_shared<TypeApplication>(
+                        std::make_shared<TypeApplication>(
+                                std::make_shared<TypeConstructor>("->"),
+                                sub_patterns.first[i]),
+                        expected_constructor_type);
+            }
+            if (constructor_types.count(dynamic_cast<ConstructorPattern *>(p.get())->name) == 0) {
+                throw TypeError(
+                        "Line " +
+                        std::to_string(p->line) +
+                        ": reference in pattern to undefined data constructor " +
+                        dynamic_cast<ConstructorPattern *>(p.get())->name + ".");
+            }
+            auto constructor_type = instantiate(
+                    constructor_types.at(dynamic_cast<ConstructorPattern *>(p.get())->name));
+            try {
+                unify(constructor_type, expected_constructor_type);
+            } catch (const TypeError &e) {
+                throw TypeError(
+                        "Line " +
+                        std::to_string(p->line) +
+                        ": could not unify the type of the data constructor " +
+                        dynamic_cast<ConstructorPattern *>(p.get())->name +
+                        " with the type implied by the pattern it was used in.");
+            }
+            break;
+        }
+        case patternform::wild:
+            type_matched = std::make_shared<TypeVariable>();
+            break;
+        case patternform::literal:
+            if (std::holds_alternative<int>(dynamic_cast<LiteralPattern*>(p.get())->value)) {
+                type_matched = std::make_shared<TypeConstructor>("Int");
+            } else if (std::holds_alternative<std::string>(dynamic_cast<LiteralPattern*>(p.get())->value)) {
+                type_matched = std::make_shared<TypeApplication>(
+                        new TypeConstructor("[]"),
+                        new TypeConstructor("Char"));
+            } else if (std::holds_alternative<char>(dynamic_cast<LiteralPattern*>(p.get())->value)) {
+                type_matched = std::make_shared<TypeConstructor>("Char");
+            }
+            break;
+        case patternform::variable:
+            type_matched = std::make_shared<TypeVariable>();
+            new_assumptions[dynamic_cast<VariablePattern*>(p.get())->name] = type_matched;
+            break;
+    }
+
+    for (const auto &v: p->as) {
+        new_assumptions[v] = type_matched;
+    }
+
+    return std::make_pair(type_matched, new_assumptions);
+}
+
+std::shared_ptr<Type> type_inference_expression(
+        std::map<std::string, std::shared_ptr<Type>> assumptions,
+        const std::unique_ptr<Expression> &expression) {
+    switch(expression->getForm()) {
+        case expform::literal:
+            if (std::holds_alternative<int>(dynamic_cast<Literal*>(expression.get())->value)) {
+                return std::make_shared<TypeConstructor>("Int");
+            } else if (std::holds_alternative<std::string>(dynamic_cast<Literal*>(expression.get())->value)) {
+                return std::make_shared<TypeApplication>(
+                        new TypeConstructor("[]"),
+                        new TypeConstructor("Char"));
+            } else if (std::holds_alternative<char>(dynamic_cast<Literal*>(expression.get())->value)) {
+                return std::make_shared<TypeConstructor>("Char");
+            }
+        case expform::variable:
+            if (assumptions.count(dynamic_cast<Variable*>(expression.get())->name) == 0) {
+                throw TypeError(
+                        "Line " +
+                        std::to_string(expression->line) +
+                        ": undefined reference to name " +
+                        dynamic_cast<Variable*>(expression.get())->name + ".");
+            }
+            return instantiate(assumptions.at(dynamic_cast<Variable*>(expression.get())->name));
+        case expform::constructor:
+            if (assumptions.count(dynamic_cast<Constructor*>(expression.get())->name) == 0) {
+                throw TypeError(
+                        "Line " +
+                        std::to_string(expression->line) +
+                        ": undefined reference to name " +
+                        dynamic_cast<Constructor*>(expression.get())->name + ".");
+            }
+            return instantiate(assumptions.at(dynamic_cast<Constructor*>(expression.get())->name));
+        case expform::abstraction: {
+            std::shared_ptr<Type> result_type = std::make_shared<TypeVariable>();
+            std::shared_ptr<Type> type = result_type;
+            for (int i = dynamic_cast<Abstraction*>(expression.get())->args.size() - 1; i >= 0; i--) {
+                std::shared_ptr<Type> arg_type = std::make_shared<TypeVariable>();
+                assumptions[dynamic_cast<Abstraction*>(expression.get())->args.at(i)] = arg_type;
+                type = std::make_shared<TypeApplication>(
+                        std::make_shared<TypeApplication>(
+                                std::make_shared<TypeConstructor>("->"),
+                                arg_type),
+                        type);
+            }
+            unify(
+                    result_type,
+                    type_inference_expression(assumptions, dynamic_cast<Abstraction*>(expression.get())->body));
+            return result_type;
+        }
+        case expform::application: {
+            std::shared_ptr<Type> left_type = type_inference_expression(
+                    assumptions,
+                    dynamic_cast<Application*>(expression.get())->left);
+            std::shared_ptr<Type> right_type = type_inference_expression(
+                    assumptions,
+                    dynamic_cast<Application*>(expression.get())->right);
+            std::shared_ptr<Type> type = std::make_shared<TypeVariable>();
+            std::shared_ptr<Type> expected_left_type = std::make_shared<TypeApplication>(
+                    std::make_shared<TypeApplication>(
+                            std::make_shared<TypeConstructor>("->"),
+                            right_type),
+                    type);
+            try {
+                unify(left_type, expected_left_type);
+            } catch (const TypeError &e) {
+                throw TypeError(
+                        "Line " +
+                        std::to_string(expression->line) +
+                        ": could not infer type for application.");
+            }
+            return type;
+        }
+        case expform::builtinop: {
+            std::shared_ptr<Type> left_type;
+            if (dynamic_cast<BuiltInOp*>(expression.get())->op != builtinop::negate) {
+                left_type = type_inference_expression(
+                        assumptions,
+                        dynamic_cast<BuiltInOp *>(expression.get())->left);
+            }
+            std::shared_ptr<Type> right_type = type_inference_expression(
+                    assumptions,
+                    dynamic_cast<BuiltInOp*>(expression.get())->right);
+            switch(dynamic_cast<BuiltInOp*>(expression.get())->op) {
+                case builtinop::add:
+                case builtinop::subtract:
+                case builtinop::times:
+                case builtinop::divide:
+                    try {
+                        unify(left_type, std::make_shared<TypeConstructor>("Int"));
+                        unify(right_type, std::make_shared<TypeConstructor>("Int"));
+                        return std::make_shared<TypeConstructor>("Int");
+                    } catch (const TypeError &e) {
+                        throw TypeError(
+                                "Line " +
+                                std::to_string(expression->line) +
+                                ": invalid arguments to built in operator.");
+                    }
+                case builtinop::negate:
+                    try {
+                        unify(right_type, std::make_shared<TypeConstructor>("Int"));
+                        return std::make_shared<TypeConstructor>("Int");
+                    } catch (const TypeError &e) {
+                        throw TypeError(
+                                "Line " +
+                                std::to_string(expression->line) +
+                                ": invalid arguments to built in operator.");
+                    }
+                case builtinop::equality:
+                case builtinop::inequality:
+                    try {
+                        unify(left_type, right_type);
+                        return std::make_shared<TypeConstructor>("Bool");
+                    } catch (const TypeError &e) {
+                        throw TypeError(
+                                "Line " +
+                                std::to_string(expression->line) +
+                                ": invalid arguments to built in operator.");
+                    }
+                case builtinop::lt:
+                case builtinop::lte:
+                case builtinop::gt:
+                case builtinop::gte:
+                    try {
+                        unify(left_type, std::make_shared<TypeConstructor>("Int"));
+                        unify(right_type, std::make_shared<TypeConstructor>("Int"));
+                        return std::make_shared<TypeConstructor>("Bool");
+                    } catch (const TypeError &e) {
+                        throw TypeError(
+                                "Line " +
+                                std::to_string(expression->line) +
+                                ": invalid arguments to built in operator.");
+                    }
+                case builtinop::land:
+                case builtinop::lor:
+                    try {
+                        unify(left_type, std::make_shared<TypeConstructor>("Bool"));
+                        unify(right_type, std::make_shared<TypeConstructor>("Bool"));
+                        return std::make_shared<TypeConstructor>("Bool");
+                    } catch (const TypeError &e) {
+                        throw TypeError(
+                                "Line " +
+                                std::to_string(expression->line) +
+                                ": invalid arguments to built in operator.");
+                    }
+            }
+        }
+        case expform::cAsE: {
+            std::shared_ptr<Type> exp_type = type_inference_expression(
+                    assumptions,
+                    dynamic_cast<Case*>(expression.get())->exp);
+            std::shared_ptr<Type> result_type = std::make_shared<TypeVariable>();
+            for (const auto &alt: dynamic_cast<Case*>(expression.get())->alts) {
+                auto pattern = type_inference_pattern(assumptions, alt.first);
+                try {
+                    unify(pattern.first, exp_type);
+                } catch (const TypeError &e) {
+                    throw TypeError(
+                            "Line " +
+                            std::to_string(alt.first->line) +
+                            ": type expected by pattern does not unify with type of expression being analysed by case.");
+                }
+                std::map<std::string, std::shared_ptr<Type>> new_assumptions = assumptions;
+                for (const auto &[name, type]: pattern.second) {
+                    new_assumptions[name] = type;
+                }
+                try {
+                    unify(
+                            result_type,
+                            type_inference_expression(new_assumptions, alt.second));
+                } catch (const TypeError &e) {
+                    throw TypeError(
+                            "Line " +
+                            std::to_string(alt.first->line) +
+                            ": type of expression in alternative does not unify with the types in other alternatives.");
+                }
+            }
+            return result_type;
+        }
+    }
+}
+
+std::shared_ptr<Type> type_inference_declarations(
+        std::map<std::string, std::shared_ptr<Type>> assumptions,
+        const std::map<std::string, std::unique_ptr<Expression>> &declarations,
+        std::map<std::string, std::shared_ptr<Type>> type_signatures
+        ) {
+
+}
+
+void typecheck(const std::unique_ptr<Program> &program) {
+
+}

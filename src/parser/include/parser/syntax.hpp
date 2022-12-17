@@ -103,10 +103,10 @@ struct Literal : public Expression {
     expform getForm() override { return expform::literal; }
 };
 
-struct Lambda : public Expression {
+struct Abstraction : public Expression {
     const std::vector<std::string> args;
     const std::unique_ptr<Expression> body;
-    Lambda(
+    Abstraction(
             const int &line,
             const std::vector<std::string> &args,
             Expression * const &body): Expression(line), args(args), body(body) {}

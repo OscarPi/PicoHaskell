@@ -21,31 +21,31 @@ TEST(Types, TypeEquality) {
             std::make_unique<TypeConstructor>("()").get(),
             std::make_unique<TypeConstructor>("()").get()));
     EXPECT_TRUE(same_type(
-            std::make_unique<TypeVariable>("a").get(),
-            std::make_unique<TypeVariable>("a").get()));
+            std::make_unique<UniversallyQuantifiedVariable>("a").get(),
+            std::make_unique<UniversallyQuantifiedVariable>("a").get()));
     EXPECT_TRUE(same_type(
-            std::make_unique<TypeApplication>(new TypeConstructor("a"), new TypeVariable("b")).get(),
-            std::make_unique<TypeApplication>(new TypeConstructor("a"), new TypeVariable("b")).get()));
+            std::make_unique<TypeApplication>(new TypeConstructor("a"), new UniversallyQuantifiedVariable("b")).get(),
+            std::make_unique<TypeApplication>(new TypeConstructor("a"), new UniversallyQuantifiedVariable("b")).get()));
 
     EXPECT_FALSE(same_type(
             std::make_unique<TypeConstructor>("()").get(),
-            std::make_unique<TypeVariable>("()").get()));
+            std::make_unique<UniversallyQuantifiedVariable>("()").get()));
     EXPECT_FALSE(same_type(
             std::make_unique<TypeConstructor>("()").get(),
             std::make_unique<TypeConstructor>("[]").get()));
     EXPECT_FALSE(same_type(
-            std::make_unique<TypeVariable>("aa").get(),
-            std::make_unique<TypeVariable>("a").get()));
+            std::make_unique<UniversallyQuantifiedVariable>("aa").get(),
+            std::make_unique<UniversallyQuantifiedVariable>("a").get()));
     EXPECT_FALSE(same_type(
-            std::make_unique<TypeApplication>(new TypeConstructor("a"), new TypeVariable("b")).get(),
-            std::make_unique<TypeApplication>(new TypeConstructor("c"), new TypeVariable("b")).get()));
+            std::make_unique<TypeApplication>(new TypeConstructor("a"), new UniversallyQuantifiedVariable("b")).get(),
+            std::make_unique<TypeApplication>(new TypeConstructor("c"), new UniversallyQuantifiedVariable("b")).get()));
 }
 
 //
 //TEST(Types, ApplySubstitution) {
 //    substitution s;
-//    type varA = std::make_shared<const TypeVariable>("a", kStar);
-//    type varB = std::make_shared<const TypeVariable>("b", kStarToStar);
+//    type varA = std::make_shared<const UniversallyQuantifiedVariable>("a", kStar);
+//    type varB = std::make_shared<const UniversallyQuantifiedVariable>("b", kStarToStar);
 //    type con1 = std::make_shared<const TypeConstructor>("a", kStar);
 //    type con2 = std::make_shared<const TypeConstructor>("b", kStar);
 //    type con3 = std::make_shared<const TypeConstructor>("c", kStarToStarToStar);
@@ -95,12 +95,12 @@ TEST(Types, TypeEquality) {
 //}
 //
 //TEST(Types, FindTypeVariables) {
-//    type varA = std::make_shared<const TypeVariable>("a", kStar);
+//    type varA = std::make_shared<const UniversallyQuantifiedVariable>("a", kStar);
 //    auto variables = findTypeVariables(varA);
 //    EXPECT_EQ(variables.size(), 1);
 //    EXPECT_TRUE(std::count(variables.begin(), variables.end(), "a") == 1);
 //
-//    type varB = std::make_shared<const TypeVariable>("b", kStarToStar);
+//    type varB = std::make_shared<const UniversallyQuantifiedVariable>("b", kStarToStar);
 //    variables = findTypeVariables(varB);
 //    EXPECT_EQ(variables.size(), 1);
 //    EXPECT_TRUE(std::count(variables.begin(), variables.end(), "b") == 1);
@@ -126,8 +126,8 @@ TEST(Types, TypeEquality) {
 //    substitution s;
 //    s["a"] = tUnit;
 //    std::vector<type> ts;
-//    ts.push_back(std::make_shared<const TypeVariable>("a", kStar));
-//    ts.push_back(std::make_shared<const TypeVariable>("b", kStarToStar));
+//    ts.push_back(std::make_shared<const UniversallyQuantifiedVariable>("a", kStar));
+//    ts.push_back(std::make_shared<const UniversallyQuantifiedVariable>("b", kStarToStar));
 //    ts.push_back(std::make_shared<const TypeConstructor>("a", kStar));
 //    ts.push_back(std::make_shared<const TypeConstructor>("b", kStar));
 //    ts.push_back(std::make_shared<const TypeConstructor>("c", kStarToStarToStar));
@@ -150,10 +150,10 @@ TEST(Types, TypeEquality) {
 //
 //TEST(Types, FindTypeVariablesVector) {
 //    std::vector<type> ts;
-//    ts.push_back(std::make_shared<const TypeVariable>("a", kStar));
-//    ts.push_back(std::make_shared<const TypeVariable>("b", kStarToStar));
+//    ts.push_back(std::make_shared<const UniversallyQuantifiedVariable>("a", kStar));
+//    ts.push_back(std::make_shared<const UniversallyQuantifiedVariable>("b", kStarToStar));
 //    ts.push_back(std::make_shared<const TypeConstructor>("c", kStar));
-//    ts.push_back(std::make_shared<const TypeApplication>(std::make_shared<const TypeVariable>("d", kStarToStar), tUnit));
+//    ts.push_back(std::make_shared<const TypeApplication>(std::make_shared<const UniversallyQuantifiedVariable>("d", kStarToStar), tUnit));
 //    auto variables = findTypeVariables(ts);
 //    EXPECT_EQ(variables.size(), 3);
 //    EXPECT_TRUE(std::count(variables.begin(), variables.end(), "a") == 1);
@@ -166,9 +166,9 @@ TEST(Types, TypeEquality) {
 //    substitution s2;
 //    s2["a"] = tUnit;
 //    s1["a"] = tInt;
-//    s2["b"] = std::make_shared<const TypeVariable>("c", kStar);
+//    s2["b"] = std::make_shared<const UniversallyQuantifiedVariable>("c", kStar);
 //    s1["c"] = tDouble;
-//    s1["d"] = std::make_shared<const TypeVariable>("e", kStar);
+//    s1["d"] = std::make_shared<const UniversallyQuantifiedVariable>("e", kStar);
 //    s2["e"] = tFloat;
 //
 //    substitution s = compose(s1, s2);
@@ -177,7 +177,7 @@ TEST(Types, TypeEquality) {
 //    EXPECT_TRUE(same_type(s["a"], tUnit));
 //    EXPECT_TRUE(same_type(s["b"], tDouble));
 //    EXPECT_TRUE(same_type(s["c"], tDouble));
-//    EXPECT_TRUE(same_type(s["d"], std::make_shared<const TypeVariable>("e", kStar)));
+//    EXPECT_TRUE(same_type(s["d"], std::make_shared<const UniversallyQuantifiedVariable>("e", kStar)));
 //    EXPECT_TRUE(same_type(s["e"], tFloat));
 //}
 //
@@ -202,23 +202,23 @@ TEST(Types, TypeEquality) {
 //    s1["a"] = tDouble;
 //    EXPECT_THROW(merge(s1, s2), std::invalid_argument);
 //
-//    s1["a"] = std::make_shared<const TypeVariable>("b", kStar);
-//    s2["b"] = std::make_shared<const TypeVariable>("a", kStar);
+//    s1["a"] = std::make_shared<const UniversallyQuantifiedVariable>("b", kStar);
+//    s2["b"] = std::make_shared<const UniversallyQuantifiedVariable>("a", kStar);
 //    s1.erase("b");
 //    s2.erase("a");
 //    s = merge(s1, s2);
 //    EXPECT_EQ(s.size(), 2);
-//    EXPECT_TRUE(same_type(s["a"], std::make_shared<const TypeVariable>("b", kStar)));
-//    EXPECT_TRUE(same_type(s["b"], std::make_shared<const TypeVariable>("a", kStar)));
+//    EXPECT_TRUE(same_type(s["a"], std::make_shared<const UniversallyQuantifiedVariable>("b", kStar)));
+//    EXPECT_TRUE(same_type(s["b"], std::make_shared<const UniversallyQuantifiedVariable>("a", kStar)));
 //}
 //
 //TEST(Types, Unification) {
-//    type t1 = std::make_shared<const TypeVariable>("a", kStar);
-//    type t2 = std::make_shared<const TypeVariable>("a", kStar);
+//    type t1 = std::make_shared<const UniversallyQuantifiedVariable>("a", kStar);
+//    type t2 = std::make_shared<const UniversallyQuantifiedVariable>("a", kStar);
 //    substitution s = mostGeneralUnifier(t1, t2);
 //    EXPECT_EQ(s.size(), 0);
 //
-//    t2 = std::make_shared<const TypeVariable>("a", kStarToStar);
+//    t2 = std::make_shared<const UniversallyQuantifiedVariable>("a", kStarToStar);
 //    EXPECT_THROW(mostGeneralUnifier(t1, t2), std::invalid_argument);
 //
 //    t2 = std::make_shared<const TypeApplication>(tList, t1);
@@ -232,26 +232,26 @@ TEST(Types, TypeEquality) {
 //    t2 = tInt;
 //    EXPECT_THROW(mostGeneralUnifier(t1, t2), std::invalid_argument);
 //
-//    t1 = std::make_shared<const TypeVariable>("a", kStar);
-//    t2 = std::make_shared<const TypeVariable>("b", kStar);
+//    t1 = std::make_shared<const UniversallyQuantifiedVariable>("a", kStar);
+//    t2 = std::make_shared<const UniversallyQuantifiedVariable>("b", kStar);
 //    s = mostGeneralUnifier(t1, t2);
 //    EXPECT_EQ(s.size(), 1);
 //    EXPECT_TRUE(same_type(s["a"], t2));
 //
-//    t1 = std::make_shared<const TypeVariable>("a", kStar);
+//    t1 = std::make_shared<const UniversallyQuantifiedVariable>("a", kStar);
 //    t2 = tDouble;
 //    s = mostGeneralUnifier(t1, t2);
 //    EXPECT_EQ(s.size(), 1);
 //    EXPECT_TRUE(same_type(s["a"], t2));
 //
 //    t1 = tDouble;
-//    t2 = std::make_shared<const TypeVariable>("a", kStar);
+//    t2 = std::make_shared<const UniversallyQuantifiedVariable>("a", kStar);
 //    s = mostGeneralUnifier(t1, t2);
 //    EXPECT_EQ(s.size(), 1);
 //    EXPECT_TRUE(same_type(s["a"], t1));
 //
 //    t1 = std::make_shared<const TypeApplication>(tList, tInt);
-//    t2 = std::make_shared<const TypeApplication>(tList, std::make_shared<const TypeVariable>("a", kStar));
+//    t2 = std::make_shared<const TypeApplication>(tList, std::make_shared<const UniversallyQuantifiedVariable>("a", kStar));
 //    s = mostGeneralUnifier(t1, t2);
 //    EXPECT_EQ(s.size(), 1);
 //    EXPECT_TRUE(same_type(s["a"], tInt));
@@ -267,12 +267,12 @@ TEST(Types, TypeEquality) {
 //}
 //
 //TEST(Types, Matching) {
-//    type t1 = std::make_shared<const TypeVariable>("a", kStar);
-//    type t2 = std::make_shared<const TypeVariable>("a", kStar);
+//    type t1 = std::make_shared<const UniversallyQuantifiedVariable>("a", kStar);
+//    type t2 = std::make_shared<const UniversallyQuantifiedVariable>("a", kStar);
 //    substitution s = match(t1, t2);
 //    EXPECT_EQ(s.size(), 0);
 //
-//    t2 = std::make_shared<const TypeVariable>("a", kStarToStar);
+//    t2 = std::make_shared<const UniversallyQuantifiedVariable>("a", kStarToStar);
 //    EXPECT_THROW(match(t1, t2), std::invalid_argument);
 //
 //    t2 = std::make_shared<const TypeApplication>(tList, t1);
@@ -288,27 +288,27 @@ TEST(Types, TypeEquality) {
 //    t2 = tInt;
 //    EXPECT_THROW(match(t1, t2), std::invalid_argument);
 //
-//    t1 = std::make_shared<const TypeVariable>("a", kStar);
-//    t2 = std::make_shared<const TypeVariable>("b", kStar);
+//    t1 = std::make_shared<const UniversallyQuantifiedVariable>("a", kStar);
+//    t2 = std::make_shared<const UniversallyQuantifiedVariable>("b", kStar);
 //    s = match(t1, t2);
 //    EXPECT_EQ(s.size(), 1);
 //    EXPECT_TRUE(same_type(s["a"], t2));
 //
-//    t1 = std::make_shared<const TypeVariable>("a", kStar);
+//    t1 = std::make_shared<const UniversallyQuantifiedVariable>("a", kStar);
 //    t2 = tDouble;
 //    s = match(t1, t2);
 //    EXPECT_EQ(s.size(), 1);
 //    EXPECT_TRUE(same_type(s["a"], t2));
 //
 //    t1 = tDouble;
-//    t2 = std::make_shared<const TypeVariable>("a", kStar);
+//    t2 = std::make_shared<const UniversallyQuantifiedVariable>("a", kStar);
 //    EXPECT_THROW(match(t1, t2), std::invalid_argument);
 //
 //    t1 = std::make_shared<const TypeApplication>(tList, tInt);
-//    t2 = std::make_shared<const TypeApplication>(tList, std::make_shared<const TypeVariable>("a", kStar));
+//    t2 = std::make_shared<const TypeApplication>(tList, std::make_shared<const UniversallyQuantifiedVariable>("a", kStar));
 //    EXPECT_THROW(match(t1, t2), std::invalid_argument);
 //
-//    t1 = std::make_shared<const TypeApplication>(tList, std::make_shared<const TypeVariable>("a", kStar));
+//    t1 = std::make_shared<const TypeApplication>(tList, std::make_shared<const UniversallyQuantifiedVariable>("a", kStar));
 //    t2 = std::make_shared<const TypeApplication>(tList, tInt);
 //    s = match(t1, t2);
 //    EXPECT_EQ(s.size(), 1);
@@ -325,9 +325,9 @@ TEST(Types, TypeEquality) {
 //}
 //
 //TEST(Types, Scheme) {
-//    std::shared_ptr<const TypeVariable> a = std::make_shared<const TypeVariable>("a", kStar);
-//    type b = std::make_shared<const TypeVariable>("b", kStar);
-//    std::shared_ptr<const TypeVariable> c = std::make_shared<const TypeVariable>("c", kStarToStar);
+//    std::shared_ptr<const UniversallyQuantifiedVariable> a = std::make_shared<const UniversallyQuantifiedVariable>("a", kStar);
+//    type b = std::make_shared<const UniversallyQuantifiedVariable>("b", kStar);
+//    std::shared_ptr<const UniversallyQuantifiedVariable> c = std::make_shared<const UniversallyQuantifiedVariable>("c", kStarToStar);
 //    type t = std::make_shared<const TypeApplication>(
 //            std::make_shared<const TypeApplication>(tTuple2, a),
 //            std::make_shared<const TypeApplication>(
@@ -335,7 +335,7 @@ TEST(Types, TypeEquality) {
 //                    std::make_shared<const TypeApplication>(c, a)
 //            )
 //    );
-//    std::vector<std::shared_ptr<const TypeVariable>> vs = {a, c};
+//    std::vector<std::shared_ptr<const UniversallyQuantifiedVariable>> vs = {a, c};
 //    Scheme s(vs, t);
 //    type a1 = std::make_shared<const TypeGeneric>(0, kStar);
 //    type c1 = std::make_shared<const TypeGeneric>(1, kStarToStar);
@@ -351,7 +351,7 @@ TEST(Types, TypeEquality) {
 //
 //TEST(Types, Assumptions) {
 //    Assumptions a;
-//    Scheme s1(std::make_shared<TypeVariable>("a", kStar));
+//    Scheme s1(std::make_shared<UniversallyQuantifiedVariable>("a", kStar));
 //    Scheme s2(tDouble);
 //
 //    Assumptions b = a.add("vara", s1);
