@@ -71,6 +71,13 @@ void Program::add_type_constructor(
         data_constructors.emplace(constructor->name, constructor);
     }
 
+    if (std::set<std::string>(argument_variables.begin(), argument_variables.end()).size() < argument_variables.size()) {
+        throw ParseError(
+                "Line " +
+                std::to_string(line) +
+                ": duplicate type variables not allowed.");
+    }
+
     auto type_constructor = std::make_unique<TConstructor>(line, name, argument_variables, data_constructor_names);
     if (type_constructors.count(type_constructor->name) > 0) {
         throw ParseError(
@@ -150,16 +157,6 @@ Expression *make_let_expression(const int &line, const declist &decls, Expressio
     std::map<std::string, Expression*> bindings;
     std::map<std::string, Type*> type_signatures;
 
-    for (const auto &signature: std::get<0>(decls)) {
-        if (type_signatures.count(signature.first) > 0) {
-            throw ParseError(
-                    "Line " +
-                    std::to_string(line) +
-                    ": multiple type signatures for the same name are not allowed.");
-        }
-        type_signatures[signature.first] = signature.second;
-    }
-
     for (const auto &function: std::get<1>(decls)) {
         if (bindings.count(std::get<0>(function)) > 0) {
             throw ParseError(
@@ -182,6 +179,26 @@ Expression *make_let_expression(const int &line, const declist &decls, Expressio
                     ".");
         }
         bindings[variable.first] = variable.second;
+    }
+
+    for (const auto &signature: std::get<0>(decls)) {
+        if (type_signatures.count(signature.first) > 0) {
+            throw ParseError(
+                    "Line " +
+                    std::to_string(line) +
+                    ": multiple type signatures for the same name " +
+                    "(" + signature.first + ")" +
+                    "are not allowed.");
+        }
+        if (bindings.count(signature.first) == 0) {
+            throw ParseError(
+                    "Line " +
+                    std::to_string(line) +
+                    ": type signature for " +
+                    signature.first +
+                    " with no matching binding.");
+        }
+        type_signatures[signature.first] = signature.second;
     }
 
     return new Let(line, bindings, type_signatures, e);

@@ -137,6 +137,9 @@ TEST(Parser, ParsesDataDecls) {
     EXPECT_THROW(parse_string("data Hi = One\n;data Bye = One", program.get()), ParseError);
 
     program = std::make_unique<Program>();
+    EXPECT_THROW(parse_string("data Hi a a = One", program.get()), ParseError);
+
+    program = std::make_unique<Program>();
     result = parse_string("data Hi = Bye\n;data Bye = Hi", program.get());
     ASSERT_EQ(result, 0);
     const auto &hi4 = program->type_constructors["Hi"];
@@ -405,6 +408,9 @@ TEST(Parser, ParsesLetExpressions) {
 
     program = std::make_unique<Program>();
     EXPECT_THROW(parse_string("a = let {c = a; c a =2} in c", program.get()), ParseError);
+
+    program = std::make_unique<Program>();
+    EXPECT_THROW(parse_string("a = let {c::Int} in c", program.get()), ParseError);
 
     program = std::make_unique<Program>();
     EXPECT_THROW(parse_string("a = let {c::Int; c::Double} in c", program.get()), ParseError);

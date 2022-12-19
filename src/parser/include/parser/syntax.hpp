@@ -21,7 +21,7 @@ public:
 struct DConstructor {
     const int line;
     const std::string name;
-    std::vector<std::unique_ptr<Type>> types;
+    std::vector<std::shared_ptr<Type>> types;
     std::string type_constructor;
     DConstructor(const int &line, std::string name, const std::vector<Type*> &types);
 };
@@ -132,7 +132,7 @@ struct Case : public Expression {
 
 struct Let : public Expression {
     std::map<std::string, std::unique_ptr<Expression>> bindings;
-    std::map<std::string, std::unique_ptr<Type>> type_signatures;
+    std::map<std::string, std::shared_ptr<Type>> type_signatures;
     const std::unique_ptr<Expression> e;
     Let(
             const int &line,
@@ -159,7 +159,7 @@ struct Program {
     std::map<std::string, std::unique_ptr<TConstructor>> type_constructors;
     std::map<std::string, std::unique_ptr<DConstructor>> data_constructors;
     std::map<std::string, std::unique_ptr<Expression>> bindings;
-    std::map<std::string, std::unique_ptr<Type>> type_signatures;
+    std::map<std::string, std::shared_ptr<Type>> type_signatures;
     void add_type_signature(const int &line, const std::string &name, Type* const &t);
     void add_type_constructor(
             const int &line,
