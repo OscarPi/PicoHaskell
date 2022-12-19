@@ -4,6 +4,7 @@
 #include "parser/syntax.hpp"
 #include "lexer/lexer.hpp"
 #include "parser/driver.hpp"
+#include "types/type_check.hpp"
 
 void reset_start_condition();
 
@@ -45,6 +46,6 @@ TEST(Types, TypeEquality) {
 
 TEST(Types, TypeChecking) {
     std::unique_ptr<Program> program = std::make_unique<Program>();
-    int result = parse_string("a :: ()", program.get());
-    //type_check(program);
+    int result = parse_string("a :: [Char]\n;a=\"ass\"", program.get());
+    type_check(program);
 }

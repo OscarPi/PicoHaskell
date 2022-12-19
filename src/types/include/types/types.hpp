@@ -7,7 +7,6 @@
 #include <utility>
 #include <vector>
 #include <stdexcept>
-#include "parser/syntax.hpp"
 
 enum class typeform {variable, universallyquantifiedvariable, constructor, application}; //, gen};
 
@@ -55,7 +54,5 @@ Type *make_list_type(Type* const &elementType);
 Type *make_tuple_type(const std::vector<Type*> &components);
 
 bool same_type(const Type *a, const Type *b);
-
-//void type_check(const std::unique_ptr<Program> &program);
 
 #endif //PICOHASKELL_TYPES_HPP

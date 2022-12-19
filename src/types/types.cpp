@@ -629,6 +629,15 @@ std::map<std::string, std::shared_ptr<Type>> type_inference_declarations(
     std::vector<std::string> explicitly_typed_bindings;
     std::vector<std::string> implicitly_typed_bindings;
 
+    for (const auto &[name, _]: type_signatures) {
+        if (declarations.count(name) == 0) {
+            throw TypeError(
+                    "Type signature for " +
+                    name +
+                    " with no matching binding.");
+        }
+    }
+
     for (const auto &[name, definition]: declarations) {
         if (type_signatures.count(name) > 0) {
             explicitly_typed_bindings.push_back(name);

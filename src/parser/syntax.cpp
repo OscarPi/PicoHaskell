@@ -190,14 +190,7 @@ Expression *make_let_expression(const int &line, const declist &decls, Expressio
                     "(" + signature.first + ")" +
                     "are not allowed.");
         }
-        if (bindings.count(signature.first) == 0) {
-            throw ParseError(
-                    "Line " +
-                    std::to_string(line) +
-                    ": type signature for " +
-                    signature.first +
-                    " with no matching binding.");
-        }
+
         type_signatures[signature.first] = signature.second;
     }
 
