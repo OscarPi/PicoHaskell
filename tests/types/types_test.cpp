@@ -44,8 +44,18 @@ TEST(Types, TypeEquality) {
             std::make_unique<TypeApplication>(new TypeConstructor("c"), new UniversallyQuantifiedVariable("b")).get()));
 }
 
-TEST(Types, TypeChecking) {
-    std::unique_ptr<Program> program = std::make_unique<Program>();
-    int result = parse_string("a :: [Char]\n;a=\"ass\"", program.get());
-    type_check(program);
+#define EXPECT_WELL_TYPED(str) {                                    \
+    std::unique_ptr<Program> program = std::make_unique<Program>(); \
+    int result = parse_string((str), program.get());                \
+    ASSERT_EQ(result, 0);                                           \
+    type_check(program);                                            \
 }
+
+#define EXPECT_NOT_WELL_TYPED(str) {                                \
+    std::unique_ptr<Program> program = std::make_unique<Program>(); \
+    int result = parse_string((str), program.get());                \
+    ASSERT_EQ(result, 0);                                           \
+    EXPECT_THROW(type_check(program), TypeError);                   \
+}
+
+

@@ -227,7 +227,7 @@ std::shared_ptr<Type> generalise(
     }
 }
 
-std::vector<std::string> get_variables_bound_by(const std::unique_ptr<Pattern> &pattern) {
+std::vector<std::string> find_variables_bound_by(const std::unique_ptr<Pattern> &pattern) {
     std::vector<std::string> variables = pattern->as;
     switch(pattern->getForm()) {
         case patternform::wild:
@@ -238,7 +238,7 @@ std::vector<std::string> get_variables_bound_by(const std::unique_ptr<Pattern> &
             return variables;
         case patternform::constructor:
             for (const auto &pat: dynamic_cast<ConstructorPattern*>(pattern.get())->args) {
-                std::vector<std::string> new_variables = get_variables_bound_by(pat);
+                std::vector<std::string> new_variables = find_variables_bound_by(pat);
                 variables.insert(variables.end(), new_variables.begin(), new_variables.end());
             }
             return variables;
@@ -247,18 +247,18 @@ std::vector<std::string> get_variables_bound_by(const std::unique_ptr<Pattern> &
 
 std::pair<std::shared_ptr<Type>, std::map<std::string, std::shared_ptr<Type>>> type_inference_pattern(
         const std::map<std::string, std::shared_ptr<Type>> &constructor_types,
-        const std::map<std::string, int> &constructor_arities,
+        const std::map<std::string, int> &data_constructor_arities,
         const std::unique_ptr<Pattern> &p);
 
 std::pair<std::vector<std::shared_ptr<Type>>, std::map<std::string, std::shared_ptr<Type>>> type_inference_patterns(
         const std::map<std::string, std::shared_ptr<Type>> &constructor_types,
-        const std::map<std::string, int> &constructor_arities,
+        const std::map<std::string, int> &data_constructor_arities,
         const std::vector<std::unique_ptr<Pattern>> &ps) {
     std::vector<std::shared_ptr<Type>> types_matched;
     std::map<std::string, std::shared_ptr<Type>> new_assumptions;
 
     for (const auto &p: ps) {
-        auto inferred = type_inference_pattern(constructor_types, constructor_arities, p);
+        auto inferred = type_inference_pattern(constructor_types, data_constructor_arities, p);
         types_matched.push_back(inferred.first);
         for (auto const &[name, type]: inferred.second) {
             new_assumptions[name] = type;
@@ -270,9 +270,9 @@ std::pair<std::vector<std::shared_ptr<Type>>, std::map<std::string, std::shared_
 
 std::pair<std::shared_ptr<Type>, std::map<std::string, std::shared_ptr<Type>>> type_inference_pattern(
         const std::map<std::string, std::shared_ptr<Type>> &constructor_types,
-        const std::map<std::string, int> &constructor_arities,
+        const std::map<std::string, int> &data_constructor_arities,
         const std::unique_ptr<Pattern> &p) {
-    std::vector<std::string> variables = get_variables_bound_by(p);
+    std::vector<std::string> variables = find_variables_bound_by(p);
     if (variables.size() > std::set(variables.begin(), variables.end()).size()) {
         throw TypeError(
                 "Line " +
@@ -291,7 +291,7 @@ std::pair<std::shared_ptr<Type>, std::map<std::string, std::shared_ptr<Type>>> t
                         dynamic_cast<ConstructorPattern *>(p.get())->name + ".");
             }
             if (dynamic_cast<ConstructorPattern *>(p.get())->args.size() !=
-                constructor_arities.at(dynamic_cast<ConstructorPattern *>(p.get())->name)) {
+                data_constructor_arities.at(dynamic_cast<ConstructorPattern *>(p.get())->name)) {
                 throw TypeError(
                         "Line " +
                         std::to_string(p->line) +
@@ -299,7 +299,7 @@ std::pair<std::shared_ptr<Type>, std::map<std::string, std::shared_ptr<Type>>> t
             }
             auto sub_patterns = type_inference_patterns(
                     constructor_types,
-                    constructor_arities,
+                    data_constructor_arities,
                     dynamic_cast<ConstructorPattern *>(p.get())->args);
             type_matched = std::make_shared<TypeVariable>();
             new_assumptions = sub_patterns.second;
@@ -354,13 +354,15 @@ std::pair<std::shared_ptr<Type>, std::map<std::string, std::shared_ptr<Type>>> t
 
 std::map<std::string, std::shared_ptr<Type>> type_inference_declarations(
         const std::map<std::string, std::shared_ptr<Type>> &assumptions,
-        const std::map<std::string, int> &constructor_arities,
+        const std::map<std::string, int> &data_constructor_arities,
+        const std::map<std::string, std::shared_ptr<Kind>> &type_constructor_kinds,
         const std::map<std::string, std::unique_ptr<Expression>> &declarations,
         const std::map<std::string, std::shared_ptr<Type>> &type_signatures);
 
 std::shared_ptr<Type> type_inference_expression(
         std::map<std::string, std::shared_ptr<Type>> assumptions,
-        const std::map<std::string, int> &constructor_arities,
+        const std::map<std::string, int> &data_constructor_arities,
+        const std::map<std::string, std::shared_ptr<Kind>> &type_constructor_kinds,
         const std::unique_ptr<Expression> &expression) {
     switch(expression->getForm()) {
         case expform::literal:
@@ -407,18 +409,21 @@ std::shared_ptr<Type> type_inference_expression(
                     result_type,
                     type_inference_expression(
                             assumptions,
-                            constructor_arities,
+                            data_constructor_arities,
+                            type_constructor_kinds,
                             dynamic_cast<Abstraction*>(expression.get())->body));
-            return result_type;
+            return type;
         }
         case expform::application: {
             std::shared_ptr<Type> left_type = type_inference_expression(
                     assumptions,
-                    constructor_arities,
+                    data_constructor_arities,
+                    type_constructor_kinds,
                     dynamic_cast<Application*>(expression.get())->left);
             std::shared_ptr<Type> right_type = type_inference_expression(
                     assumptions,
-                    constructor_arities,
+                    data_constructor_arities,
+                    type_constructor_kinds,
                     dynamic_cast<Application*>(expression.get())->right);
             std::shared_ptr<Type> type = std::make_shared<TypeVariable>();
             std::shared_ptr<Type> expected_left_type = std::make_shared<TypeApplication>(
@@ -441,12 +446,14 @@ std::shared_ptr<Type> type_inference_expression(
             if (dynamic_cast<BuiltInOp*>(expression.get())->op != builtinop::negate) {
                 left_type = type_inference_expression(
                         assumptions,
-                        constructor_arities,
+                        data_constructor_arities,
+                        type_constructor_kinds,
                         dynamic_cast<BuiltInOp *>(expression.get())->left);
             }
             std::shared_ptr<Type> right_type = type_inference_expression(
                     assumptions,
-                    constructor_arities,
+                    data_constructor_arities,
+                    type_constructor_kinds,
                     dynamic_cast<BuiltInOp*>(expression.get())->right);
             switch(dynamic_cast<BuiltInOp*>(expression.get())->op) {
                 case builtinop::add:
@@ -515,11 +522,12 @@ std::shared_ptr<Type> type_inference_expression(
         case expform::cAsE: {
             std::shared_ptr<Type> exp_type = type_inference_expression(
                     assumptions,
-                    constructor_arities,
+                    data_constructor_arities,
+                    type_constructor_kinds,
                     dynamic_cast<Case*>(expression.get())->exp);
             std::shared_ptr<Type> result_type = std::make_shared<TypeVariable>();
             for (const auto &alt: dynamic_cast<Case*>(expression.get())->alts) {
-                auto pattern = type_inference_pattern(assumptions, constructor_arities, alt.first);
+                auto pattern = type_inference_pattern(assumptions, data_constructor_arities, alt.first);
                 try {
                     unify(pattern.first, exp_type);
                 } catch (const TypeError &e) {
@@ -535,7 +543,11 @@ std::shared_ptr<Type> type_inference_expression(
                 try {
                     unify(
                             result_type,
-                            type_inference_expression(new_assumptions, constructor_arities, alt.second));
+                            type_inference_expression(
+                                    new_assumptions,
+                                    data_constructor_arities,
+                                    type_constructor_kinds,
+                                    alt.second));
                 } catch (const TypeError &e) {
                     throw TypeError(
                             "Line " +
@@ -548,18 +560,20 @@ std::shared_ptr<Type> type_inference_expression(
         case expform::let: {
             std::map<std::string, std::shared_ptr<Type>> local_assumptions = type_inference_declarations(
                     assumptions,
-                    constructor_arities,
+                    data_constructor_arities,
+                    type_constructor_kinds,
                     dynamic_cast<Let*>(expression.get())->bindings,
                     dynamic_cast<Let*>(expression.get())->type_signatures);
             return type_inference_expression(
                     local_assumptions,
-                    constructor_arities,
+                    data_constructor_arities,
+                    type_constructor_kinds,
                     dynamic_cast<Let*>(expression.get())->e);
         }
     }
 }
 
-std::set<std::string> get_free_variables(const std::unique_ptr<Expression> &exp) {
+std::set<std::string> find_free_variables(const std::unique_ptr<Expression> &exp) {
     switch(exp->getForm()) {
         case expform::variable:
             return std::set<std::string>({dynamic_cast<Variable*>(exp.get())->name});
@@ -567,24 +581,24 @@ std::set<std::string> get_free_variables(const std::unique_ptr<Expression> &exp)
         case expform::literal:
             return {};
         case expform::abstraction: {
-            std::set<std::string> variables = get_free_variables(dynamic_cast<Abstraction*>(exp.get())->body);
+            std::set<std::string> variables = find_free_variables(dynamic_cast<Abstraction*>(exp.get())->body);
             for (const std::string &v: dynamic_cast<Abstraction*>(exp.get())->args) {
                 variables.erase(v);
             }
             return variables;
         }
         case expform::application: {
-            std::set<std::string> variables = get_free_variables(dynamic_cast<Application*>(exp.get())->left);
-            for (const std::string &v: get_free_variables(dynamic_cast<Application*>(exp.get())->right)) {
+            std::set<std::string> variables = find_free_variables(dynamic_cast<Application*>(exp.get())->left);
+            for (const std::string &v: find_free_variables(dynamic_cast<Application*>(exp.get())->right)) {
                 variables.insert(v);
             }
             return variables;
         }
         case expform::cAsE: {
-            std::set<std::string> variables = get_free_variables(dynamic_cast<Case*>(exp.get())->exp);
+            std::set<std::string> variables = find_free_variables(dynamic_cast<Case*>(exp.get())->exp);
             for (const auto &alt: dynamic_cast<Case*>(exp.get())->alts) {
-                std::set<std::string> new_variables = get_free_variables(alt.second);
-                for (const std::string &v: get_variables_bound_by(alt.first)) {
+                std::set<std::string> new_variables = find_free_variables(alt.second);
+                for (const std::string &v: find_variables_bound_by(alt.first)) {
                     new_variables.erase(v);
                 }
                 for (const std::string &v: new_variables) {
@@ -594,11 +608,11 @@ std::set<std::string> get_free_variables(const std::unique_ptr<Expression> &exp)
             return variables;
         }
         case expform::let: {
-            std::set<std::string> variables = get_free_variables(dynamic_cast<Let*>(exp.get())->e);
+            std::set<std::string> variables = find_free_variables(dynamic_cast<Let*>(exp.get())->e);
             std::set<std::string> bound_names;
             for (const auto &[name, e]: dynamic_cast<Let*>(exp.get())->bindings) {
                 bound_names.insert(name);
-                for (const std::string &v: get_free_variables(e)) {
+                for (const std::string &v: find_free_variables(e)) {
                     variables.insert(v);
                 }
             }
@@ -608,140 +622,13 @@ std::set<std::string> get_free_variables(const std::unique_ptr<Expression> &exp)
             return variables;
         }
         case expform::builtinop: {
-            std::set<std::string> variables = get_free_variables(dynamic_cast<BuiltInOp*>(exp.get())->left);
-            for (const std::string &v: get_free_variables(dynamic_cast<BuiltInOp*>(exp.get())->right)) {
+            std::set<std::string> variables = find_free_variables(dynamic_cast<BuiltInOp*>(exp.get())->left);
+            for (const std::string &v: find_free_variables(dynamic_cast<BuiltInOp*>(exp.get())->right)) {
                 variables.insert(v);
             }
             return variables;
         }
     }
-}
-
-std::map<std::string, std::shared_ptr<Type>> type_inference_declarations(
-        const std::map<std::string, std::shared_ptr<Type>> &assumptions,
-        const std::map<std::string, int> &constructor_arities,
-        const std::map<std::string, std::unique_ptr<Expression>> &declarations,
-        const std::map<std::string, std::shared_ptr<Type>> &type_signatures) {
-    std::map<std::string, std::shared_ptr<Type>> local_assumptions = assumptions;
-
-    std::map<std::string, std::set<std::string>> free_variables;
-
-    std::vector<std::string> explicitly_typed_bindings;
-    std::vector<std::string> implicitly_typed_bindings;
-
-    for (const auto &[name, _]: type_signatures) {
-        if (declarations.count(name) == 0) {
-            throw TypeError(
-                    "Type signature for " +
-                    name +
-                    " with no matching binding.");
-        }
-    }
-
-    for (const auto &[name, definition]: declarations) {
-        if (type_signatures.count(name) > 0) {
-            explicitly_typed_bindings.push_back(name);
-        } else {
-            implicitly_typed_bindings.push_back(name);
-            free_variables[name] = get_free_variables(definition);
-        }
-    }
-
-    for (const auto &name: explicitly_typed_bindings) {
-        local_assumptions[name] = type_signatures.at(name);
-    }
-
-    std::vector<std::vector<std::string>> to_typecheck;
-    while (!implicitly_typed_bindings.empty()) {
-        to_typecheck.push_back({implicitly_typed_bindings.back()});
-        implicitly_typed_bindings.pop_back();
-
-        while (!to_typecheck.empty()) {
-            std::vector<std::string> current = to_typecheck.back();
-            to_typecheck.pop_back();
-
-            std::vector<std::string> depends_on;
-            for (const auto &name: current) {
-                for (const auto &dependency: free_variables[name]) {
-                    depends_on.push_back(dependency);
-                }
-            }
-
-            bool dependencies_ok = true;
-            for (const auto &dependency: depends_on) {
-                if (std::count(implicitly_typed_bindings.begin(), implicitly_typed_bindings.end(), dependency) > 0) {
-                    to_typecheck.push_back(current);
-                    to_typecheck.push_back({dependency});
-                    implicitly_typed_bindings.erase(
-                            std::find(
-                                    implicitly_typed_bindings.begin(),
-                                    implicitly_typed_bindings.end(),
-                                    dependency));
-                    dependencies_ok = false;
-                    break;
-                } else {
-                    for (int i = 0; i < to_typecheck.size(); i++) {
-                        if (std::count(to_typecheck[i].begin(), to_typecheck[i].end(), dependency) > 0) {
-                            size_t number_to_pop = to_typecheck.size() - i;
-                            std::vector<std::string> new_group;
-                            for (int j = 0; j < number_to_pop; j++) {
-                                new_group.insert(new_group.end(), to_typecheck.back().begin(), to_typecheck.back().end());
-                                to_typecheck.pop_back();
-                            }
-                            new_group.insert(new_group.end(), current.begin(), current.end());
-                            dependencies_ok = false;
-                            break;
-                        }
-                    }
-                    if (!dependencies_ok) {
-                        break;
-                    }
-                }
-            }
-
-            if (dependencies_ok) {
-                for (const auto &name: current) {
-                    local_assumptions[name] = std::make_shared<TypeVariable>();
-                }
-                for (const auto &name: current) {
-                    std::shared_ptr<Type> type = type_inference_expression(
-                            local_assumptions,
-                            constructor_arities,
-                            declarations.at(name));
-                    try {
-                        unify(type, local_assumptions[name]);
-                    } catch (const TypeError &e) {
-                        throw TypeError(
-                                "Line " +
-                                std::to_string(declarations.at(name)->line) +
-                                ": could not deduce type for name " +
-                                name + ".");
-                    }
-                }
-                for (const auto &name: current) {
-                    local_assumptions[name] = generalise(local_assumptions[name], assumptions);
-                }
-            }
-        }
-    }
-
-    for (const auto &name: explicitly_typed_bindings) {
-        std::shared_ptr<Type> type = type_inference_expression(
-                local_assumptions,
-                constructor_arities,
-                declarations.at(name));
-        try {
-            match(type, instantiate(local_assumptions[name]));
-        } catch (const TypeError &e) {
-            throw TypeError(
-                    "Line " +
-                    std::to_string(declarations.at(name)->line) +
-                    ": could not confirm type for name " +
-                    name + ".");
-        }
-    }
-
-    return local_assumptions;
 }
 
 std::shared_ptr<Kind> follow_substitution(std::shared_ptr<Kind> k) {
@@ -829,33 +716,33 @@ std::shared_ptr<Kind> generalise(const std::shared_ptr<Kind> &k) {
 std::shared_ptr<Kind> kind_inference(
         const std::shared_ptr<Type> &t,
         const std::map<std::string, std::shared_ptr<Kind>> &variable_kinds,
-        const std::map<std::string, std::shared_ptr<Kind>> &constructor_kinds) {
+        const std::map<std::string, std::shared_ptr<Kind>> &type_constructor_kinds) {
     switch(t->get_form()) {
         case typeform::variable:
             throw TypeError("cannot infer kind of instantiated type variable.");
         case typeform::universallyquantifiedvariable:
-            if (variable_kinds.count(std::dynamic_pointer_cast<Variable>(t)->name) == 0) {
+            if (variable_kinds.count(std::dynamic_pointer_cast<UniversallyQuantifiedVariable>(t)->id) == 0) {
                 throw TypeError(
-                        "unbound type variable" +
-                        std::dynamic_pointer_cast<Variable>(t)->name + ".");
+                        "unbound type variable \"" +
+                        std::dynamic_pointer_cast<UniversallyQuantifiedVariable>(t)->id + "\".");
             }
-            return variable_kinds.at(std::dynamic_pointer_cast<Variable>(t)->name);
+            return variable_kinds.at(std::dynamic_pointer_cast<UniversallyQuantifiedVariable>(t)->id);
         case typeform::constructor:
-            if (constructor_kinds.count(std::dynamic_pointer_cast<TypeConstructor>(t)->id) == 0) {
+            if (type_constructor_kinds.count(std::dynamic_pointer_cast<TypeConstructor>(t)->id) == 0) {
                 throw TypeError(
-                        "unbound type constructor " +
-                        std::dynamic_pointer_cast<Constructor>(t)->name + ".");
+                        "unbound type constructor \"" +
+                        std::dynamic_pointer_cast<TypeConstructor>(t)->id + "\".");
             }
-            return constructor_kinds.at(std::dynamic_pointer_cast<TypeConstructor>(t)->id);
+            return type_constructor_kinds.at(std::dynamic_pointer_cast<TypeConstructor>(t)->id);
         case typeform::application: {
             std::shared_ptr<Kind> left_kind = kind_inference(
                     dynamic_cast<TypeApplication*>(t.get())->left,
                     variable_kinds,
-                    constructor_kinds);
+                    type_constructor_kinds);
             std::shared_ptr<Kind> right_kind = kind_inference(
                     dynamic_cast<TypeApplication*>(t.get())->right,
                     variable_kinds,
-                    constructor_kinds);
+                    type_constructor_kinds);
             std::shared_ptr<Kind> kind = std::make_shared<KindVariable>();
             std::shared_ptr<Kind> expected_left_kind = std::make_shared<ArrowKind>(right_kind, kind);
             try {
@@ -868,16 +755,200 @@ std::shared_ptr<Kind> kind_inference(
     }
 }
 
-std::set<std::string> get_referenced_type_constructors(std::shared_ptr<Type> t) {
+std::set<std::string> find_universally_quantified_variable_names(std::shared_ptr<Type> type) {
+    type = follow_substitution(type);
+    switch (type->get_form()) {
+        case typeform::constructor:
+        case typeform::variable:
+            return {};
+        case typeform::universallyquantifiedvariable:
+            return {std::dynamic_pointer_cast<UniversallyQuantifiedVariable>(type)->id};
+        case typeform::application: {
+            std::set<std::string> left = find_universally_quantified_variable_names(
+                    std::dynamic_pointer_cast<TypeApplication>(type)->left);
+            std::set<std::string> right = find_universally_quantified_variable_names(
+                    std::dynamic_pointer_cast<TypeApplication>(type)->right);
+            left.insert(right.begin(), right.end());
+            return left;
+        }
+    }
+}
+
+std::vector<std::vector<std::string>> dependency_analysis(
+        std::vector<std::string> names,
+        const std::map<std::string, std::set<std::string>> &dependencies) {
+    std::vector<std::vector<std::string>> dependency_groups;
+
+    std::vector<std::vector<std::string>> stack;
+    while (!names.empty()) {
+        stack.push_back({names.back()});
+        names.pop_back();
+
+        while (!stack.empty()) {
+            std::vector<std::string> current = stack.back();
+            stack.pop_back();
+
+            std::set<std::string> depends_on;
+            for (const auto &name: current) {
+                for (const auto &dependency: dependencies.at(name)) {
+                    depends_on.insert(dependency);
+                }
+            }
+
+            bool dependencies_ok = true;
+            for (const auto &dependency: depends_on) {
+                const auto &iterator = std::find(names.begin(), names.end(), dependency);
+                if (iterator != names.end()) {
+                    stack.push_back(current);
+                    stack.push_back({dependency});
+                    names.erase(iterator);
+                    dependencies_ok = false;
+                    break;
+                } else {
+                    for (int i = 0; i < stack.size(); i++) {
+                        if (std::count(stack[i].begin(), stack[i].end(), dependency) > 0) {
+                            size_t number_to_pop = stack.size() - i;
+                            std::vector<std::string> new_group;
+                            for (int j = 0; j < number_to_pop; j++) {
+                                new_group.insert(new_group.end(), stack.back().begin(), stack.back().end());
+                                stack.pop_back();
+                            }
+                            new_group.insert(new_group.end(), current.begin(), current.end());
+                            dependencies_ok = false;
+                            break;
+                        }
+                    }
+                    if (!dependencies_ok) {
+                        break;
+                    }
+                }
+            }
+
+            if (dependencies_ok) {
+                dependency_groups.push_back(current);
+            }
+        }
+    }
+    return dependency_groups;
+}
+
+std::map<std::string, std::shared_ptr<Type>> type_inference_declarations(
+        const std::map<std::string, std::shared_ptr<Type>> &assumptions,
+        const std::map<std::string, int> &data_constructor_arities,
+        const std::map<std::string, std::shared_ptr<Kind>> &type_constructor_kinds,
+        const std::map<std::string, std::unique_ptr<Expression>> &declarations,
+        const std::map<std::string, std::shared_ptr<Type>> &type_signatures) {
+    std::map<std::string, std::shared_ptr<Type>> local_assumptions = assumptions;
+
+    std::map<std::string, std::set<std::string>> free_variables;
+
+    std::vector<std::string> explicitly_typed_bindings;
+    std::vector<std::string> implicitly_typed_bindings;
+
+    for (const auto &[name, type]: type_signatures) {
+        if (declarations.count(name) == 0) {
+            throw TypeError(
+                    "Type signature for \"" +
+                    name +
+                    "\" with no matching binding.");
+        }
+        std::map<std::string, std::shared_ptr<Kind>> variable_kinds;
+        for (const std::string &v: find_universally_quantified_variable_names(type)) {
+            variable_kinds[v] = std::make_shared<KindVariable>();
+        }
+        std::shared_ptr<Kind> kind;
+        try {
+            kind = kind_inference(type, variable_kinds, type_constructor_kinds);
+        } catch (const TypeError &e) {
+            throw TypeError(
+                    "Type signature for \"" +
+                    name +
+                    "\" with invalid type: " +
+                    e.what());
+        }
+        try {
+            unify(kind, std::make_shared<StarKind>());
+        } catch (const TypeError &e) {
+            throw TypeError(
+                    "Type signature for " +
+                    name +
+                    " with invalid type.");
+        }
+    }
+
+    for (const auto &[name, definition]: declarations) {
+        if (type_signatures.count(name) > 0) {
+            explicitly_typed_bindings.push_back(name);
+        } else {
+            implicitly_typed_bindings.push_back(name);
+            free_variables[name] = find_free_variables(definition);
+        }
+    }
+
+    for (const auto &name: explicitly_typed_bindings) {
+        local_assumptions[name] = type_signatures.at(name);
+    }
+
+    std::vector<std::vector<std::string>> dependency_groups = dependency_analysis(
+            implicitly_typed_bindings,
+            free_variables);
+
+
+    for (const auto &current: dependency_groups) {
+        for (const auto &name: current) {
+            local_assumptions[name] = std::make_shared<TypeVariable>();
+        }
+        for (const auto &name: current) {
+            std::shared_ptr<Type> type = type_inference_expression(
+                    local_assumptions,
+                    data_constructor_arities,
+                    type_constructor_kinds,
+                    declarations.at(name));
+            try {
+                unify(type, local_assumptions[name]);
+            } catch (const TypeError &e) {
+                throw TypeError(
+                        "Line " +
+                        std::to_string(declarations.at(name)->line) +
+                        ": could not deduce type for name " +
+                        name + ".");
+            }
+        }
+        for (const auto &name: current) {
+            local_assumptions[name] = generalise(local_assumptions[name], assumptions);
+        }
+    }
+
+    for (const auto &name: explicitly_typed_bindings) {
+        std::shared_ptr<Type> type = type_inference_expression(
+                local_assumptions,
+                data_constructor_arities,
+                type_constructor_kinds,
+                declarations.at(name));
+        try {
+            match(type, instantiate(local_assumptions[name]));
+        } catch (const TypeError &e) {
+            throw TypeError(
+                    "Line " +
+                    std::to_string(declarations.at(name)->line) +
+                    ": could not confirm type for name " +
+                    name + ".");
+        }
+    }
+
+    return local_assumptions;
+}
+
+std::set<std::string> find_referenced_type_constructors(std::shared_ptr<Type> t) {
     t = follow_substitution(t);
     switch(t->get_form()) {
         case typeform::universallyquantifiedvariable:
         case typeform::variable:
             return {};
         case typeform::application: {
-            std::set<std::string> left = get_referenced_type_constructors(
+            std::set<std::string> left = find_referenced_type_constructors(
                     std::dynamic_pointer_cast<TypeApplication>(t)->left);
-            std::set<std::string> right = get_referenced_type_constructors(
+            std::set<std::string> right = find_referenced_type_constructors(
                     std::dynamic_pointer_cast<TypeApplication>(t)->right);
             left.insert(right.begin(), right.end());
             return left;
@@ -893,137 +964,88 @@ void type_check(const std::unique_ptr<Program> &program) {
     std::map<std::string, int> data_constructor_arities;
 
     std::map<std::string, std::shared_ptr<Kind>> type_constructor_kinds;
-    type_constructor_kinds["Int"] = std::make_shared<StarKind>();
-    type_constructor_kinds["Char"] = std::make_shared<StarKind>();
-    type_constructor_kinds["Bool"] = std::make_shared<StarKind>();
 
     std::vector<std::string> type_constructor_names;
-    std::map<std::string, std::vector<std::string>> free_type_constructors;
+    std::map<std::string, std::set<std::string>> free_type_constructors;
 
     for (const auto &[name, constructor]: program->type_constructors) {
         type_constructor_names.push_back(name);
-        std::vector<std::string> referenced_type_constructors;
+        std::set<std::string> referenced_type_constructors;
         for (const auto &data_constructor: constructor->data_constructors) {
             for (const auto &type: program->data_constructors[data_constructor]->types) {
-                for (const auto &n: get_referenced_type_constructors(type)) {
-                    referenced_type_constructors.push_back(n);
-                }
+                const auto &cs = find_referenced_type_constructors(type);
+                referenced_type_constructors.insert(cs.begin(), cs.end());
             }
         }
         free_type_constructors[name] = referenced_type_constructors;
     }
 
-    std::vector<std::vector<std::string>> to_kind_check;
-    while (!type_constructor_names.empty()) {
-        to_kind_check.push_back({type_constructor_names.back()});
-        type_constructor_names.pop_back();
+    std::vector<std::vector<std::string>> dependency_groups = dependency_analysis(
+            type_constructor_names,
+            free_type_constructors);
 
-        while (!to_kind_check.empty()) {
-            std::vector<std::string> current = to_kind_check.back();
-            to_kind_check.pop_back();
-
-            std::vector<std::string> depends_on;
-            for (const auto &type_constructor: current) {
-                for (const auto &dependency: free_type_constructors[type_constructor]) {
-                    depends_on.push_back(dependency);
-                }
+    for (const auto &current: dependency_groups) {
+        std::map<std::string, std::map<std::string, std::shared_ptr<Kind>>> argument_variable_kinds;
+        for (const std::string &type_constructor: current) {
+            std::map<std::string, std::shared_ptr<Kind>> arg_kinds;
+            std::shared_ptr<Kind> type_constructor_kind = std::make_shared<StarKind>();
+            for (int i = program->type_constructors.at(type_constructor)->argument_variables.size() - 1; i >= 0; i--) {
+                std::shared_ptr<Kind> k = std::make_shared<KindVariable>();
+                arg_kinds[program->type_constructors.at(type_constructor)->argument_variables[i]] = k;
+                type_constructor_kind = std::make_shared<ArrowKind>(k, type_constructor_kind);
             }
-
-            bool dependencies_ok = true;
-            for (const auto &dependency: depends_on) {
-                if (std::count(type_constructor_names.begin(), type_constructor_names.end(), dependency) > 0) {
-                    to_kind_check.push_back(current);
-                    to_kind_check.push_back({dependency});
-                    type_constructor_names.erase(
-                            std::find(
-                                    type_constructor_names.begin(),
-                                    type_constructor_names.end(),
-                                    dependency));
-                    dependencies_ok = false;
-                    break;
-                } else {
-                    for (int i = 0; i < to_kind_check.size(); i++) {
-                        if (std::count(to_kind_check[i].begin(), to_kind_check[i].end(), dependency) > 0) {
-                            size_t number_to_pop = to_kind_check.size() - i;
-                            std::vector<std::string> new_group;
-                            for (int j = 0; j < number_to_pop; j++) {
-                                new_group.insert(new_group.end(), to_kind_check.back().begin(), to_kind_check.back().end());
-                                to_kind_check.pop_back();
-                            }
-                            new_group.insert(new_group.end(), current.begin(), current.end());
-                            dependencies_ok = false;
-                            break;
-                        }
-                    }
-                    if (!dependencies_ok) {
-                        break;
-                    }
-                }
+            argument_variable_kinds[type_constructor] = arg_kinds;
+            type_constructor_kinds[type_constructor] = type_constructor_kind;
+        }
+        for (const std::string &type_constructor: current) {
+            std::shared_ptr<Type> base_data_constructor_type = std::make_shared<TypeConstructor>(type_constructor);
+            for (const std::string &variable: program->type_constructors[type_constructor]->argument_variables) {
+                base_data_constructor_type = std::make_shared<TypeApplication>(
+                        base_data_constructor_type,
+                        std::make_shared<UniversallyQuantifiedVariable>(variable));
             }
-
-            if (dependencies_ok) {
-                std::map<std::string, std::map<std::string, std::shared_ptr<Kind>>> argument_variable_kinds;
-                for (const std::string &type_constructor: current) {
-                    std::map<std::string, std::shared_ptr<Kind>> arg_kinds;
-                    std::shared_ptr<Kind> type_constructor_kind = std::make_shared<StarKind>();
-                    for (int i = program->type_constructors.at(type_constructor)->argument_variables.size(); i >= 0; i--) {
-                        std::shared_ptr<Kind> k = std::make_shared<KindVariable>();
-                        arg_kinds[program->type_constructors.at(type_constructor)->argument_variables[i]] = k;
-                        type_constructor_kind = std::make_shared<ArrowKind>(k, type_constructor_kind);
+            for (const std::string &data_constructor: program->type_constructors[type_constructor]->data_constructors) {
+                std::shared_ptr<Type> data_constructor_type = base_data_constructor_type;
+                for (int i = program->data_constructors[data_constructor]->types.size() - 1; i >= 0; i--) {
+                    std::shared_ptr<Kind> k;
+                    try {
+                        k = kind_inference(
+                                program->data_constructors[data_constructor]->types[i],
+                                argument_variable_kinds[type_constructor],
+                                type_constructor_kinds);
+                    } catch (const TypeError &e) {
+                        throw TypeError(
+                                "Line " +
+                                std::to_string(program->data_constructors[data_constructor]->line) +
+                                " " + e.what());
                     }
-                    argument_variable_kinds[type_constructor] = arg_kinds;
-                    type_constructor_kinds[type_constructor] = type_constructor_kind;
-                }
-                for (const std::string &type_constructor: current) {
-                    std::shared_ptr<Type> base_data_constructor_type = std::make_shared<TypeConstructor>(type_constructor);
-                    for (const std::string &variable: program->type_constructors[type_constructor]->argument_variables) {
-                        base_data_constructor_type = std::make_shared<TypeApplication>(
-                                base_data_constructor_type,
-                                std::make_shared<UniversallyQuantifiedVariable>(variable));
+                    try {
+                        unify(k, std::make_shared<StarKind>());
+                    } catch (const TypeError &e) {
+                        throw TypeError(
+                                "Line " +
+                                std::to_string(program->data_constructors[data_constructor]->line) +
+                                " invalid type in data constructor.");
                     }
-                    for (const std::string &data_constructor: program->type_constructors[type_constructor]->data_constructors) {
-                        std::shared_ptr<Type> data_constructor_type = base_data_constructor_type;
-                        for (int i = program->data_constructors[data_constructor]->types.size(); i >= 0; i--) {
-                            std::shared_ptr<Kind> k;
-                            try {
-                                k = kind_inference(
-                                        program->data_constructors[data_constructor]->types[i],
-                                        argument_variable_kinds[type_constructor],
-                                        type_constructor_kinds);
-                            } catch (const TypeError &e) {
-                                throw TypeError(
-                                        "Line " +
-                                        std::to_string(program->data_constructors[data_constructor]->line) +
-                                        " " + e.what());
-                            }
-                            try {
-                                unify(k, std::make_shared<StarKind>());
-                            } catch (const TypeError &e) {
-                                throw TypeError(
-                                        "Line " +
-                                        std::to_string(program->data_constructors[data_constructor]->line) +
-                                        " invalid type in data constructor.");
-                            }
-                            data_constructor_type = std::make_shared<TypeApplication>(
-                                    std::make_shared<TypeApplication>(
-                                            std::make_shared<TypeConstructor>("->"),
-                                            program->data_constructors[data_constructor]->types[i]),
+                    data_constructor_type = std::make_shared<TypeApplication>(
+                            std::make_shared<TypeApplication>(
+                                    std::make_shared<TypeConstructor>("->"),
+                                    program->data_constructors[data_constructor]->types[i]),
                                     data_constructor_type);
-                        }
-                        assumptions[data_constructor] = data_constructor_type;
-                        data_constructor_arities[data_constructor] = program->data_constructors[data_constructor]->types.size();
-                    }
                 }
-                for (const std::string &type_constructor: current) {
-                    type_constructor_kinds[type_constructor] = generalise(type_constructor_kinds[type_constructor]);
-                }
+                assumptions[data_constructor] = data_constructor_type;
+                data_constructor_arities[data_constructor] = program->data_constructors[data_constructor]->types.size();
             }
+        }
+        for (const std::string &type_constructor: current) {
+            type_constructor_kinds[type_constructor] = generalise(type_constructor_kinds[type_constructor]);
         }
     }
 
     type_inference_declarations(
             assumptions,
             data_constructor_arities,
+            type_constructor_kinds,
             program->bindings,
             program->type_signatures);
 }

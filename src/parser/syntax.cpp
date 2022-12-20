@@ -40,6 +40,45 @@ Let::Let(
     }
 }
 
+Program::Program() {
+    add_type_constructor(0, "Int", {}, {});
+    add_type_constructor(0, "Char", {}, {});
+    add_type_constructor(
+            0,
+            "Bool",
+            {},
+            {new DConstructor(0, "True", {}), new DConstructor(0, "False", {})});
+    add_type_constructor(0, "->", {"a", "b"}, {});
+    add_type_constructor(0, "()", {}, {new DConstructor(0, "()", {})});
+    add_type_constructor(
+            0,
+            "[]",
+            {"a"},
+            {
+                new DConstructor(0, "[]", {}),
+                new DConstructor(
+                        0,
+                        ":",
+                        {
+                            new UniversallyQuantifiedVariable("a"),
+                            new TypeApplication(new TypeConstructor("[]"),
+                                                new UniversallyQuantifiedVariable("a"))})});
+    for (int i = 1; i < 15; i++) {
+        const std::string name = "(" + std::string(i, ',') + ")";
+        std::vector<std::string> argument_variables;
+        std::vector<Type*> types;
+        for (int j = 0; j < i+1; j++) {
+            argument_variables.push_back(std::to_string(j));
+            types.push_back(new UniversallyQuantifiedVariable(std::to_string(j)));
+        }
+        add_type_constructor(
+                0,
+                name,
+                argument_variables,
+                {new DConstructor(0, name, types)});
+    }
+}
+
 void Program::add_type_signature(const int &line, const std::string &name, Type* const &t) {
     if (type_signatures.count(name) > 0) {
         throw ParseError(
