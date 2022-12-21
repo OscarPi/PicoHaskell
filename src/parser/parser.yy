@@ -299,7 +299,7 @@ apat:
 
 apats:
     apat           { $$ = {$1}; }
-  | apats "," apat { $$ = $1; $$.push_back($3); }
+  | apats apat { $$ = $1; $$.push_back($2); }
   ;
 
 pats:

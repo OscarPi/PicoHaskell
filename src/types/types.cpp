@@ -1,3 +1,5 @@
+#pragma clang diagnostic push
+#pragma ide diagnostic ignored "misc-no-recursion"
 #include "types/types.hpp"
 #include "parser/syntax.hpp"
 #include <string>
@@ -94,7 +96,7 @@ bool occurs_check_ok(const std::shared_ptr<TypeVariable> &v, const std::shared_p
             return occurs_check_ok(v, std::dynamic_pointer_cast<TypeApplication>(t)->left) &&
                    occurs_check_ok(v, std::dynamic_pointer_cast<TypeApplication>(t)->right);
         case typeform::universallyquantifiedvariable:
-            throw TypeError("Universally quantified variable should not occur in instantiated type.");
+            return true;
     }
 }
 
@@ -132,36 +134,6 @@ void unify(std::shared_ptr<Type> a, std::shared_ptr<Type> b) {
     }
 
     throw TypeError("Failed to unify types.");
-}
-
-void match(std::shared_ptr<Type> a, std::shared_ptr<Type> b) {
-    a = follow_substitution(a);
-    b = follow_substitution(b);
-    if (a == b) {
-        return;
-    }
-    if (
-            a->get_form() == typeform::constructor &&
-            b->get_form() == typeform::constructor &&
-            std::dynamic_pointer_cast<TypeConstructor>(a)->id == std::dynamic_pointer_cast<TypeConstructor>(b)->id) {
-        return;
-    } else if (a->get_form() == typeform::variable) {
-        if (!occurs_check_ok(std::dynamic_pointer_cast<TypeVariable>(a), b)) {
-            throw TypeError("Failed to match types: occurs check failed.");
-        }
-        std::dynamic_pointer_cast<TypeVariable>(a)->bound_to = b;
-        return;
-    } else if (a->get_form() == typeform::application && b->get_form() == typeform::application) {
-        match(
-                std::dynamic_pointer_cast<TypeApplication>(a)->left,
-                std::dynamic_pointer_cast<TypeApplication>(b)->left);
-        match(
-                std::dynamic_pointer_cast<TypeApplication>(a)->right,
-                std::dynamic_pointer_cast<TypeApplication>(b)->right);
-        return;
-    }
-
-    throw TypeError("Failed to match types.");
 }
 
 std::shared_ptr<Type> instantiate(
@@ -225,6 +197,70 @@ std::shared_ptr<Type> generalise(
                 return type;
             }
     }
+}
+
+bool contains_variables(const std::shared_ptr<Type> &type) {
+    switch(type->get_form()) {
+        case typeform::constructor:
+            return false;
+        case typeform::variable:
+        case typeform::universallyquantifiedvariable:
+            return true;
+        case typeform::application:
+            return contains_variables(std::dynamic_pointer_cast<TypeApplication>(type)->left) ||
+                   contains_variables(std::dynamic_pointer_cast<TypeApplication>(type)->right);
+    }
+}
+
+void check_type_signature(
+        const std::shared_ptr<Type> &inferred_type_scheme,
+        std::shared_ptr<Type> inferred_type_instantiated,
+        std::shared_ptr<Type> type_signature) {
+    inferred_type_instantiated = follow_substitution(inferred_type_instantiated);
+    type_signature = follow_substitution(type_signature);
+    if (inferred_type_instantiated == type_signature) {
+        return;
+    }
+    if (
+            inferred_type_instantiated->get_form() == typeform::constructor &&
+            type_signature->get_form() == typeform::constructor &&
+            std::dynamic_pointer_cast<TypeConstructor>(inferred_type_instantiated)->id ==
+                std::dynamic_pointer_cast<TypeConstructor>(type_signature)->id) {
+        return;
+    } else if (inferred_type_instantiated->get_form() == typeform::variable) {
+        const auto &variable = std::dynamic_pointer_cast<TypeVariable>(inferred_type_instantiated);
+        if (!occurs_check_ok(variable, type_signature)) {
+            throw TypeError("Failed to verify type signature: occurs check failed.");
+        }
+        if (!occurs_check_ok(variable, inferred_type_scheme) && contains_variables(type_signature)) {
+            throw TypeError("Failed to verify type signature.");
+        }
+        std::dynamic_pointer_cast<TypeVariable>(inferred_type_instantiated)->bound_to = type_signature;
+        return;
+    } else if (
+            inferred_type_instantiated->get_form() == typeform::application &&
+            type_signature->get_form() == typeform::application) {
+        check_type_signature(
+                inferred_type_scheme,
+                std::dynamic_pointer_cast<TypeApplication>(inferred_type_instantiated)->left,
+                std::dynamic_pointer_cast<TypeApplication>(type_signature)->left);
+        check_type_signature(
+                inferred_type_scheme,
+                std::dynamic_pointer_cast<TypeApplication>(inferred_type_instantiated)->right,
+                std::dynamic_pointer_cast<TypeApplication>(type_signature)->right);
+        return;
+    }
+
+    throw TypeError("Failed to verify type signature.");
+}
+
+void check_type_signature(
+        const std::shared_ptr<Type> &inferred_type_scheme,
+        const std::shared_ptr<Type> &type_signature) {
+    check_type_signature(
+            inferred_type_scheme,
+            instantiate(inferred_type_scheme),
+            instantiate(type_signature));
 }
 
 std::vector<std::string> find_variables_bound_by(const std::unique_ptr<Pattern> &pattern) {
@@ -622,10 +658,13 @@ std::set<std::string> find_free_variables(const std::unique_ptr<Expression> &exp
             return variables;
         }
         case expform::builtinop: {
-            std::set<std::string> variables = find_free_variables(dynamic_cast<BuiltInOp*>(exp.get())->left);
-            for (const std::string &v: find_free_variables(dynamic_cast<BuiltInOp*>(exp.get())->right)) {
-                variables.insert(v);
+            std::set<std::string> variables;
+            if (dynamic_cast<BuiltInOp*>(exp.get())->op != builtinop::negate) {
+                const auto &left = find_free_variables(dynamic_cast<BuiltInOp*>(exp.get())->left);
+                variables.insert(left.begin(), left.end());
             }
+            const auto &right = find_free_variables(dynamic_cast<BuiltInOp*>(exp.get())->right);
+            variables.insert(right.begin(), right.end());
             return variables;
         }
     }
@@ -925,8 +964,9 @@ std::map<std::string, std::shared_ptr<Type>> type_inference_declarations(
                 data_constructor_arities,
                 type_constructor_kinds,
                 declarations.at(name));
+        type = generalise(type, local_assumptions);
         try {
-            match(type, instantiate(local_assumptions[name]));
+            check_type_signature(type, local_assumptions[name]);
         } catch (const TypeError &e) {
             throw TypeError(
                     "Line " +
@@ -1049,3 +1089,5 @@ void type_check(const std::unique_ptr<Program> &program) {
             program->bindings,
             program->type_signatures);
 }
+
+#pragma clang diagnostic pop
