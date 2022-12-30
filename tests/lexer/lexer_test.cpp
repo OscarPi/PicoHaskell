@@ -1,27 +1,9 @@
 #include <gtest/gtest.h>
 #include <vector>
+#include "test/test_utilities.hpp"
 #include "lexer/lexer.hpp"
 #include "parser/parser.hpp"
 #include "parser/driver.hpp"
-
-void reset_start_condition();
-
-std::vector<yy::parser::symbol_type> lex_string(const char* str) {
-    std::vector<yy::parser::symbol_type> result;
-    Driver drv;
-    YY_BUFFER_STATE buffer = yy_scan_string(str);
-    yy_switch_to_buffer(buffer);
-    reset_start_condition();
-    while (true) {
-        result.push_back(yylex(drv));
-        if (result.back().kind() == yy::parser::symbol_kind_type::S_YYEOF) {
-            result.pop_back();
-            break;
-        }
-    }
-    yy_delete_buffer(buffer);
-    return result;
-}
 
 #define EXPECT_SYMBOL(str, sym) {     \
     auto result = lex_string(str);    \

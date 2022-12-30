@@ -1,0 +1,3 @@
+add_library(test_utilities INTERFACE)
+target_include_directories(test_utilities INTERFACE include)
+target_sources(test_utilities INTERFACE test_utilities.cpp)

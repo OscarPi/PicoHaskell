@@ -24,26 +24,6 @@ Type *make_tuple_type(const std::vector<Type*> &components) {
     return t;
 }
 
-bool same_type(const Type *a, const Type *b) {
-    if (a->get_form() != b->get_form()) {
-        return false;
-    }
-    switch (a->get_form()) {
-        case typeform::universallyquantifiedvariable:
-            return dynamic_cast<const UniversallyQuantifiedVariable*>(a)->id ==
-                dynamic_cast<const UniversallyQuantifiedVariable*>(b)->id;
-        case typeform::constructor:
-            return dynamic_cast<const TypeConstructor*>(a)->id == dynamic_cast<const TypeConstructor*>(b)->id;
-        case typeform::application:
-            return same_type(
-                           dynamic_cast<const TypeApplication*>(a)->left.get(),
-                           dynamic_cast<const TypeApplication*>(b)->left.get()) &&
-                   same_type(
-                           dynamic_cast<const TypeApplication*>(a)->right.get(),
-                           dynamic_cast<const TypeApplication*>(b)->right.get());
-    }
-}
-
 enum class kindform {star, arrow, variable};
 
 struct Kind {
@@ -265,7 +245,7 @@ void check_type_signature(
 
 std::vector<std::string> find_variables_bound_by(const std::unique_ptr<Pattern> &pattern) {
     std::vector<std::string> variables = pattern->as;
-    switch(pattern->getForm()) {
+    switch(pattern->get_form()) {
         case patternform::wild:
         case patternform::literal:
             return variables;
@@ -317,7 +297,7 @@ std::pair<std::shared_ptr<Type>, std::map<std::string, std::shared_ptr<Type>>> t
     }
     std::shared_ptr<Type> type_matched;
     std::map<std::string, std::shared_ptr<Type>> new_assumptions;
-    switch (p->getForm()) {
+    switch (p->get_form()) {
         case patternform::constructor: {
             if (constructor_types.count(dynamic_cast<ConstructorPattern *>(p.get())->name) == 0) {
                 throw TypeError(
@@ -400,7 +380,7 @@ std::shared_ptr<Type> type_inference_expression(
         const std::map<std::string, int> &data_constructor_arities,
         const std::map<std::string, std::shared_ptr<Kind>> &type_constructor_kinds,
         const std::unique_ptr<Expression> &expression) {
-    switch(expression->getForm()) {
+    switch(expression->get_form()) {
         case expform::literal:
             if (std::holds_alternative<int>(dynamic_cast<Literal*>(expression.get())->value)) {
                 return std::make_shared<TypeConstructor>("Int");
@@ -610,7 +590,7 @@ std::shared_ptr<Type> type_inference_expression(
 }
 
 std::set<std::string> find_free_variables(const std::unique_ptr<Expression> &exp) {
-    switch(exp->getForm()) {
+    switch(exp->get_form()) {
         case expform::variable:
             return std::set<std::string>({dynamic_cast<Variable*>(exp.get())->name});
         case expform::constructor:

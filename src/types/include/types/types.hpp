@@ -53,6 +53,4 @@ Type *make_function_type(Type* const &argType, Type* const &resultType);
 Type *make_list_type(Type* const &elementType);
 Type *make_tuple_type(const std::vector<Type*> &components);
 
-bool same_type(const Type *a, const Type *b);
-
 #endif //PICOHASKELL_TYPES_HPP

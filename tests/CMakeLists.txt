@@ -11,6 +11,7 @@ FetchContent_MakeAvailable(googletest)
 enable_testing()
 include(GoogleTest)
 
+add_subdirectory(utilities)
 add_subdirectory(lexer)
 add_subdirectory(parser)
 add_subdirectory(types)

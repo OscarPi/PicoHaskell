@@ -1,23 +1,11 @@
 #include <gtest/gtest.h>
 #include <algorithm>
+#include "test/test_utilities.hpp"
 #include "types/types.hpp"
 #include "parser/syntax.hpp"
 #include "lexer/lexer.hpp"
 #include "parser/driver.hpp"
 #include "types/type_check.hpp"
-
-void reset_start_condition();
-
-int parse_string(const char* str, Program *program) {
-    Driver drv;
-    YY_BUFFER_STATE buffer = yy_scan_string(str);
-    yy_switch_to_buffer(buffer);
-    reset_start_condition();
-    yy::parser parse(drv, program);
-    int result = parse();
-    yy_delete_buffer(buffer);
-    return result;
-}
 
 TEST(Types, TypeEquality) {
     EXPECT_TRUE(same_type(
@@ -222,6 +210,8 @@ TEST(Types, Let) {
             "x = 10;"
             "b :: Char;"
             "b = let {x :: Char; x = 'a'} in x");
+    EXPECT_NOT_WELL_TYPED(
+            "a = let {c::Int} in 1");
     EXPECT_NOT_WELL_TYPED(
             "x = 'a';"
             "b :: Char;"

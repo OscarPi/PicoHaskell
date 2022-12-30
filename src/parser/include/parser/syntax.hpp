@@ -46,7 +46,7 @@ struct Pattern {
     const int line;
     std::vector<std::string> as;
     explicit Pattern(const int &line): line(line) {}
-    virtual patternform getForm() = 0;
+    virtual patternform get_form() = 0;
     virtual ~Pattern() = default;
 };
 
@@ -54,12 +54,12 @@ struct ConstructorPattern : Pattern {
     const std::string name;
     std::vector<std::unique_ptr<Pattern>> args;
     ConstructorPattern(const int &line, std::string name, const std::vector<Pattern*> &args);
-    patternform getForm() override { return patternform::constructor; }
+    patternform get_form() override { return patternform::constructor; }
 };
 
 struct WildPattern : Pattern {
     WildPattern(const int &line): Pattern(line) {}
-    patternform getForm() override { return patternform::wild; }
+    patternform get_form() override { return patternform::wild; }
 };
 
 struct LiteralPattern : Pattern {
@@ -67,32 +67,32 @@ struct LiteralPattern : Pattern {
     LiteralPattern(const int &line, int value): Pattern(line), value(value) {}
     LiteralPattern(const int &line, char value): Pattern(line), value(value) {}
     LiteralPattern(const int &line, std::string value): Pattern(line), value(value) {}
-    patternform getForm() override { return patternform::literal; }
+    patternform get_form() override { return patternform::literal; }
 };
 
 struct VariablePattern : Pattern {
     const std::string name;
     VariablePattern(const int &line, std::string name): Pattern(line), name(std::move(name)) {}
-    patternform getForm() override { return patternform::variable; }
+    patternform get_form() override { return patternform::variable; }
 };
 
 struct Expression {
     const int line;
     explicit Expression(const int &line): line(line) {}
-    virtual expform getForm() = 0;
+    virtual expform get_form() = 0;
     virtual ~Expression() = default;
 };
 
 struct Variable : public Expression {
     const std::string name;
     Variable(const int &line, std::string name): Expression(line), name(std::move(name)) {}
-    expform getForm() override { return expform::variable; }
+    expform get_form() override { return expform::variable; }
 };
 
 struct Constructor : public Expression {
     const std::string name;
     Constructor(const int &line, std::string name): Expression(line), name(std::move(name)) {}
-    expform getForm() override { return expform::constructor; }
+    expform get_form() override { return expform::constructor; }
 };
 
 struct Literal : public Expression {
@@ -100,7 +100,7 @@ struct Literal : public Expression {
     Literal(const int &line, int i) : Expression(line), value(i) {}
     Literal(const int &line, char c) : Expression(line), value(c) {}
     Literal(const int &line, std::string s) : Expression(line), value(s) {}
-    expform getForm() override { return expform::literal; }
+    expform get_form() override { return expform::literal; }
 };
 
 struct Abstraction : public Expression {
@@ -110,7 +110,7 @@ struct Abstraction : public Expression {
             const int &line,
             const std::vector<std::string> &args,
             Expression * const &body): Expression(line), args(args), body(body) {}
-    expform getForm() override { return expform::abstraction; }
+    expform get_form() override { return expform::abstraction; }
 };
 
 struct Application : public Expression {
@@ -120,14 +120,14 @@ struct Application : public Expression {
             const int &line,
             Expression * const &left,
             Expression * const &right): Expression(line), left(left), right(right) {}
-    expform getForm() override { return expform::application; }
+    expform get_form() override { return expform::application; }
 };
 
 struct Case : public Expression {
     const std::unique_ptr<Expression> exp;
     std::vector<std::pair<std::unique_ptr<Pattern>, std::unique_ptr<Expression>>> alts;
     Case(const int &line, Expression * const &exp, const std::vector<std::pair<Pattern*, Expression*>> &alts);
-    expform getForm() override { return expform::cAsE; }
+    expform get_form() override { return expform::cAsE; }
 };
 
 struct Let : public Expression {
@@ -140,7 +140,7 @@ struct Let : public Expression {
             const std::map<std::string, Type*> &type_signatures,
             Expression * const &e
             );
-    expform getForm() override { return expform::let; }
+    expform get_form() override { return expform::let; }
 };
 
 struct BuiltInOp : public Expression {
@@ -152,7 +152,7 @@ struct BuiltInOp : public Expression {
             Expression * const &left,
             Expression * const &right,
             const builtinop &op): Expression(line), left(left), right(right), op(op) {}
-    expform getForm() override { return expform::builtinop; }
+    expform get_form() override { return expform::builtinop; }
 };
 
 struct Program {
