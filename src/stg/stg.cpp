@@ -119,6 +119,17 @@ std::map<std::string, std::unique_ptr<STGLambdaForm>> translate(const std::uniqu
                 }
                 break;
             }
+            case expform::constructor: {
+                std::unique_ptr<STGExpression> e = std::make_unique<STGConstructor>(
+                        dynamic_cast<Constructor*>(expr.get())->name,
+                        std::vector<std::unique_ptr<STGAtom>>());
+                translated = std::make_unique<STGLambdaForm>(
+                        std::vector<std::string>(),
+                        std::vector<std::string>(),
+                        false,
+                        std::move(e));
+                break;
+            }
         }
         stg_program[name] = std::move(translated);
     }
