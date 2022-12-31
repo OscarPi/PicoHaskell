@@ -11,7 +11,8 @@ DConstructor::DConstructor(
 };
 
 ConstructorPattern::ConstructorPattern(
-        const int &line, std::string name,
+        const int &line,
+        std::string name,
         const std::vector<Pattern *> &args): Pattern(line), name(std::move(name)) {
     for (const auto &arg: args) {
         this->args.emplace_back(arg);

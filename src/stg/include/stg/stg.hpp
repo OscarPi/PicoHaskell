@@ -25,7 +25,7 @@ struct STGLambdaForm {
             const std::vector<std::string> &free_variables,
             const std::vector<std::string> &argument_variables,
             const bool &updatable,
-            std::unique_ptr<STGExpression> &expr):
+            std::unique_ptr<STGExpression> &&expr):
             free_variables(free_variables),
             argument_variables(argument_variables),
             updatable(updatable),
@@ -39,11 +39,20 @@ struct STGLet : public STGExpression {
     const std::map<std::string, std::unique_ptr<STGLambdaForm>> bindings;
     const std::unique_ptr<STGExpression> expr;
     const bool recursive;
+    STGLet(
+            std::map<std::string, std::unique_ptr<STGLambdaForm>> &&bindings,
+            std::unique_ptr<STGExpression> &&expr,
+            const bool &recursive):
+            bindings(std::move(bindings)),
+            expr(std::move(expr)),
+            recursive(recursive) {}
     stgform get_form() override { return stgform::let; }
 };
 
 struct STGLiteral : public STGAtom {
     const std::variant<int, char> value;
+    STGLiteral(const int &i): value(i) {}
+    STGLiteral(const char &c): value(c) {}
     stgform get_form() override { return stgform::literal; }
 };
 
@@ -62,6 +71,11 @@ struct STGApplication : public STGExpression {
 struct STGConstructor : public STGExpression {
     const std::string constructor_name;
     const std::vector<std::unique_ptr<STGAtom>> arguments;
+    STGConstructor(
+            std::string constructor_name,
+            std::vector<std::unique_ptr<STGAtom>> &&arguments):
+            constructor_name(std::move(constructor_name)),
+            arguments(std::move(arguments)) {}
     stgform get_form() override { return stgform::constructor; }
 };
 

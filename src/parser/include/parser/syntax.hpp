@@ -97,9 +97,9 @@ struct Constructor : public Expression {
 
 struct Literal : public Expression {
     const std::variant<int, std::string, char> value;
-    Literal(const int &line, int i) : Expression(line), value(i) {}
-    Literal(const int &line, char c) : Expression(line), value(c) {}
-    Literal(const int &line, std::string s) : Expression(line), value(s) {}
+    Literal(const int &line, const int &i): Expression(line), value(i) {}
+    Literal(const int &line, const char &c): Expression(line), value(c) {}
+    Literal(const int &line, std::string s): Expression(line), value(s) {}
     expform get_form() override { return expform::literal; }
 };
 
