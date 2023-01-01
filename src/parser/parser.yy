@@ -138,9 +138,9 @@ decls:
   | decls ";" fundecl { $$ = $1; std::get<1>($$).push_back($3); }
   | decls ";" vardecl { $$ = $1; std::get<2>($$).push_back($3); }
 
-typesig: VARID "::" ctype   { $$ = std::make_pair($1, $3); };
-fundecl: VARID vars "=" exp { $$ = std::make_tuple($1, $2, $4); };
-vardecl: VARID "=" exp      { $$ =  std::make_pair($1, $3); };
+typesig: var "::" ctype   { $$ = std::make_pair($1, $3); };
+fundecl: var vars "=" exp { $$ = std::make_tuple($1, $2, $4); };
+vardecl: var "=" exp      { $$ =  std::make_pair($1, $3); };
 
 exp:
     infixexp { $$ = $1; }
@@ -194,8 +194,8 @@ explist:
   | explist "," exp { $$ = $1; $$.push_back($3); }
 
 vars:
-    VARID      { $$ = {$1}; }
-  | vars VARID { $$ = $1; $$.push_back($2); }
+    var      { $$ = {$1}; }
+  | vars var { $$ = $1; $$.push_back($2); }
   ;
 
 constrs:
@@ -284,8 +284,8 @@ lpat:
   ;
 
 apat:
-    VARID "@" apat       { $$ = $3; $$->as.push_back($1); }
-  | VARID                { $$ = new VariablePattern(@1.begin.line, $1); }
+    var "@" apat       { $$ = $3; $$->as.push_back($1); }
+  | var                { $$ = new VariablePattern(@1.begin.line, $1); }
   | gcon                 { $$ = new ConstructorPattern(@1.begin.line, $1, std::vector<Pattern*>{}); }
   | INTEGER              { $$ = new LiteralPattern(@1.begin.line, $1); }
   | STRING               { $$ = new LiteralPattern(@1.begin.line, $1); }
