@@ -147,17 +147,17 @@ exp:
   ;
 
 infixexp:
-    infixexp "+" infixexp  { $$ = new BuiltInOp(@2.begin.line, $1, $3, builtinop::add); }
-  | infixexp "-" infixexp  { $$ = new BuiltInOp(@2.begin.line, $1, $3, builtinop::subtract); }
+    infixexp "+" infixexp  { $$ = new Application(@2.begin.line, new Application(@2.begin.line, new Variable(@2.begin.line, "+"), $1), $3); }
+  | infixexp "-" infixexp  { $$ = new Application(@2.begin.line, new Application(@2.begin.line, new Variable(@2.begin.line, "-"), $1), $3); }
   | "-" infixexp           { $$ = new BuiltInOp(@1.begin.line, nullptr, $2, builtinop::negate); }
-  | infixexp "*" infixexp  { $$ = new BuiltInOp(@2.begin.line, $1, $3, builtinop::times); }
-  | infixexp "/" infixexp  { $$ = new BuiltInOp(@2.begin.line, $1, $3, builtinop::divide); }
-  | infixexp "==" infixexp { $$ = new BuiltInOp(@2.begin.line, $1, $3, builtinop::equality); }
-  | infixexp "/=" infixexp { $$ = new BuiltInOp(@2.begin.line, $1, $3, builtinop::inequality); }
-  | infixexp "<" infixexp  { $$ = new BuiltInOp(@2.begin.line, $1, $3, builtinop::lt); }
-  | infixexp "<=" infixexp { $$ = new BuiltInOp(@2.begin.line, $1, $3, builtinop::lte); }
-  | infixexp ">" infixexp  { $$ = new BuiltInOp(@2.begin.line, $1, $3, builtinop::gt); }
-  | infixexp ">=" infixexp { $$ = new BuiltInOp(@2.begin.line, $1, $3, builtinop::gte); }
+  | infixexp "*" infixexp  { $$ = new Application(@2.begin.line, new Application(@2.begin.line, new Variable(@2.begin.line, "*"), $1), $3); }
+  | infixexp "/" infixexp  { $$ = new Application(@2.begin.line, new Application(@2.begin.line, new Variable(@2.begin.line, "/"), $1), $3); }
+  | infixexp "==" infixexp { $$ = new Application(@2.begin.line, new Application(@2.begin.line, new Variable(@2.begin.line, "=="), $1), $3); }
+  | infixexp "/=" infixexp { $$ = new Application(@2.begin.line, new Application(@2.begin.line, new Variable(@2.begin.line, "/="), $1), $3); }
+  | infixexp "<" infixexp  { $$ = new Application(@2.begin.line, new Application(@2.begin.line, new Variable(@2.begin.line, "<"), $1), $3); }
+  | infixexp "<=" infixexp { $$ = new Application(@2.begin.line, new Application(@2.begin.line, new Variable(@2.begin.line, "<="), $1), $3); }
+  | infixexp ">" infixexp  { $$ = new Application(@2.begin.line, new Application(@2.begin.line, new Variable(@2.begin.line, ">"), $1), $3); }
+  | infixexp ">=" infixexp { $$ = new Application(@2.begin.line, new Application(@2.begin.line, new Variable(@2.begin.line, ">="), $1), $3); }
   | infixexp "&&" infixexp { $$ = new Application(@2.begin.line, new Application(@2.begin.line, new Variable(@2.begin.line, "&&"), $1), $3); }
   | infixexp "||" infixexp { $$ = new Application(@2.begin.line, new Application(@2.begin.line, new Variable(@2.begin.line, "||"), $1), $3); }
   | infixexp "." infixexp  { $$ = new Application(@2.begin.line, new Application(@2.begin.line, new Variable(@2.begin.line, "."), $1), $3); }

@@ -160,7 +160,6 @@ struct Program {
     std::map<std::string, std::unique_ptr<DConstructor>> data_constructors;
     std::map<std::string, std::unique_ptr<Expression>> bindings;
     std::map<std::string, std::shared_ptr<Type>> type_signatures;
-    Program();
     void add_type_signature(const int &line, const std::string &name, Type* const &t);
     void add_type_constructor(
             const int &line,
