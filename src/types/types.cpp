@@ -521,18 +521,6 @@ std::shared_ptr<Type> type_inference_expression(
                                 std::to_string(expression->line) +
                                 ": invalid arguments to built in operator.");
                     }
-                case builtinop::land:
-                case builtinop::lor:
-                    try {
-                        unify(left_type, std::make_shared<TypeConstructor>("Bool"));
-                        unify(right_type, std::make_shared<TypeConstructor>("Bool"));
-                        return std::make_shared<TypeConstructor>("Bool");
-                    } catch (const TypeError &e) {
-                        throw TypeError(
-                                "Line " +
-                                std::to_string(expression->line) +
-                                ": invalid arguments to built in operator.");
-                    }
             }
         }
         case expform::cAsE: {

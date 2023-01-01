@@ -11,7 +11,7 @@
 
 enum class patternform {constructor, wild, literal, variable};
 enum class expform {variable, constructor, literal, abstraction, application, cAsE, let, builtinop};
-enum class builtinop {add, subtract, times, divide, equality, inequality, lt, lte, gt, gte, land, lor, negate};
+enum class builtinop {add, subtract, times, divide, equality, inequality, lt, lte, gt, gte, negate};
 
 class ParseError : public std::runtime_error {
 public:

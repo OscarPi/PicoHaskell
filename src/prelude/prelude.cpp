@@ -3,7 +3,15 @@
 #include "lexer/lexer.hpp"
 
 const char *prelude = R"##(
-
+data Bool = True | False
+;
+(&&) :: Bool -> Bool -> Bool
+;
+(&&) a b = case a of { False -> False ; True -> b }
+;
+(||) :: Bool -> Bool -> Bool
+;
+(||) a b = case a of { True -> True ; False -> b }
 )##";
 
 void add_prelude(Program *program) {

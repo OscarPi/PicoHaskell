@@ -158,8 +158,8 @@ infixexp:
   | infixexp "<=" infixexp { $$ = new BuiltInOp(@2.begin.line, $1, $3, builtinop::lte); }
   | infixexp ">" infixexp  { $$ = new BuiltInOp(@2.begin.line, $1, $3, builtinop::gt); }
   | infixexp ">=" infixexp { $$ = new BuiltInOp(@2.begin.line, $1, $3, builtinop::gte); }
-  | infixexp "&&" infixexp { $$ = new BuiltInOp(@2.begin.line, $1, $3, builtinop::land); }
-  | infixexp "||" infixexp { $$ = new BuiltInOp(@2.begin.line, $1, $3, builtinop::lor); }
+  | infixexp "&&" infixexp { $$ = new Application(@2.begin.line, new Application(@2.begin.line, new Variable(@2.begin.line, "&&"), $1), $3); }
+  | infixexp "||" infixexp { $$ = new Application(@2.begin.line, new Application(@2.begin.line, new Variable(@2.begin.line, "||"), $1), $3); }
   | infixexp "." infixexp  { $$ = new Application(@2.begin.line, new Application(@2.begin.line, new Variable(@2.begin.line, "."), $1), $3); }
   | infixexp ":" infixexp  { $$ = new Application(@2.begin.line, new Application(@2.begin.line, new Constructor(@2.begin.line, ":"), $1), $3); }
   | lexp                   { $$ = $1; }

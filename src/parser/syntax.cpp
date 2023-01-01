@@ -44,11 +44,6 @@ Let::Let(
 Program::Program() {
     add_type_constructor(0, "Int", {}, {});
     add_type_constructor(0, "Char", {}, {});
-    add_type_constructor(
-            0,
-            "Bool",
-            {},
-            {new DConstructor(0, "True", {}), new DConstructor(0, "False", {})});
     add_type_constructor(0, "->", {"a", "b"}, {});
     add_type_constructor(0, "()", {}, {new DConstructor(0, "()", {})});
     add_type_constructor(

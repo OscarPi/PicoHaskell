@@ -256,8 +256,6 @@ TEST(Parser, ParsesInfix) {
     TESTINFIXOP("<=", builtinop::lte);
     TESTINFIXOP(">", builtinop::gt);
     TESTINFIXOP(">=", builtinop::gte);
-    TESTINFIXOP("&&", builtinop::land);
-    TESTINFIXOP("||", builtinop::lor);
 
     auto program = std::make_unique<Program>();
     auto result = parse_string("a = -c", program.get());
@@ -298,6 +296,38 @@ TEST(Parser, ParsesInfix) {
     l = dynamic_cast<Application*>(b->left.get());
     ASSERT_EQ(l->left->get_form(), expform::variable);
     EXPECT_EQ(dynamic_cast<Variable*>(l->left.get())->name, ".");
+    ASSERT_EQ(l->right->get_form(), expform::variable);
+    EXPECT_EQ(dynamic_cast<Variable*>(l->right.get())->name, "b");
+    ASSERT_EQ(b->right->get_form(), expform::variable);
+    EXPECT_EQ(dynamic_cast<Variable*>(b->right.get())->name, "c");
+
+    program = std::make_unique<Program>();
+    result = parse_string("a = b && c", program.get());
+    ASSERT_EQ(result, 0);
+    EXPECT_EQ(program->bindings.size(), 1);
+
+    ASSERT_EQ(program->bindings["a"]->get_form(), expform::application);
+    b = dynamic_cast<Application*>(program->bindings["a"].get());
+    ASSERT_EQ(b->left->get_form(), expform::application);
+    l = dynamic_cast<Application*>(b->left.get());
+    ASSERT_EQ(l->left->get_form(), expform::variable);
+    EXPECT_EQ(dynamic_cast<Variable*>(l->left.get())->name, "&&");
+    ASSERT_EQ(l->right->get_form(), expform::variable);
+    EXPECT_EQ(dynamic_cast<Variable*>(l->right.get())->name, "b");
+    ASSERT_EQ(b->right->get_form(), expform::variable);
+    EXPECT_EQ(dynamic_cast<Variable*>(b->right.get())->name, "c");
+
+    program = std::make_unique<Program>();
+    result = parse_string("a = b || c", program.get());
+    ASSERT_EQ(result, 0);
+    EXPECT_EQ(program->bindings.size(), 1);
+
+    ASSERT_EQ(program->bindings["a"]->get_form(), expform::application);
+    b = dynamic_cast<Application*>(program->bindings["a"].get());
+    ASSERT_EQ(b->left->get_form(), expform::application);
+    l = dynamic_cast<Application*>(b->left.get());
+    ASSERT_EQ(l->left->get_form(), expform::variable);
+    EXPECT_EQ(dynamic_cast<Variable*>(l->left.get())->name, "||");
     ASSERT_EQ(l->right->get_form(), expform::variable);
     EXPECT_EQ(dynamic_cast<Variable*>(l->right.get())->name, "b");
     ASSERT_EQ(b->right->get_form(), expform::variable);
