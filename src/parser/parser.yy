@@ -297,7 +297,7 @@ apat:
   ;
 
 apats:
-    apat           { $$ = {$1}; }
+    apat       { $$ = {$1}; }
   | apats apat { $$ = $1; $$.push_back($2); }
   ;
 

@@ -3,6 +3,7 @@
 #include "parser/parser.hpp"
 #include "lexer/yylex.hpp"
 #include "lexer/lexer.hpp"
+#include "prelude/prelude.hpp"
 
 
 std::vector<yy::parser::symbol_type> lex_string(const char* str) {
@@ -23,6 +24,7 @@ std::vector<yy::parser::symbol_type> lex_string(const char* str) {
 }
 
 int parse_string(const char* str, Program *program) {
+    add_prelude(program);
     yy::location loc;
     YY_BUFFER_STATE buffer = yy_scan_string(str);
     yy_switch_to_buffer(buffer);

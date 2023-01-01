@@ -3,8 +3,6 @@
 
 #include "parser/parser.hpp"
 
-void reset_start_condition();
-
 std::vector<yy::parser::symbol_type> lex_string(const char* str);
 int parse_string(const char* str, Program *program);
 
