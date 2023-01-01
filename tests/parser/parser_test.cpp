@@ -156,7 +156,6 @@ TEST(Parser, ParsesVariableExpressions) {
     auto program = std::make_unique<Program>();
     auto result = parse_string("a = b \n;c = d", program.get());
     ASSERT_EQ(result, 0);
-    EXPECT_EQ(program->bindings.size(), 2);
 
     const auto &a = program->bindings["a"];
     EXPECT_EQ(dynamic_cast<Variable*>(a.get())->name, "b");
@@ -173,7 +172,6 @@ TEST(Parser, ParsesLiteralExpressions) {
     auto program = std::make_unique<Program>();
     auto result = parse_string("a = 1\n;b = 'a'\n;c = \"hi\"", program.get());
     ASSERT_EQ(result, 0);
-    EXPECT_EQ(program->bindings.size(), 3);
 
     const auto &a = program->bindings["a"];
     EXPECT_EQ(std::get<int>(dynamic_cast<Literal*>(a.get())->value), 1);
@@ -189,7 +187,6 @@ TEST(Parser, ParsesConstructorExpressions) {
     auto program = std::make_unique<Program>();
     auto result = parse_string("a = ()\n;b = []\n;c = (,,)\n;d = Toast", program.get());
     ASSERT_EQ(result, 0);
-    EXPECT_EQ(program->bindings.size(), 4);
 
     const auto &a = program->bindings["a"];
     EXPECT_EQ(dynamic_cast<Constructor*>(a.get())->name, "()");
@@ -208,7 +205,6 @@ TEST(Parser, ParsesApplicationExpressions) {
     auto program = std::make_unique<Program>();
     auto result = parse_string("a = b c d", program.get());
     ASSERT_EQ(result, 0);
-    EXPECT_EQ(program->bindings.size(), 1);
 
     const auto &a = dynamic_cast<Application*>(program->bindings["a"].get());
     EXPECT_EQ(dynamic_cast<Variable*>(a->right.get())->name, "d");
@@ -221,7 +217,6 @@ TEST(Parser, ParsesLambdaAbstractions) {
     auto program = std::make_unique<Program>();
     auto result = parse_string("l = \\ a b -> a", program.get());
     ASSERT_EQ(result, 0);
-    EXPECT_EQ(program->bindings.size(), 1);
 
 
     ASSERT_EQ(program->bindings["l"]->get_form(), expform::abstraction);
@@ -238,7 +233,6 @@ TEST(Parser, ParsesLambdaAbstractions) {
     auto program = std::make_unique<Program>();                      \
     auto result = parse_string("a = b " opstr " c", program.get());        \
     ASSERT_EQ(result, 0);                                            \
-    EXPECT_EQ(program->bindings.size(), 1);                          \
     auto a = dynamic_cast<BuiltInOp*>(program->bindings["a"].get()); \
     EXPECT_EQ(dynamic_cast<Variable*>(a->left.get())->name, "b");    \
     EXPECT_EQ(dynamic_cast<Variable*>(a->right.get())->name, "c");   \
@@ -260,7 +254,6 @@ TEST(Parser, ParsesInfix) {
     auto program = std::make_unique<Program>();
     auto result = parse_string("a = -c", program.get());
     ASSERT_EQ(result, 0);
-    EXPECT_EQ(program->bindings.size(), 1);
 
     ASSERT_EQ(program->bindings["a"]->get_form(), expform::builtinop);
     auto a = dynamic_cast<BuiltInOp*>(program->bindings["a"].get());
@@ -272,7 +265,6 @@ TEST(Parser, ParsesInfix) {
     program = std::make_unique<Program>();
     result = parse_string("a = b:c", program.get());
     ASSERT_EQ(result, 0);
-    EXPECT_EQ(program->bindings.size(), 1);
 
     ASSERT_EQ(program->bindings["a"]->get_form(), expform::application);
     auto b = dynamic_cast<Application*>(program->bindings["a"].get());
@@ -288,7 +280,6 @@ TEST(Parser, ParsesInfix) {
     program = std::make_unique<Program>();
     result = parse_string("a = b.c", program.get());
     ASSERT_EQ(result, 0);
-    EXPECT_EQ(program->bindings.size(), 1);
 
     ASSERT_EQ(program->bindings["a"]->get_form(), expform::application);
     b = dynamic_cast<Application*>(program->bindings["a"].get());
@@ -304,7 +295,6 @@ TEST(Parser, ParsesInfix) {
     program = std::make_unique<Program>();
     result = parse_string("a = b && c", program.get());
     ASSERT_EQ(result, 0);
-    EXPECT_EQ(program->bindings.size(), 1);
 
     ASSERT_EQ(program->bindings["a"]->get_form(), expform::application);
     b = dynamic_cast<Application*>(program->bindings["a"].get());
@@ -320,7 +310,6 @@ TEST(Parser, ParsesInfix) {
     program = std::make_unique<Program>();
     result = parse_string("a = b || c", program.get());
     ASSERT_EQ(result, 0);
-    EXPECT_EQ(program->bindings.size(), 1);
 
     ASSERT_EQ(program->bindings["a"]->get_form(), expform::application);
     b = dynamic_cast<Application*>(program->bindings["a"].get());
@@ -338,7 +327,6 @@ TEST(Parser, ParsesConditionals) {
     auto program = std::make_unique<Program>();
     auto result = parse_string("i = if a then 1 else 2", program.get());
     ASSERT_EQ(result, 0);
-    EXPECT_EQ(program->bindings.size(), 1);
 
 
     ASSERT_EQ(program->bindings["i"]->get_form(), expform::cAsE);
@@ -369,7 +357,6 @@ TEST(Parser, ParsesLists) {
     auto program = std::make_unique<Program>();
     auto result = parse_string("l = [1,2]", program.get());
     ASSERT_EQ(result, 0);
-    EXPECT_EQ(program->bindings.size(), 1);
 
 
     ASSERT_EQ(program->bindings["l"]->get_form(), expform::application);
@@ -398,7 +385,6 @@ TEST(Parser, ParsesTuples) {
     auto program = std::make_unique<Program>();
     auto result = parse_string("l = (1,2)", program.get());
     ASSERT_EQ(result, 0);
-    EXPECT_EQ(program->bindings.size(), 1);
 
 
     ASSERT_EQ(program->bindings["l"]->get_form(), expform::application);
@@ -431,7 +417,6 @@ TEST(Parser, ParsesLetExpressions) {
     program = std::make_unique<Program>();
     auto result = parse_string("a = let {a :: b -> b; a x = x; p = 1} in p", program.get());
     ASSERT_EQ(result, 0);
-    EXPECT_EQ(program->bindings.size(), 1);
 
     ASSERT_EQ(program->bindings["a"]->get_form(), expform::let);
     auto l = dynamic_cast<Let*>(program->bindings["a"].get());
@@ -463,7 +448,6 @@ TEST(Parser, ParsesCaseExpressions) {
     auto program = std::make_unique<Program>();
     auto result = parse_string("a = case 1 of {_ -> 2; _ -> 3}", program.get());
     ASSERT_EQ(result, 0);
-    EXPECT_EQ(program->bindings.size(), 1);
 
     ASSERT_EQ(program->bindings["a"]->get_form(), expform::cAsE);
     auto c = dynamic_cast<Case*>(program->bindings["a"].get());

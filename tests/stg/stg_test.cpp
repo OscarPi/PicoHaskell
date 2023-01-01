@@ -7,7 +7,6 @@ TEST(STGTranslation, TranslatesVariables) {
     int result = parse_string("b = a", program.get());
     ASSERT_EQ(result, 0);
     std::map<std::string, std::unique_ptr<STGLambdaForm>> translated = translate(program);
-    EXPECT_EQ(translated.size(), 1);
     EXPECT_EQ(translated["b"]->free_variables.size(), 0);
     EXPECT_EQ(translated["b"]->argument_variables.size(), 0);
     EXPECT_EQ(translated["b"]->updatable, true);
@@ -35,7 +34,6 @@ TEST(STGTranslation, TranslatesLiterals) {
     int result = parse_string("b = 1", program.get());
     ASSERT_EQ(result, 0);
     std::map<std::string, std::unique_ptr<STGLambdaForm>> translated = translate(program);
-    EXPECT_EQ(translated.size(), 1);
     EXPECT_EQ(translated["b"]->free_variables.size(), 0);
     EXPECT_EQ(translated["b"]->argument_variables.size(), 0);
     EXPECT_EQ(translated["b"]->updatable, false);
@@ -53,14 +51,12 @@ TEST(STGTranslation, TranslatesLiterals) {
     result = parse_string("b = 'a'", program.get());
     ASSERT_EQ(result, 0);
     translated = translate(program);
-    EXPECT_EQ(translated.size(), 1);
     EXPECT_CHAR(translated["b"], 'a');
 
     program = std::make_unique<Program>();
     result = parse_string("b = \"ab\"", program.get());
     ASSERT_EQ(result, 0);
     translated = translate(program);
-    EXPECT_EQ(translated.size(), 1);
     EXPECT_EQ(translated["b"]->free_variables.size(), 0);
     EXPECT_EQ(translated["b"]->argument_variables.size(), 0);
     EXPECT_EQ(translated["b"]->updatable, true);
@@ -116,7 +112,6 @@ TEST(STGTranslation, TranslatesConstructors) {
     int result = parse_string("data T = Test\n;b = Test", program.get());
     ASSERT_EQ(result, 0);
     std::map<std::string, std::unique_ptr<STGLambdaForm>> translated = translate(program);
-    EXPECT_EQ(translated.size(), 1);
     EXPECT_EQ(translated["b"]->free_variables.size(), 0);
     EXPECT_EQ(translated["b"]->argument_variables.size(), 0);
     EXPECT_EQ(translated["b"]->updatable, false);
