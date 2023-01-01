@@ -1,9 +1,7 @@
 #include <gtest/gtest.h>
 #include <vector>
 #include "test/test_utilities.hpp"
-#include "lexer/lexer.hpp"
 #include "parser/parser.hpp"
-#include "parser/driver.hpp"
 
 #define EXPECT_SYMBOL(str, sym) {     \
     auto result = lex_string(str);    \

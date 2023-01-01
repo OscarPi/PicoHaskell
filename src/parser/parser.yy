@@ -10,16 +10,15 @@
     #include <memory>
     #include "parser/syntax.hpp"
     #include "types/types.hpp"
-    class Driver;
 }
-%param { Driver& drv }
+%param { yy::location &loc }
 %parse-param { Program *program }
 %locations
 %define parse.trace
 %define parse.error detailed
 %define parse.lac full
 %code {
-    #include "parser/driver.hpp"
+    #include "lexer/yylex.hpp"
 }
 %define api.token.prefix {TOK_}
 %token

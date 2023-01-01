@@ -3,8 +3,6 @@
 #include "test/test_utilities.hpp"
 #include "types/types.hpp"
 #include "parser/syntax.hpp"
-#include "lexer/lexer.hpp"
-#include "parser/driver.hpp"
 #include "types/type_check.hpp"
 
 TEST(Types, TypeEquality) {

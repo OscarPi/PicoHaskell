@@ -1,18 +1,18 @@
 #include <vector>
 #include "test/test_utilities.hpp"
 #include "parser/parser.hpp"
-#include "parser/driver.hpp"
+#include "lexer/yylex.hpp"
 #include "lexer/lexer.hpp"
 
 
 std::vector<yy::parser::symbol_type> lex_string(const char* str) {
     std::vector<yy::parser::symbol_type> result;
-    Driver drv;
+    yy::location loc;
     YY_BUFFER_STATE buffer = yy_scan_string(str);
     yy_switch_to_buffer(buffer);
     reset_start_condition();
     while (true) {
-        result.push_back(yylex(drv));
+        result.push_back(yylex(loc));
         if (result.back().kind() == yy::parser::symbol_kind_type::S_YYEOF) {
             result.pop_back();
             break;
@@ -23,11 +23,11 @@ std::vector<yy::parser::symbol_type> lex_string(const char* str) {
 }
 
 int parse_string(const char* str, Program *program) {
-    Driver drv;
+    yy::location loc;
     YY_BUFFER_STATE buffer = yy_scan_string(str);
     yy_switch_to_buffer(buffer);
     reset_start_condition();
-    yy::parser parse(drv, program);
+    yy::parser parse(loc, program);
     int result = parse();
     yy_delete_buffer(buffer);
     return result;

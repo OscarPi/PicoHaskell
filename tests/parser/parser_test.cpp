@@ -1,7 +1,5 @@
 #include <gtest/gtest.h>
 #include <memory>
-#include "parser/driver.hpp"
-#include "lexer/lexer.hpp"
 #include "test/test_utilities.hpp"
 
 TEST(Parser, ParsesTypeSignatures) {

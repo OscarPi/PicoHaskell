@@ -4,7 +4,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <string>
-#include "parser/driver.hpp"
+#include "lexer/yylex.hpp"
 #include "parser/parser.hpp"
 %}
 %option noyywrap nounput noinput batch debug stack
@@ -56,7 +56,6 @@ STRCHAR     {SMALL}|{LARGE}|[!#\$%&\*\+\.\/\<=\>\?@\^\|\-~\:]|{DIGIT}|{SPECIAL}|
 %}
 %%
 %{
-yy::location &loc = drv.location;
 loc.step();
 std::string strliteral;
 %}
@@ -290,21 +289,6 @@ yy::parser::symbol_type parse_character(const std::string &s, const yy::parser::
         return yy::parser::make_CHAR(parse_escape(s.substr(1, s.size() - 2), loc), loc);
     }
     return yy::parser::make_CHAR(s[1], loc);
-}
-
-void Driver::scan_begin() {
-  yy_flex_debug = trace_scanning;
-  if (file.empty () || file == "-")
-    yyin = stdin;
-  else if (!(yyin = fopen (file.c_str (), "r")))
-    {
-      std::cerr << "cannot open " << file << ": " << strerror (errno) << '\n';
-      exit (EXIT_FAILURE);
-    }
-}
-
-void Driver::scan_end () {
-  fclose (yyin);
 }
 
 void reset_start_condition() {
