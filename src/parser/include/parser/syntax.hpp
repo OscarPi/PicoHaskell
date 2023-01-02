@@ -158,6 +158,7 @@ struct BuiltInOp : public Expression {
 struct Program {
     std::map<std::string, std::unique_ptr<TConstructor>> type_constructors;
     std::map<std::string, std::unique_ptr<DConstructor>> data_constructors;
+    std::map<std::string, size_t> data_constructor_arities;
     std::map<std::string, std::unique_ptr<Expression>> bindings;
     std::map<std::string, std::shared_ptr<Type>> type_signatures;
     void add_type_signature(const int &line, const std::string &name, Type* const &t);

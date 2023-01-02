@@ -263,12 +263,12 @@ std::vector<std::string> find_variables_bound_by(const std::unique_ptr<Pattern> 
 
 std::pair<std::shared_ptr<Type>, std::map<std::string, std::shared_ptr<Type>>> type_inference_pattern(
         const std::map<std::string, std::shared_ptr<Type>> &constructor_types,
-        const std::map<std::string, int> &data_constructor_arities,
+        const std::map<std::string, size_t> &data_constructor_arities,
         const std::unique_ptr<Pattern> &p);
 
 std::pair<std::vector<std::shared_ptr<Type>>, std::map<std::string, std::shared_ptr<Type>>> type_inference_patterns(
         const std::map<std::string, std::shared_ptr<Type>> &constructor_types,
-        const std::map<std::string, int> &data_constructor_arities,
+        const std::map<std::string, size_t> &data_constructor_arities,
         const std::vector<std::unique_ptr<Pattern>> &ps) {
     std::vector<std::shared_ptr<Type>> types_matched;
     std::map<std::string, std::shared_ptr<Type>> new_assumptions;
@@ -286,7 +286,7 @@ std::pair<std::vector<std::shared_ptr<Type>>, std::map<std::string, std::shared_
 
 std::pair<std::shared_ptr<Type>, std::map<std::string, std::shared_ptr<Type>>> type_inference_pattern(
         const std::map<std::string, std::shared_ptr<Type>> &constructor_types,
-        const std::map<std::string, int> &data_constructor_arities,
+        const std::map<std::string, size_t> &data_constructor_arities,
         const std::unique_ptr<Pattern> &p) {
     std::vector<std::string> variables = find_variables_bound_by(p);
     if (variables.size() > std::set(variables.begin(), variables.end()).size()) {
@@ -370,14 +370,14 @@ std::pair<std::shared_ptr<Type>, std::map<std::string, std::shared_ptr<Type>>> t
 
 std::map<std::string, std::shared_ptr<Type>> type_inference_declarations(
         const std::map<std::string, std::shared_ptr<Type>> &assumptions,
-        const std::map<std::string, int> &data_constructor_arities,
+        const std::map<std::string, size_t> &data_constructor_arities,
         const std::map<std::string, std::shared_ptr<Kind>> &type_constructor_kinds,
         const std::map<std::string, std::unique_ptr<Expression>> &declarations,
         const std::map<std::string, std::shared_ptr<Type>> &type_signatures);
 
 std::shared_ptr<Type> type_inference_expression(
         std::map<std::string, std::shared_ptr<Type>> assumptions,
-        const std::map<std::string, int> &data_constructor_arities,
+        const std::map<std::string, size_t> &data_constructor_arities,
         const std::map<std::string, std::shared_ptr<Kind>> &type_constructor_kinds,
         const std::unique_ptr<Expression> &expression) {
     switch(expression->get_form()) {
@@ -841,7 +841,7 @@ std::vector<std::vector<std::string>> dependency_analysis(
 
 std::map<std::string, std::shared_ptr<Type>> type_inference_declarations(
         const std::map<std::string, std::shared_ptr<Type>> &assumptions,
-        const std::map<std::string, int> &data_constructor_arities,
+        const std::map<std::string, size_t> &data_constructor_arities,
         const std::map<std::string, std::shared_ptr<Kind>> &type_constructor_kinds,
         const std::map<std::string, std::unique_ptr<Expression>> &declarations,
         const std::map<std::string, std::shared_ptr<Type>> &type_signatures) {
@@ -969,8 +969,6 @@ std::set<std::string> find_referenced_type_constructors(std::shared_ptr<Type> t)
 void type_check(const std::unique_ptr<Program> &program) {
     std::map<std::string, std::shared_ptr<Type>> assumptions;
 
-    std::map<std::string, int> data_constructor_arities;
-
     std::map<std::string, std::shared_ptr<Kind>> type_constructor_kinds;
 
     std::vector<std::string> type_constructor_names;
@@ -1042,7 +1040,6 @@ void type_check(const std::unique_ptr<Program> &program) {
                                     data_constructor_type);
                 }
                 assumptions[data_constructor] = data_constructor_type;
-                data_constructor_arities[data_constructor] = program->data_constructors[data_constructor]->types.size();
             }
         }
         for (const std::string &type_constructor: current) {
@@ -1052,7 +1049,7 @@ void type_check(const std::unique_ptr<Program> &program) {
 
     type_inference_declarations(
             assumptions,
-            data_constructor_arities,
+            program->data_constructor_arities,
             type_constructor_kinds,
             program->bindings,
             program->type_signatures);

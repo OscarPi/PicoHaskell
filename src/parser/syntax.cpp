@@ -69,6 +69,7 @@ void Program::add_type_constructor(
                     " already exists.");
         }
         data_constructor_names.push_back(constructor->name);
+        data_constructor_arities[constructor->name] = constructor->types.size();
         data_constructors.emplace(constructor->name, constructor);
     }
 
