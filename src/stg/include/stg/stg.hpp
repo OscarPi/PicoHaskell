@@ -79,9 +79,11 @@ struct STGConstructor : public STGExpression {
     stgform get_form() override { return stgform::constructor; }
 };
 
-struct STGPrimitiveCase : public STGExpression {
+struct STGLiteralCase : public STGExpression {
     const std::unique_ptr<STGExpression> expr;
     const std::vector<std::pair<std::unique_ptr<STGLiteral>, std::unique_ptr<STGExpression>>> alts;
+    const std::string default_var;
+    const std::unique_ptr<STGExpression> default_expr;
     stgform get_form() override { return stgform::primitivecase; }
 };
 
@@ -93,6 +95,8 @@ struct STGPattern {
 struct STGAlgebraicCase : public STGExpression {
     const std::unique_ptr<STGExpression> expr;
     const std::vector<std::pair<std::unique_ptr<STGPattern>, std::unique_ptr<STGExpression>>> alts;
+    const std::string default_var;
+    const std::unique_ptr<STGExpression> default_expr;
     stgform get_form() override { return stgform::algebraiccase; }
 };
 
