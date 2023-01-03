@@ -132,9 +132,40 @@ std::pair<std::unique_ptr<STGLambdaForm>, std::vector<std::map<std::string, std:
 std::pair<std::unique_ptr<STGLambdaForm>, std::vector<std::map<std::string, std::unique_ptr<STGLambdaForm>>>> translate_constructor(
         const std::unique_ptr<Expression> &expr,
         unsigned long *next_variable_name,
-        const std::map<std::string, std::string> &variable_renamings,
         const std::map<std::string, size_t> &data_constructor_arities) {
+    auto constructor = dynamic_cast<Constructor*>(expr.get());
 
+    if (data_constructor_arities.at(constructor->name) == 0) {
+        return std::make_pair(
+                std::make_unique<STGLambdaForm>(
+                        std::set<std::string>(),
+                        std::vector<std::string>(),
+                        false,
+                        std::make_unique<STGConstructor>(constructor->name)),
+                std::vector<std::map<std::string, std::unique_ptr<STGLambdaForm>>>());
+    } else {
+        std::vector<std::string> argument_variables;
+        for (int i = 0; i < data_constructor_arities.at(constructor->name); i++) {
+            argument_variables.push_back("." + std::to_string((*next_variable_name)++));
+        }
+        std::string var_name = "." + std::to_string((*next_variable_name)++);
+        std::map<std::string, std::unique_ptr<STGLambdaForm>> bindings;
+        bindings[var_name] = std::make_unique<STGLambdaForm>(
+                std::set<std::string>(argument_variables.begin(), argument_variables.end()),
+                std::vector<std::string>(),
+                false,
+                std::make_unique<STGConstructor>(constructor->name, argument_variables));
+        return std::make_pair(
+                std::make_unique<STGLambdaForm>(
+                        std::set<std::string>(),
+                        argument_variables,
+                        false,
+                        std::make_unique<STGLet>(
+                                std::move(bindings),
+                                std::make_unique<STGVariable>(var_name),
+                                false)),
+                std::vector<std::map<std::string, std::unique_ptr<STGLambdaForm>>>());
+    }
 }
 
 std::pair<std::unique_ptr<STGLambdaForm>, std::vector<std::map<std::string, std::unique_ptr<STGLambdaForm>>>> translate_let(
@@ -313,6 +344,8 @@ std::pair<std::unique_ptr<STGLambdaForm>, std::vector<std::map<std::string, std:
             return translate_abstraction(expr, next_variable_name, variable_renamings, data_constructor_arities);
         case expform::let:
             return translate_let(expr, next_variable_name, variable_renamings, data_constructor_arities);
+        case expform::constructor:
+            return translate_constructor(expr, next_variable_name, data_constructor_arities);
     }
 }
 

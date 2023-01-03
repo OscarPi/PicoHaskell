@@ -124,15 +124,38 @@ TEST(STGTranslation, TranslatesLet) {
     EXPECT_VARIABLE(translated->bindings.at(".8"), ".4");
 }
 
-//TEST(STGTranslation, TranslatesConstructors) {
-//    std::unique_ptr<Program> program = std::make_unique<Program>();
-//    int result = parse_string_no_prelude("data T = Test\n;b = Test", program.get());
-//    ASSERT_EQ(result, 0);
-//    std::map<std::string, std::unique_ptr<STGLambdaForm>> translated = translate(program);
-//    EXPECT_EQ(translated["b"]->free_variables.size(), 0);
-//    EXPECT_EQ(translated["b"]->argument_variables.size(), 0);
-//    EXPECT_EQ(translated["b"]->updatable, false);
-//    ASSERT_EQ(translated["b"]->expr->get_form(), stgform::constructor);
-//    EXPECT_EQ(dynamic_cast<STGConstructor*>(translated["b"]->expr.get())->arguments.size(), 0);
-//    EXPECT_EQ(dynamic_cast<STGConstructor*>(translated["b"]->expr.get())->constructor_name, "Test");
-//}
+TEST(STGTranslation, TranslatesConstructors) {
+    std::unique_ptr<Program> program = std::make_unique<Program>();
+    int result = parse_string_no_prelude("data T = Test\n;b = Test", program.get());
+    ASSERT_EQ(result, 0);
+    auto translated = translate(program);
+    EXPECT_EQ(translated->bindings.at("b")->free_variables.size(), 0);
+    EXPECT_EQ(translated->bindings.at("b")->argument_variables.size(), 0);
+    EXPECT_EQ(translated->bindings.at("b")->updatable, false);
+    ASSERT_EQ(translated->bindings.at("b")->expr->get_form(), stgform::constructor);
+    EXPECT_EQ(dynamic_cast<STGConstructor*>(translated->bindings.at("b")->expr.get())->arguments.size(), 0);
+    EXPECT_EQ(dynamic_cast<STGConstructor*>(translated->bindings.at("b")->expr.get())->constructor_name, "Test");
+
+    program = std::make_unique<Program>();
+    result = parse_string_no_prelude("data T = Test T\n;b = Test", program.get());
+    ASSERT_EQ(result, 0);
+    translated = translate(program);
+    EXPECT_EQ(translated->bindings.at("b")->free_variables.size(), 0);
+    EXPECT_EQ(translated->bindings.at("b")->argument_variables.size(), 1);
+    EXPECT_EQ(translated->bindings.at("b")->argument_variables[0], ".0");
+    EXPECT_EQ(translated->bindings.at("b")->updatable, false);
+    ASSERT_EQ(translated->bindings.at("b")->expr->get_form(), stgform::let);
+    auto let = dynamic_cast<STGLet*>(translated->bindings.at("b")->expr.get());
+    EXPECT_EQ(let->recursive, false);
+    EXPECT_EQ(let->bindings.size(), 1);
+    EXPECT_EQ(let->bindings.at(".1")->free_variables.size(), 1);
+    EXPECT_EQ(let->bindings.at(".1")->free_variables.count(".0"), 1);
+    EXPECT_EQ(let->bindings.at(".1")->argument_variables.size(), 0);
+    EXPECT_EQ(let->bindings.at(".1")->updatable, false);
+    ASSERT_EQ(let->bindings.at(".1")->expr->get_form(), stgform::constructor);
+    EXPECT_EQ(dynamic_cast<STGConstructor*>(let->bindings.at(".1")->expr.get())->arguments.size(), 1);
+    EXPECT_EQ(dynamic_cast<STGConstructor*>(let->bindings.at(".1")->expr.get())->arguments[0], ".0");
+    EXPECT_EQ(dynamic_cast<STGConstructor*>(let->bindings.at(".1")->expr.get())->constructor_name, "Test");
+    ASSERT_EQ(let->expr->get_form(), stgform::variable);
+    EXPECT_EQ(dynamic_cast<STGVariable*>(let->expr.get())->name, ".1");
+}
