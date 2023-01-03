@@ -35,6 +35,17 @@ int parse_string(const char* str, Program *program) {
     return result;
 }
 
+int parse_string_no_prelude(const char* str, Program *program) {
+    yy::location loc;
+    YY_BUFFER_STATE buffer = yy_scan_string(str);
+    yy_switch_to_buffer(buffer);
+    reset_start_condition();
+    yy::parser parse(loc, program);
+    int result = parse();
+    yy_delete_buffer(buffer);
+    return result;
+}
+
 bool same_type(const Type *a, const Type *b) {
     if (a->get_form() != b->get_form()) {
         return false;

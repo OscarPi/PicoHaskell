@@ -5,6 +5,7 @@
 
 std::vector<yy::parser::symbol_type> lex_string(const char* str);
 int parse_string(const char* str, Program *program);
+int parse_string_no_prelude(const char* str, Program *program);
 
 bool same_type(const Type *a, const Type *b);
 

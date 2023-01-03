@@ -130,7 +130,7 @@ Expression *make_if_expression(
     return new Case(line, e1, alts);
 }
 
-Expression *make_list_expression(const int &line, const std::vector<Expression *> &elements) {
+Expression *make_list_expression(const int &line, const std::vector<Expression*> &elements) {
     Expression *list = new Constructor(line, "[]");
     for (int i = elements.size() - 1; i >= 0; i--) {
         list = new Application(

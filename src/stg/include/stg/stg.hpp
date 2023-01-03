@@ -17,13 +17,13 @@ struct STGExpression {
 };
 
 struct STGLambdaForm {
-    const std::vector<std::string> free_variables;
-    const std::vector<std::string> argument_variables;
+    const std::set<std::string> free_variables;
+    const std::set<std::string> argument_variables;
     const bool updatable;
     const std::unique_ptr<STGExpression> expr;
     STGLambdaForm(
-            const std::vector<std::string> &free_variables,
-            const std::vector<std::string> &argument_variables,
+            const std::set<std::string> &free_variables,
+            const std::set<std::string> &argument_variables,
             const bool &updatable,
             std::unique_ptr<STGExpression> &&expr):
             free_variables(free_variables),
@@ -32,12 +32,9 @@ struct STGLambdaForm {
             expr(std::move(expr)) {}
 };
 
-struct STGAtom : public STGExpression {
-};
-
 struct STGLet : public STGExpression {
-    const std::map<std::string, std::unique_ptr<STGLambdaForm>> bindings;
-    const std::unique_ptr<STGExpression> expr;
+    std::map<std::string, std::unique_ptr<STGLambdaForm>> bindings;
+    std::unique_ptr<STGExpression> expr;
     const bool recursive;
     STGLet(
             std::map<std::string, std::unique_ptr<STGLambdaForm>> &&bindings,
@@ -49,34 +46,35 @@ struct STGLet : public STGExpression {
     stgform get_form() override { return stgform::let; }
 };
 
-struct STGLiteral : public STGAtom {
+struct STGLiteral : public STGExpression {
     const std::variant<int, char> value;
     STGLiteral(const int &i): value(i) {}
     STGLiteral(const char &c): value(c) {}
     stgform get_form() override { return stgform::literal; }
 };
 
-struct STGVariable : public STGAtom {
-    const std::string name;
-    explicit STGVariable(std::string name): name(std::move(name)) {}
-    stgform get_form() override { return stgform::variable; }
-};
-
 struct STGApplication : public STGExpression {
     const std::string lhs;
-    const std::vector<std::unique_ptr<STGAtom>> arguments;
+    const std::vector<std::string> arguments;
     stgform get_form() override { return stgform::application; }
 };
 
 struct STGConstructor : public STGExpression {
     const std::string constructor_name;
-    const std::vector<std::unique_ptr<STGAtom>> arguments;
+    const std::vector<std::string> arguments;
+    explicit STGConstructor(std::string constructor_name): constructor_name(std::move(constructor_name)) {}
     STGConstructor(
             std::string constructor_name,
-            std::vector<std::unique_ptr<STGAtom>> &&arguments):
+            const std::vector<std::string> &arguments):
             constructor_name(std::move(constructor_name)),
-            arguments(std::move(arguments)) {}
+            arguments(arguments) {}
     stgform get_form() override { return stgform::constructor; }
+};
+
+struct STGVariable : public STGExpression {
+    const std::string name;
+    explicit STGVariable(std::string name): name(std::move(name)) {}
+    stgform get_form() override { return stgform::variable; }
 };
 
 struct STGLiteralCase : public STGExpression {
@@ -101,12 +99,18 @@ struct STGAlgebraicCase : public STGExpression {
 };
 
 struct STGPrimitiveOp : public STGExpression {
-    const std::unique_ptr<STGAtom> left;
-    const std::unique_ptr<STGAtom> right;
+    const std::string left;
+    const std::string right;
     const builtinop op;
     stgform get_form() override { return stgform::primitiveop; }
 };
 
-std::map<std::string, std::unique_ptr<STGLambdaForm>> translate(const std::unique_ptr<Program> &program);
+struct STGProgram {
+    const std::map<std::string, std::unique_ptr<STGLambdaForm>> bindings;
+    explicit STGProgram(
+            std::map<std::string, std::unique_ptr<STGLambdaForm>> &&bindings): bindings(std::move(bindings)) {}
+};
+
+std::unique_ptr<STGProgram> translate(const std::unique_ptr<Program> &program);
 
 #endif //PICOHASKELL_STG_HPP
