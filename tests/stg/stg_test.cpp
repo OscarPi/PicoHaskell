@@ -75,6 +75,20 @@ TEST(STGTranslation, TranslatesLiterals) {
     EXPECT_EQ(constructor->constructor_name, "[]");
 }
 
+TEST(STGTranslation, TranslatesAbstractions) {
+    std::unique_ptr<Program> program = std::make_unique<Program>();
+    int result = parse_string_no_prelude("h a = \\a -> a", program.get());
+    ASSERT_EQ(result, 0);
+    auto translated = translate(program);
+    EXPECT_EQ(translated->bindings.at("h")->free_variables.size(), 0);
+    EXPECT_EQ(translated->bindings.at("h")->argument_variables.size(), 2);
+    EXPECT_EQ(translated->bindings.at("h")->argument_variables[0], ".0");
+    EXPECT_EQ(translated->bindings.at("h")->argument_variables[1], ".1");
+    EXPECT_EQ(translated->bindings.at("h")->updatable, false);
+    ASSERT_EQ(translated->bindings.at("h")->expr->get_form(), stgform::variable);
+    EXPECT_EQ(dynamic_cast<STGVariable*>((translated->bindings.at("h"))->expr.get())->name, ".1");
+}
+
 //TEST(STGTranslation, TranslatesConstructors) {
 //    std::unique_ptr<Program> program = std::make_unique<Program>();
 //    int result = parse_string_no_prelude("data T = Test\n;b = Test", program.get());
