@@ -78,6 +78,7 @@
     AND           "&&"
     OR            "||"
     DOT           "."
+    APPEND        "++"
 ;
 %token <std::string> VARID CONID STRING
 %token <int> INTEGER
@@ -87,7 +88,7 @@
 %right "||"
 %right "&&"
 %precedence "==" "/=" "<" "<=" ">=" ">"
-%right ":"
+%right ":" "++"
 %left "+" "-"
 %left "*" "/"
 %right "."
@@ -162,6 +163,7 @@ infixexp:
   | infixexp "||" infixexp { $$ = new Application(@2.begin.line, new Application(@2.begin.line, new Variable(@2.begin.line, "||"), $1), $3); }
   | infixexp "." infixexp  { $$ = new Application(@2.begin.line, new Application(@2.begin.line, new Variable(@2.begin.line, "."), $1), $3); }
   | infixexp ":" infixexp  { $$ = new Application(@2.begin.line, new Application(@2.begin.line, new Constructor(@2.begin.line, ":"), $1), $3); }
+  | infixexp "++" infixexp { $$ = new Application(@2.begin.line, new Application(@2.begin.line, new Variable(@2.begin.line, "++"), $1), $3); }
   | lexp                   { $$ = $1; }
   ;
 
@@ -321,6 +323,7 @@ var:
   | "(" ">=" ")" { $$ = ">="; }
   | "(" "&&" ")" { $$ = "&&"; }
   | "(" "||" ")" { $$ = "||"; }
+  | "(" "++" ")" { $$ = "++"; }
   ;
 
 optsemicolon: %empty | ";";

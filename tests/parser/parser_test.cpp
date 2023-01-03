@@ -259,6 +259,7 @@ TEST(Parser, ParsesInfix) {
     TESTINFIXOP("&&");
     TESTINFIXOP("||");
     TESTINFIXOP(".");
+    TESTINFIXOP("++");
 
     auto program = std::make_unique<Program>();
     auto result = parse_string("a = -c", program.get());

@@ -16,6 +16,10 @@ data Bool = True | False
 (.) :: (b -> c) -> (a -> b) -> a -> c
 ;
 (.) f g = \x -> f (g x)
+;
+(++) :: [a] -> [a] -> [a]
+;
+(++) a b = case a of { [] -> b ; (x:xs) -> x : (xs ++ b) }
 )##";
 
 void bind_built_in_op(Program *program, const std::string &function_name, builtinop op) {

@@ -119,6 +119,7 @@ std::string strliteral;
 "&&"        return yy::parser::make_AND(loc);
 "||"        return yy::parser::make_OR(loc);
 "."         return yy::parser::make_DOT(loc);
+"++"        return yy::parser::make_APPEND(loc);
 {VARID}     return yy::parser::make_VARID(yytext, loc);
 {CONID}     return yy::parser::make_CONID(yytext, loc);
 {OPENCOM}   yy_push_state(incomment);

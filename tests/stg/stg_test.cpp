@@ -8,7 +8,7 @@
     EXPECT_EQ((lambda_form)->argument_variables.size(), 0);                          \
     EXPECT_EQ((lambda_form)->updatable, true);                                       \
     ASSERT_EQ((lambda_form)->expr->get_form(), stgform::variable);                   \
-    EXPECT_EQ(dynamic_cast<STGVariable*>((lambda_form)->expr.get())->name, (v));    \
+    EXPECT_EQ(dynamic_cast<STGVariable*>((lambda_form)->expr.get())->name, (v));     \
 }
 
 TEST(STGTranslation, TranslatesVariables) {
