@@ -1,5 +1,6 @@
 #ifndef PICOHASKELL_TYPES_HPP
 #define PICOHASKELL_TYPES_HPP
+
 #include <memory>
 #include <string>
 #include <map>
@@ -8,7 +9,7 @@
 #include <vector>
 #include <stdexcept>
 
-enum class typeform {variable, universallyquantifiedvariable, constructor, application}; //, gen};
+enum class typeform {variable, universallyquantifiedvariable, constructor, application};
 
 class TypeError : public std::runtime_error {
 public:

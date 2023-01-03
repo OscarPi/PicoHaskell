@@ -821,6 +821,7 @@ std::vector<std::vector<std::string>> dependency_analysis(
                                 stack.pop_back();
                             }
                             new_group.insert(new_group.end(), current.begin(), current.end());
+                            stack.push_back(new_group);
                             dependencies_ok = false;
                             break;
                         }

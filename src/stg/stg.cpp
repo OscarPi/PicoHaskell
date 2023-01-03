@@ -4,6 +4,7 @@
 #include <algorithm>
 #include "stg/stg.hpp"
 #include "parser/syntax.hpp"
+#include "types/type_check.hpp"
 
 std::pair<std::unique_ptr<STGLambdaForm>, std::vector<std::map<std::string, std::unique_ptr<STGLambdaForm>>>> translate_expression(
         const std::unique_ptr<Expression> &expr,
@@ -136,6 +137,81 @@ std::pair<std::unique_ptr<STGLambdaForm>, std::vector<std::map<std::string, std:
 
 }
 
+std::pair<std::unique_ptr<STGLambdaForm>, std::vector<std::map<std::string, std::unique_ptr<STGLambdaForm>>>> translate_let(
+        const std::unique_ptr<Expression> &expr,
+        unsigned long *next_variable_name,
+        std::map<std::string, std::string> variable_renamings,
+        const std::map<std::string, size_t> &data_constructor_arities) {
+    auto let = dynamic_cast<Let*>(expr.get());
+
+    std::vector<std::string> names_defined;
+    for (const auto &[name, _]: let->bindings) {
+        variable_renamings[name] = "." + std::to_string((*next_variable_name)++);
+        names_defined.push_back(name);
+    }
+    std::map<std::string, std::set<std::string>> dependencies;
+    for (const auto &[name, expression]: let->bindings) {
+        dependencies[name] = std::set<std::string>();
+        for (const auto &free_variable: find_free_variables(expression)) {
+            if (std::count(names_defined.begin(), names_defined.end(), free_variable)) {
+                dependencies[name].insert(free_variable);
+            }
+        }
+    }
+    auto dependency_groups = dependency_analysis(names_defined, dependencies);
+
+    std::vector<std::map<std::string, std::unique_ptr<STGLambdaForm>>> definitions;
+
+    for (const auto &group: dependency_groups) {
+        std::map<std::string, std::unique_ptr<STGLambdaForm>> bindings;
+        std::set<std::string> names_defined_in_group;
+        for (const auto &name: group) {
+            names_defined_in_group.insert(variable_renamings[name]);
+        }
+        for (const auto &name: group) {
+            auto translated = translate_expression(
+                    let->bindings.at(name),
+                    next_variable_name,
+                    variable_renamings,
+                    data_constructor_arities);
+            for (auto &definition: translated.second) {
+                bool depends_on_names_in_group = false;
+                for (auto &[n, lambda_form]: definition) {
+                    for (const auto &free_variable: lambda_form->free_variables) {
+                        if (names_defined_in_group.count(free_variable)) {
+                            depends_on_names_in_group = true;
+                            break;
+                        }
+                    }
+                }
+
+                if (!depends_on_names_in_group) {
+                    definitions.push_back(std::move(definition));
+                } else {
+                    for (auto &[n, lambda_form]: definition) {
+                        names_defined_in_group.insert(n);
+                        bindings[n] = std::move(lambda_form);
+                    }
+                }
+            }
+            bindings[variable_renamings[name]] = std::move(translated.first);
+        }
+        definitions.push_back(std::move(bindings));
+    }
+
+    auto translated = translate_expression(
+            let->e,
+            next_variable_name,
+            variable_renamings,
+            data_constructor_arities);
+
+   for (auto &definition: translated.second) {
+       definitions.push_back(std::move(definition));
+   }
+
+   return std::make_pair(std::move(translated.first), std::move(definitions));
+}
+
 std::pair<std::unique_ptr<STGLambdaForm>, std::vector<std::map<std::string, std::unique_ptr<STGLambdaForm>>>> translate_abstraction(
         const std::unique_ptr<Expression> &expr,
         unsigned long *next_variable_name,
@@ -171,6 +247,7 @@ std::pair<std::unique_ptr<STGLambdaForm>, std::vector<std::map<std::string, std:
             translated.first->argument_variables.end());
     std::unique_ptr<STGExpression> body_expression = std::move(translated.first->expr);
     std::vector<std::map<std::string, std::unique_ptr<STGLambdaForm>>> definitions;
+    std::vector<std::pair<std::map<std::string, std::unique_ptr<STGLambdaForm>>, bool>> definitions_that_depend_on_arguments;
     for (auto &definition: translated.second) {
         std::set<std::string> defined_names;
         std::set<std::string> free_variables_in_definition;
@@ -196,15 +273,21 @@ std::pair<std::unique_ptr<STGLambdaForm>, std::vector<std::map<std::string, std:
             for (const auto &name: free_variables_in_definition) {
                 if (defined_names.count(name)) {
                     recursive = true;
-                } else if (!std::count(argument_variables.begin(), argument_variables.end(), name)) {
+                } else if (!names_that_depend_on_arguments.count(name)) {
                     free_variables.insert(name);
                 }
             }
-            body_expression = std::make_unique<STGLet>(
-                    std::move(definition),
-                    std::move(body_expression),
-                    recursive);
+            definitions_that_depend_on_arguments.emplace_back(std::move(definition), recursive);
         }
+    }
+
+    for (auto it = definitions_that_depend_on_arguments.rbegin();
+            it != definitions_that_depend_on_arguments.rend(); ++it) {
+        auto &[definition, recursive] = *it;
+        body_expression = std::make_unique<STGLet>(
+                std::move(definition),
+                std::move(body_expression),
+                recursive);
     }
 
     return std::make_pair(
@@ -228,6 +311,8 @@ std::pair<std::unique_ptr<STGLambdaForm>, std::vector<std::map<std::string, std:
             return translate_literal(expr, next_variable_name);
         case expform::abstraction:
             return translate_abstraction(expr, next_variable_name, variable_renamings, data_constructor_arities);
+        case expform::let:
+            return translate_let(expr, next_variable_name, variable_renamings, data_constructor_arities);
     }
 }
 

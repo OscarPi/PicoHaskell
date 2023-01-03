@@ -2,17 +2,21 @@
 #include "test/test_utilities.hpp"
 #include "stg/stg.hpp"
 
+#define EXPECT_VARIABLE(lambda_form, v) {                                            \
+    EXPECT_EQ((lambda_form)->free_variables.size(), 1);                              \
+    EXPECT_EQ((lambda_form)->free_variables.count((v)), 1);                          \
+    EXPECT_EQ((lambda_form)->argument_variables.size(), 0);                          \
+    EXPECT_EQ((lambda_form)->updatable, true);                                       \
+    ASSERT_EQ((lambda_form)->expr->get_form(), stgform::variable);                   \
+    EXPECT_EQ(dynamic_cast<STGVariable*>((lambda_form)->expr.get())->name, (v));    \
+}
+
 TEST(STGTranslation, TranslatesVariables) {
     std::unique_ptr<Program> program = std::make_unique<Program>();
     int result = parse_string_no_prelude("b = a", program.get());
     ASSERT_EQ(result, 0);
     auto translated = translate(program);
-    EXPECT_EQ(translated->bindings.at("b")->free_variables.size(), 1);
-    EXPECT_EQ(translated->bindings.at("b")->free_variables.count("a"), 1);
-    EXPECT_EQ(translated->bindings.at("b")->argument_variables.size(), 0);
-    EXPECT_EQ(translated->bindings.at("b")->updatable, true);
-    ASSERT_EQ(translated->bindings.at("b")->expr->get_form(), stgform::variable);
-    EXPECT_EQ(dynamic_cast<STGVariable*>(translated->bindings.at("b")->expr.get())->name, "a");
+    EXPECT_VARIABLE(translated->bindings.at("b"), "a");
 }
 
 #define EXPECT_CHAR(lambda_form, c) {                                                \
@@ -87,6 +91,37 @@ TEST(STGTranslation, TranslatesAbstractions) {
     EXPECT_EQ(translated->bindings.at("h")->updatable, false);
     ASSERT_EQ(translated->bindings.at("h")->expr->get_form(), stgform::variable);
     EXPECT_EQ(dynamic_cast<STGVariable*>((translated->bindings.at("h"))->expr.get())->name, ".1");
+}
+
+TEST(STGTranslation, TranslatesLet) {
+    std::unique_ptr<Program> program = std::make_unique<Program>();
+    int result = parse_string_no_prelude("x t = let { a=t; b=a; c=let { t='a' } in t; f=let { a=b; b=a } in 'b' } in let { g=f } in f", program.get());
+    ASSERT_EQ(result, 0);
+    auto translated = translate(program);
+    EXPECT_EQ(translated->bindings.at("x")->free_variables.size(), 1);
+    EXPECT_EQ(translated->bindings.at("x")->free_variables.count(".4"), 1);
+    EXPECT_EQ(translated->bindings.at("x")->argument_variables.size(), 1);
+    EXPECT_EQ(translated->bindings.at("x")->argument_variables[0], ".0");
+    EXPECT_EQ(translated->bindings.at("x")->updatable, false);
+    ASSERT_EQ(translated->bindings.at("x")->expr->get_form(), stgform::let);
+    auto let = dynamic_cast<STGLet*>(translated->bindings.at("x")->expr.get());
+    EXPECT_EQ(let->recursive, false);
+    EXPECT_EQ(let->bindings.size(), 1);
+    EXPECT_VARIABLE(let->bindings.at(".1"), ".0");
+    ASSERT_EQ(let->expr->get_form(), stgform::let);
+    let = dynamic_cast<STGLet*>(let->expr.get());
+    EXPECT_EQ(let->recursive, false);
+    EXPECT_EQ(let->bindings.size(), 1);
+    EXPECT_VARIABLE(let->bindings.at(".2"), ".1");
+    ASSERT_EQ(let->expr->get_form(), stgform::variable);
+    EXPECT_EQ(dynamic_cast<STGVariable*>(let->expr.get())->name, ".4");
+
+    EXPECT_VARIABLE(translated->bindings.at(".3"), ".7");
+    EXPECT_CHAR(translated->bindings.at(".4"), 'b');
+    EXPECT_VARIABLE(translated->bindings.at(".5"), ".6");
+    EXPECT_VARIABLE(translated->bindings.at(".6"), ".5");
+    EXPECT_CHAR(translated->bindings.at(".7"), 'a');
+    EXPECT_VARIABLE(translated->bindings.at(".8"), ".4");
 }
 
 //TEST(STGTranslation, TranslatesConstructors) {
