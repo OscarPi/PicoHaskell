@@ -105,6 +105,10 @@ struct STGPrimitiveOp : public STGExpression {
     const std::string left;
     const std::string right;
     const builtinop op;
+    STGPrimitiveOp(
+            std::string left,
+            std::string right,
+            const builtinop &op): left(std::move(left)), right(std::move(right)), op(op) {}
     stgform get_form() override { return stgform::primitiveop; }
 };
 

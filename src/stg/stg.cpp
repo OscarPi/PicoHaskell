@@ -168,6 +168,73 @@ std::pair<std::unique_ptr<STGLambdaForm>, std::vector<std::map<std::string, std:
     }
 }
 
+std::pair<std::unique_ptr<STGLambdaForm>, std::vector<std::map<std::string, std::unique_ptr<STGLambdaForm>>>> translate_built_in_op(
+        const std::unique_ptr<Expression> &expr,
+        unsigned long *next_variable_name,
+        const std::map<std::string, std::string> &variable_renamings,
+        const std::map<std::string, size_t> &data_constructor_arities) {
+    std::vector<std::map<std::string, std::unique_ptr<STGLambdaForm>>> definitions;
+
+    auto op = dynamic_cast<BuiltInOp*>(expr.get());
+
+    std::string left;
+    if (op->left) {
+        auto translated = translate_expression(
+                op->left,
+                next_variable_name,
+                variable_renamings,
+                data_constructor_arities);
+
+        for (auto &definition: translated.second) {
+            definitions.push_back(std::move(definition));
+        }
+
+        if (translated.first->expr->get_form() == stgform::variable) {
+            left = dynamic_cast<STGVariable*>(translated.first->expr.get())->name;
+        } else {
+            std::map<std::string, std::unique_ptr<STGLambdaForm>> bindings;
+            std::string name = "." + std::to_string((*next_variable_name)++);
+            bindings[name] = std::move(translated.first);
+            definitions.push_back(std::move(bindings));
+            left = name;
+        }
+    }
+
+    std::string right;
+    auto translated = translate_expression(
+            op->right,
+            next_variable_name,
+            variable_renamings,
+            data_constructor_arities);
+
+    for (auto &definition: translated.second) {
+        definitions.push_back(std::move(definition));
+    }
+
+    if (translated.first->expr->get_form() == stgform::variable) {
+        right = dynamic_cast<STGVariable *>(translated.first->expr.get())->name;
+    } else {
+        std::map<std::string, std::unique_ptr<STGLambdaForm>> bindings;
+        std::string name = "." + std::to_string((*next_variable_name)++);
+        bindings[name] = std::move(translated.first);
+        definitions.push_back(std::move(bindings));
+        right = name;
+    }
+
+    std::set<std::string> free_variables;
+    if (!left.empty()) {
+        free_variables.insert(left);
+    }
+    free_variables.insert(right);
+    return std::make_pair(
+            std::make_unique<STGLambdaForm>(
+                    free_variables,
+                    std::vector<std::string>(),
+                    true,
+                    std::make_unique<STGPrimitiveOp>(left, right, op->op)),
+            definitions);
+}
+
 std::pair<std::unique_ptr<STGLambdaForm>, std::vector<std::map<std::string, std::unique_ptr<STGLambdaForm>>>> translate_application(
         const std::unique_ptr<Expression> &expr,
         unsigned long *next_variable_name,
