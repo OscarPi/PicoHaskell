@@ -56,6 +56,9 @@ struct STGLiteral : public STGExpression {
 struct STGApplication : public STGExpression {
     const std::string lhs;
     const std::vector<std::string> arguments;
+    STGApplication(
+            std::string lhs,
+            const std::vector<std::string> &arguments): lhs(std::move(lhs)), arguments(arguments) {}
     stgform get_form() override { return stgform::application; }
 };
 
