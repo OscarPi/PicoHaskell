@@ -232,7 +232,7 @@ std::pair<std::unique_ptr<STGLambdaForm>, std::vector<std::map<std::string, std:
                     std::vector<std::string>(),
                     true,
                     std::make_unique<STGPrimitiveOp>(left, right, op->op)),
-            definitions);
+            std::move(definitions));
 }
 
 std::pair<std::unique_ptr<STGLambdaForm>, std::vector<std::map<std::string, std::unique_ptr<STGLambdaForm>>>> translate_application(

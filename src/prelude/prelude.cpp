@@ -20,6 +20,10 @@ data Bool = True | False
 (++) :: [a] -> [a] -> [a]
 ;
 (++) a b = case a of { [] -> b ; (x:xs) -> x : (xs ++ b) }
+;
+error :: [Char] -> a
+;
+error msg = error msg
 )##";
 
 void bind_built_in_op(Program *program, const std::string &function_name, builtinop op) {
