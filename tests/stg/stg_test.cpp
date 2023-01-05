@@ -29,20 +29,6 @@ TEST(STGTranslation, TranslatesVariables) {
         (c));                                                                        \
 }
 
-#define EXPECT_CONS(lambda_form, hd, tl) {                                                  \
-    EXPECT_EQ((lambda_form)->free_variables.size(), 2);                                     \
-    EXPECT_EQ((lambda_form)->free_variables.count((hd)), 1);                                \
-    EXPECT_EQ((lambda_form)->free_variables.count((tl)), 1);                                \
-    EXPECT_EQ((lambda_form)->argument_variables.size(), 0);                                 \
-    EXPECT_EQ((lambda_form)->updatable, false);                                             \
-    ASSERT_EQ((lambda_form)->expr->get_form(), stgform::constructor);                       \
-    STGConstructor *constructor = dynamic_cast<STGConstructor*>((lambda_form)->expr.get()); \
-    EXPECT_EQ(constructor->arguments.size(), 2);                                            \
-    EXPECT_EQ(constructor->arguments[0], (hd));                                             \
-    EXPECT_EQ(constructor->arguments[1], (tl));                                             \
-    EXPECT_EQ(constructor->constructor_name, ":");                                          \
-}
-
 TEST(STGTranslation, TranslatesLiterals) {
     std::unique_ptr<Program> program = std::make_unique<Program>();
     int result = parse_string_no_prelude("b = 1", program.get());
@@ -61,22 +47,6 @@ TEST(STGTranslation, TranslatesLiterals) {
     ASSERT_EQ(result, 0);
     translated = translate(program);
     EXPECT_CHAR(translated->bindings.at("b"), 'a');
-
-    program = std::make_unique<Program>();
-    result = parse_string_no_prelude("b = \"ab\"", program.get());
-    ASSERT_EQ(result, 0);
-    translated = translate(program);
-    EXPECT_CONS(translated->bindings.at("b"), ".0", ".1");
-    EXPECT_CHAR(translated->bindings.at(".0"), 'a');
-    EXPECT_CONS(translated->bindings.at(".1"), ".2", ".3");
-    EXPECT_CHAR(translated->bindings.at(".2"), 'b');
-    EXPECT_EQ(translated->bindings.at(".3")->free_variables.size(), 0);
-    EXPECT_EQ(translated->bindings.at(".3")->argument_variables.size(), 0);
-    EXPECT_EQ(translated->bindings.at(".3")->updatable, false);
-    ASSERT_EQ(translated->bindings.at(".3")->expr->get_form(), stgform::constructor);
-    STGConstructor *constructor = dynamic_cast<STGConstructor*>(translated->bindings.at(".3")->expr.get());
-    EXPECT_EQ(constructor->arguments.size(), 0);
-    EXPECT_EQ(constructor->constructor_name, "[]");
 }
 
 TEST(STGTranslation, TranslatesAbstractions) {

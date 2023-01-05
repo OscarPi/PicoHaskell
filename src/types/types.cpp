@@ -347,10 +347,6 @@ std::pair<std::shared_ptr<Type>, std::map<std::string, std::shared_ptr<Type>>> t
         case patternform::literal:
             if (std::holds_alternative<int>(dynamic_cast<LiteralPattern*>(p.get())->value)) {
                 type_matched = std::make_shared<TypeConstructor>("Int");
-            } else if (std::holds_alternative<std::string>(dynamic_cast<LiteralPattern*>(p.get())->value)) {
-                type_matched = std::make_shared<TypeApplication>(
-                        new TypeConstructor("[]"),
-                        new TypeConstructor("Char"));
             } else if (std::holds_alternative<char>(dynamic_cast<LiteralPattern*>(p.get())->value)) {
                 type_matched = std::make_shared<TypeConstructor>("Char");
             }
@@ -384,10 +380,6 @@ std::shared_ptr<Type> type_inference_expression(
         case expform::literal:
             if (std::holds_alternative<int>(dynamic_cast<Literal*>(expression.get())->value)) {
                 return std::make_shared<TypeConstructor>("Int");
-            } else if (std::holds_alternative<std::string>(dynamic_cast<Literal*>(expression.get())->value)) {
-                return std::make_shared<TypeApplication>(
-                        new TypeConstructor("[]"),
-                        new TypeConstructor("Char"));
             } else if (std::holds_alternative<char>(dynamic_cast<Literal*>(expression.get())->value)) {
                 return std::make_shared<TypeConstructor>("Char");
             }

@@ -130,6 +130,20 @@ Expression *make_if_expression(
     return new Case(line, e1, alts);
 }
 
+Expression *make_string_expression(const int &line, const std::string &str) {
+    Expression *list = new Constructor(line, "[]");
+    for (int i = str.size() - 1; i >= 0; i--) {
+        list = new Application(
+                line,
+                new Application(
+                        line,
+                        new Constructor(line, ":"),
+                        new Literal(line, str[i])),
+                list);
+    }
+    return list;
+}
+
 Expression *make_list_expression(const int &line, const std::vector<Expression*> &elements) {
     Expression *list = new Constructor(line, "[]");
     for (int i = elements.size() - 1; i >= 0; i--) {
@@ -197,6 +211,17 @@ Expression *make_let_expression(const int &line, const declist &decls, Expressio
     }
 
     return new Let(line, bindings, type_signatures, e);
+}
+
+Pattern *make_string_pattern(const int &line, const std::string &str) {
+    Pattern *list = new ConstructorPattern(line, "[]", {});
+    for (int i = str.size() - 1; i >= 0; i--) {
+        list = new ConstructorPattern(
+                line,
+                ":",
+                {new LiteralPattern(line, str[i]), list});
+    }
+    return list;
 }
 
 Pattern *make_list_pattern(const int &line, const std::vector<Pattern*> &elements) {

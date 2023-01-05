@@ -179,8 +179,23 @@ TEST(Parser, ParsesLiteralExpressions) {
     const auto &b = program->bindings["b"];
     EXPECT_EQ(std::get<char>(dynamic_cast<Literal*>(b.get())->value), 'a');
 
-    const auto &c = program->bindings["c"];
-    EXPECT_EQ(std::get<std::string>(dynamic_cast<Literal*>(c.get())->value), "hi");
+    auto str = dynamic_cast<Application*>(program->bindings["c"].get());
+    ASSERT_EQ(str->left->get_form(), expform::application);
+    auto l = dynamic_cast<Application*>(str->left.get());
+    ASSERT_EQ(l->left->get_form(), expform::constructor);
+    EXPECT_EQ(dynamic_cast<Constructor*>(l->left.get())->name, ":");
+    ASSERT_EQ(l->right->get_form(), expform::literal);
+    EXPECT_EQ(std::get<char>(dynamic_cast<Literal*>(l->right.get())->value), 'h');
+    ASSERT_EQ(str->right->get_form(), expform::application);
+    auto r = dynamic_cast<Application*>(str->right.get());
+    ASSERT_EQ(r->left->get_form(), expform::application);
+    auto rl = dynamic_cast<Application*>(r->left.get());
+    ASSERT_EQ(rl->left->get_form(), expform::constructor);
+    EXPECT_EQ(dynamic_cast<Constructor*>(rl->left.get())->name, ":");
+    ASSERT_EQ(rl->right->get_form(), expform::literal);
+    EXPECT_EQ(std::get<char>(dynamic_cast<Literal*>(rl->right.get())->value), 'i');
+    ASSERT_EQ(r->right->get_form(), expform::constructor);
+    EXPECT_EQ(dynamic_cast<Constructor*>(r->right.get())->name, "[]");
 }
 
 TEST(Parser, ParsesConstructorExpressions) {

@@ -63,10 +63,9 @@ struct WildPattern : Pattern {
 };
 
 struct LiteralPattern : Pattern {
-    const std::variant<int, std::string, char> value;
+    const std::variant<int, char> value;
     LiteralPattern(const int &line, int value): Pattern(line), value(value) {}
     LiteralPattern(const int &line, char value): Pattern(line), value(value) {}
-    LiteralPattern(const int &line, std::string value): Pattern(line), value(value) {}
     patternform get_form() override { return patternform::literal; }
 };
 
@@ -96,10 +95,9 @@ struct Constructor : public Expression {
 };
 
 struct Literal : public Expression {
-    const std::variant<int, std::string, char> value;
+    const std::variant<int, char> value;
     Literal(const int &line, const int &i): Expression(line), value(i) {}
     Literal(const int &line, const char &c): Expression(line), value(c) {}
-    Literal(const int &line, std::string s): Expression(line), value(s) {}
     expform get_form() override { return expform::literal; }
 };
 
@@ -181,9 +179,11 @@ typedef std::vector<std::pair<std::string, Expression*>> vars;
 typedef std::tuple<typesigs, funcs, vars> declist;
 
 Expression *make_if_expression(const int &line, Expression* const &e1, Expression* const &e2, Expression* const &e3);
+Expression *make_string_expression(const int &line, const std::string &str);
 Expression *make_list_expression(const int &line, const std::vector<Expression*> &elements);
 Expression *make_tuple_expression(const int &line, const std::vector<Expression*> &elements);
 Expression *make_let_expression(const int &line, const declist &decls, Expression* const &e);
+Pattern *make_string_pattern(const int &line, const std::string &str);
 Pattern *make_list_pattern(const int &line, const std::vector<Pattern*> &elements);
 Pattern *make_tuple_pattern(const int &line, const std::vector<Pattern*> &elements);
 

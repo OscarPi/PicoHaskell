@@ -183,7 +183,7 @@ fexp:
 aexp:
     var                     { $$ = new Variable(@1.begin.line, $1); }
   | INTEGER                 { $$ = new Literal(@1.begin.line, $1); }
-  | STRING                  { $$ = new Literal(@1.begin.line, $1); }
+  | STRING                  { $$ = make_string_expression(@1.begin.line, $1); }
   | CHAR                    { $$ = new Literal(@1.begin.line, $1); }
   | gcon                    { $$ = new Constructor(@1.begin.line, $1); }
   | "[" explist "]"         { $$ = make_list_expression(@1.begin.line, $2); }
@@ -290,7 +290,7 @@ apat:
   | var                { $$ = new VariablePattern(@1.begin.line, $1); }
   | gcon                 { $$ = new ConstructorPattern(@1.begin.line, $1, std::vector<Pattern*>{}); }
   | INTEGER              { $$ = new LiteralPattern(@1.begin.line, $1); }
-  | STRING               { $$ = new LiteralPattern(@1.begin.line, $1); }
+  | STRING               { $$ = make_string_pattern(@1.begin.line, $1); }
   | CHAR                 { $$ = new LiteralPattern(@1.begin.line, $1); }
   | "_"                  { $$ = new WildPattern(@1.begin.line); }
   | "(" pat ")"          { $$ = $2; }
