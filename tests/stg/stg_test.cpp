@@ -246,3 +246,37 @@ TEST(STGTranslation, TranslatesApplications) {
     EXPECT_EQ(dynamic_cast<STGApplication*>(translated->bindings.at("b")->expr.get())->arguments[1], "c");
     EXPECT_EQ(dynamic_cast<STGApplication*>(translated->bindings.at("b")->expr.get())->arguments[2], "d");
 }
+
+TEST(STGTranslation, TranslatesCase) {
+    std::unique_ptr<Program> program = std::make_unique<Program>();
+    int result = parse_string_no_prelude("a = case let { x = 1 } in x of { _ -> 'a' }", program.get());
+    ASSERT_EQ(result, 0);
+    auto translated = translate(program);
+    EXPECT_EQ(translated->bindings.size(), 1);
+    EXPECT_CHAR(translated->bindings.at("a"), 'a');
+
+    program = std::make_unique<Program>();
+    result = parse_string_no_prelude("a = case let { x = 'b' } in x of { x@_ -> 'a' }", program.get());
+    ASSERT_EQ(result, 0);
+    translated = translate(program);
+    EXPECT_EQ(translated->bindings.size(), 3);
+    EXPECT_CHAR(translated->bindings.at("a"), 'a');
+    EXPECT_CHAR(translated->bindings.at(".0"), 'b');
+    EXPECT_VARIABLE(translated->bindings.at(".1"), ".0");
+
+    program = std::make_unique<Program>();
+    result = parse_string_no_prelude("a = case 'a' of { a -> a }", program.get());
+    ASSERT_EQ(result, 0);
+    translated = translate(program);
+    EXPECT_EQ(translated->bindings.size(), 2);
+    EXPECT_CHAR(translated->bindings.at(".0"), 'a');
+    EXPECT_VARIABLE(translated->bindings.at("a"), ".0");
+
+    program = std::make_unique<Program>();
+    result = parse_string_no_prelude("a = case 'a' of { x@a -> x ; _ -> 'b' }", program.get());
+    ASSERT_EQ(result, 0);
+    translated = translate(program);
+    EXPECT_EQ(translated->bindings.size(), 2);
+    EXPECT_CHAR(translated->bindings.at(".0"), 'a');
+    EXPECT_VARIABLE(translated->bindings.at("a"), ".0");
+}

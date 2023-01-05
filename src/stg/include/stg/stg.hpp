@@ -48,8 +48,7 @@ struct STGLet : public STGExpression {
 
 struct STGLiteral : public STGExpression {
     const std::variant<int, char> value;
-    STGLiteral(const int &i): value(i) {}
-    STGLiteral(const char &c): value(c) {}
+    explicit STGLiteral(const std::variant<int, char> &value): value(value) {}
     stgform get_form() override { return stgform::literal; }
 };
 
@@ -82,7 +81,7 @@ struct STGVariable : public STGExpression {
 
 struct STGLiteralCase : public STGExpression {
     const std::unique_ptr<STGExpression> expr;
-    const std::vector<std::pair<std::unique_ptr<STGLiteral>, std::unique_ptr<STGExpression>>> alts;
+    const std::vector<std::pair<STGLiteral, std::unique_ptr<STGExpression>>> alts;
     const std::string default_var;
     const std::unique_ptr<STGExpression> default_expr;
     stgform get_form() override { return stgform::primitivecase; }
