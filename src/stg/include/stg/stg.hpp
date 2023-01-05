@@ -99,13 +99,27 @@ struct STGLiteralCase : public STGExpression {
 struct STGPattern {
     const std::string constructor_name;
     const std::vector<std::string> variables;
+    STGPattern(
+            std::string constructor_name,
+            const std::vector<std::string> &variables):
+            constructor_name(std::move(constructor_name)),
+            variables(variables) {}
 };
 
 struct STGAlgebraicCase : public STGExpression {
     const std::unique_ptr<STGExpression> expr;
-    const std::vector<std::pair<std::unique_ptr<STGPattern>, std::unique_ptr<STGExpression>>> alts;
+    const std::vector<std::pair<STGPattern, std::unique_ptr<STGExpression>>> alts;
     const std::string default_var;
     const std::unique_ptr<STGExpression> default_expr;
+    STGAlgebraicCase(
+            std::unique_ptr<STGExpression> &&expr,
+            std::vector<std::pair<STGPattern, std::unique_ptr<STGExpression>>> &&alts,
+            std::string default_var,
+            std::unique_ptr<STGExpression> &&default_expr):
+            expr(std::move(expr)),
+            alts(std::move(alts)),
+            default_var(std::move(default_var)),
+            default_expr(std::move(default_expr)) {}
     stgform get_form() override { return stgform::algebraiccase; }
 };
 
