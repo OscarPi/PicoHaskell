@@ -9,7 +9,7 @@
 #include <variant>
 #include "parser/syntax.hpp"
 
-enum class stgform {let, literal, variable, application, constructor, primitivecase, algebraiccase, primitiveop};
+enum class stgform {let, literal, variable, application, constructor, literalcase, algebraiccase, primitiveop};
 
 struct STGExpression {
     virtual stgform get_form() = 0;
@@ -84,7 +84,16 @@ struct STGLiteralCase : public STGExpression {
     const std::vector<std::pair<STGLiteral, std::unique_ptr<STGExpression>>> alts;
     const std::string default_var;
     const std::unique_ptr<STGExpression> default_expr;
-    stgform get_form() override { return stgform::primitivecase; }
+    STGLiteralCase(
+            std::unique_ptr<STGExpression> &&expr,
+            std::vector<std::pair<STGLiteral, std::unique_ptr<STGExpression>>> &&alts,
+            std::string default_var,
+            std::unique_ptr<STGExpression> &&default_expr):
+            expr(std::move(expr)),
+            alts(std::move(alts)),
+            default_var(std::move(default_var)),
+            default_expr(std::move(default_expr)) {}
+    stgform get_form() override { return stgform::literalcase; }
 };
 
 struct STGPattern {
