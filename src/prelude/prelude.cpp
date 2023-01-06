@@ -24,6 +24,8 @@ data Bool = True | False
 error :: [Char] -> a
 ;
 error msg = error msg
+;
+case_error = error "Non-exhaustive patterns in case"
 )##";
 
 void bind_built_in_op(Program *program, const std::string &function_name, builtinop op) {

@@ -65,7 +65,9 @@ TEST(STGTranslation, TranslatesAbstractions) {
 
 TEST(STGTranslation, TranslatesLet) {
     std::unique_ptr<Program> program = std::make_unique<Program>();
-    int result = parse_string_no_prelude("x t = let { a=t; b=a; c=let { t='a' } in t; f=let { a=b; b=a } in 'b' } in let { g=f } in f", program.get());
+    int result = parse_string_no_prelude(
+            "x t = let { a=t; b=a; c=let { t='a' } in t; f=let { a=b; b=a } in 'b' } in let { g=f } in f",
+            program.get());
     ASSERT_EQ(result, 0);
     auto translated = translate(program);
     EXPECT_EQ(translated->bindings.at("x")->free_variables.size(), 1);
@@ -209,7 +211,9 @@ TEST(STGTranslation, TranslatesApplications) {
     EXPECT_EQ(dynamic_cast<STGApplication*>(translated->bindings.at("b")->expr.get())->arguments[2], "d");
 
     program = std::make_unique<Program>();
-    result = parse_string_no_prelude("b = (let { t = f } in (f g)) (let { q = r } in (q t)) c d", program.get());
+    result = parse_string_no_prelude(
+            "b = (let { t = f } in (f g)) (let { q = r } in (q t)) c d",
+            program.get());
     ASSERT_EQ(result, 0);
     translated = translate(program);
     EXPECT_VARIABLE(translated->bindings.at(".0"), "r");
@@ -281,7 +285,9 @@ TEST(STGTranslation, TranslatesCase) {
     EXPECT_VARIABLE(translated->bindings.at("a"), ".0");
 
     program = std::make_unique<Program>();
-    result = parse_string_no_prelude("a = case 'a' of { 'a' -> '0' ; 'b' -> let { a = 'g' } in '1' }", program.get());
+    result = parse_string_no_prelude(
+            "a = case 'a' of { 'a' -> '0' ; 'b' -> let { a = 'g' } in '1' }",
+            program.get());
     ASSERT_EQ(result, 0);
     translated = translate(program);
     EXPECT_CHAR(translated->bindings.at(".0"), 'g');
@@ -301,7 +307,7 @@ TEST(STGTranslation, TranslatesCase) {
     EXPECT_EQ(std::get<char>(dynamic_cast<STGLiteral*>(cAsE->alts[1].second.get())->value), '1');
     EXPECT_EQ(cAsE->default_var, "");
     ASSERT_EQ(cAsE->default_expr->get_form(), stgform::variable);
-    EXPECT_EQ(dynamic_cast<STGVariable*>(cAsE->default_expr.get())->name, ".case_error");
+    EXPECT_EQ(dynamic_cast<STGVariable*>(cAsE->default_expr.get())->name, "case_error");
 
     program = std::make_unique<Program>();
     result = parse_string_no_prelude("a = case 'a' of { k@'a' -> k ; 'b' -> '1' }", program.get());
@@ -325,7 +331,7 @@ TEST(STGTranslation, TranslatesCase) {
     EXPECT_EQ(std::get<char>(dynamic_cast<STGLiteral*>(cAsE->alts[1].second.get())->value), '1');
     EXPECT_EQ(cAsE->default_var, "");
     ASSERT_EQ(cAsE->default_expr->get_form(), stgform::variable);
-    EXPECT_EQ(dynamic_cast<STGVariable*>(cAsE->default_expr.get())->name, ".case_error");
+    EXPECT_EQ(dynamic_cast<STGVariable*>(cAsE->default_expr.get())->name, "case_error");
 
     program = std::make_unique<Program>();
     result = parse_string_no_prelude("a = case 'a' of { 'a' -> k ; _ -> '1' }", program.get());
@@ -367,4 +373,186 @@ TEST(STGTranslation, TranslatesCase) {
     EXPECT_EQ(cAsE->default_var, "k");
     ASSERT_EQ(cAsE->default_expr->get_form(), stgform::variable);
     EXPECT_EQ(dynamic_cast<STGVariable*>(cAsE->default_expr.get())->name, "k");
+
+    program = std::make_unique<Program>();
+    result = parse_string_no_prelude(
+            "data Hi = Nil | Nill\n;a = case 'a' of { Nil -> 'a' ; Nill -> 'b' ; Nil -> 'c' }",
+            program.get());
+    ASSERT_EQ(result, 0);
+    translated = translate(program);
+    EXPECT_EQ(translated->bindings.at("a")->free_variables.size(), 0);
+    EXPECT_EQ(translated->bindings.at("a")->argument_variables.size(), 0);
+    EXPECT_EQ(translated->bindings.at("a")->updatable, true);
+    ASSERT_EQ(translated->bindings.at("a")->expr->get_form(), stgform::algebraiccase);
+    auto CaSe = dynamic_cast<STGAlgebraicCase*>(translated->bindings.at("a")->expr.get());
+    ASSERT_EQ(CaSe->expr->get_form(), stgform::literal);
+    EXPECT_EQ(std::get<char>(dynamic_cast<STGLiteral*>(CaSe->expr.get())->value), 'a');
+    ASSERT_EQ(CaSe->alts.size(), 2);
+    EXPECT_EQ(CaSe->alts[0].first.constructor_name, "Nil");
+    EXPECT_EQ(CaSe->alts[0].first.variables.size(), 0);
+    ASSERT_EQ(CaSe->alts[0].second->get_form(), stgform::literal);
+    EXPECT_EQ(std::get<char>(dynamic_cast<STGLiteral*>(CaSe->alts[0].second.get())->value), 'a');
+    EXPECT_EQ(CaSe->alts[1].first.constructor_name, "Nill");
+    EXPECT_EQ(CaSe->alts[1].first.variables.size(), 0);
+    ASSERT_EQ(CaSe->alts[1].second->get_form(), stgform::literal);
+    EXPECT_EQ(std::get<char>(dynamic_cast<STGLiteral*>(CaSe->alts[1].second.get())->value), 'b');
+    EXPECT_EQ(CaSe->default_var, "");
+    ASSERT_EQ(CaSe->default_expr->get_form(), stgform::variable);
+    EXPECT_EQ(dynamic_cast<STGVariable*>(CaSe->default_expr.get())->name, "case_error");
+
+    program = std::make_unique<Program>();
+    result = parse_string_no_prelude(
+            "data List = Cons Int List | Nil\n;a l = case l of { Cons x@_ xs -> x ; Cons y ys -> j }",
+            program.get());
+    ASSERT_EQ(result, 0);
+    translated = translate(program);
+    EXPECT_EQ(translated->bindings.at("a")->free_variables.size(), 0);
+    EXPECT_EQ(translated->bindings.at("a")->argument_variables.size(), 1);
+    EXPECT_EQ(translated->bindings.at("a")->argument_variables[0], ".0");
+    EXPECT_EQ(translated->bindings.at("a")->updatable, false);
+    ASSERT_EQ(translated->bindings.at("a")->expr->get_form(), stgform::algebraiccase);
+    CaSe = dynamic_cast<STGAlgebraicCase*>(translated->bindings.at("a")->expr.get());
+    ASSERT_EQ(CaSe->expr->get_form(), stgform::variable);
+    EXPECT_EQ(dynamic_cast<STGVariable*>(CaSe->expr.get())->name, ".0");
+    ASSERT_EQ(CaSe->alts.size(), 1);
+    EXPECT_EQ(CaSe->alts[0].first.constructor_name, "Cons");
+    EXPECT_EQ(CaSe->alts[0].first.variables.size(), 2);
+    EXPECT_EQ(CaSe->alts[0].first.variables[0], ".1");
+    EXPECT_EQ(CaSe->alts[0].first.variables[1], ".2");
+    ASSERT_EQ(CaSe->alts[0].second->get_form(), stgform::variable);
+    EXPECT_EQ(dynamic_cast<STGVariable*>(CaSe->alts[0].second.get())->name, ".1");
+    EXPECT_EQ(CaSe->default_var, "");
+    ASSERT_EQ(CaSe->default_expr->get_form(), stgform::variable);
+    EXPECT_EQ(dynamic_cast<STGVariable*>(CaSe->default_expr.get())->name, "case_error");
+
+    program = std::make_unique<Program>();
+    result = parse_string_no_prelude(
+            "data List = Cons Int List | Nil\n;a l = case l of { Cons _ (Cons x xs) -> x ; Cons _ (Nil) -> 1 }",
+            program.get());
+    ASSERT_EQ(result, 0);
+    translated = translate(program);
+    EXPECT_EQ(translated->bindings.at("a")->free_variables.size(), 0);
+    EXPECT_EQ(translated->bindings.at("a")->argument_variables.size(), 1);
+    EXPECT_EQ(translated->bindings.at("a")->argument_variables[0], ".0");
+    EXPECT_EQ(translated->bindings.at("a")->updatable, false);
+    ASSERT_EQ(translated->bindings.at("a")->expr->get_form(), stgform::algebraiccase);
+    CaSe = dynamic_cast<STGAlgebraicCase*>(translated->bindings.at("a")->expr.get());
+    ASSERT_EQ(CaSe->expr->get_form(), stgform::variable);
+    EXPECT_EQ(dynamic_cast<STGVariable*>(CaSe->expr.get())->name, ".0");
+    ASSERT_EQ(CaSe->alts.size(), 1);
+    EXPECT_EQ(CaSe->alts[0].first.constructor_name, "Cons");
+    EXPECT_EQ(CaSe->alts[0].first.variables.size(), 2);
+    EXPECT_EQ(CaSe->alts[0].first.variables[0], ".1");
+    EXPECT_EQ(CaSe->alts[0].first.variables[1], ".2");
+    ASSERT_EQ(CaSe->alts[0].second->get_form(), stgform::algebraiccase);
+    EXPECT_EQ(CaSe->default_var, "");
+    ASSERT_EQ(CaSe->default_expr->get_form(), stgform::variable);
+    EXPECT_EQ(dynamic_cast<STGVariable*>(CaSe->default_expr.get())->name, "case_error");
+    CaSe = dynamic_cast<STGAlgebraicCase*>(CaSe->alts[0].second.get());
+    ASSERT_EQ(CaSe->expr->get_form(), stgform::variable);
+    EXPECT_EQ(dynamic_cast<STGVariable*>(CaSe->expr.get())->name, ".2");
+    ASSERT_EQ(CaSe->alts.size(), 2);
+    EXPECT_EQ(CaSe->alts[0].first.constructor_name, "Cons");
+    EXPECT_EQ(CaSe->alts[0].first.variables.size(), 2);
+    EXPECT_EQ(CaSe->alts[0].first.variables[0], ".3");
+    EXPECT_EQ(CaSe->alts[0].first.variables[1], ".4");
+    ASSERT_EQ(CaSe->alts[0].second->get_form(), stgform::variable);
+    EXPECT_EQ(dynamic_cast<STGVariable*>(CaSe->alts[0].second.get())->name, ".3");
+    EXPECT_EQ(CaSe->alts[1].first.constructor_name, "Nil");
+    EXPECT_EQ(CaSe->alts[1].first.variables.size(), 0);
+    ASSERT_EQ(CaSe->alts[1].second->get_form(), stgform::literal);
+    EXPECT_EQ(std::get<int>(dynamic_cast<STGLiteral*>(CaSe->alts[1].second.get())->value), 1);
+    EXPECT_EQ(CaSe->default_var, "");
+    ASSERT_EQ(CaSe->default_expr->get_form(), stgform::variable);
+    EXPECT_EQ(dynamic_cast<STGVariable*>(CaSe->default_expr.get())->name, "case_error");
+
+    program = std::make_unique<Program>();
+    result = parse_string_no_prelude(
+            "data List = Cons Int List | Nil;"
+            "data Pair = Pair List List;"
+            "a p = case p of { Pair Nil ys -> let { a = 'b' } in ys ; Pair xs Nil -> xs ; Pair (Cons 1 xs) (Cons 2 ys) -> xs }",
+            program.get());
+    ASSERT_EQ(result, 0);
+    translated = translate(program);
+    EXPECT_CHAR(translated->bindings.at(".7"), 'b');
+    EXPECT_EQ(translated->bindings.at("a")->free_variables.size(), 0);
+    EXPECT_EQ(translated->bindings.at("a")->argument_variables.size(), 1);
+    EXPECT_EQ(translated->bindings.at("a")->argument_variables[0], ".0");
+    EXPECT_EQ(translated->bindings.at("a")->updatable, false);
+    ASSERT_EQ(translated->bindings.at("a")->expr->get_form(), stgform::algebraiccase);
+    CaSe = dynamic_cast<STGAlgebraicCase*>(translated->bindings.at("a")->expr.get());
+    ASSERT_EQ(CaSe->expr->get_form(), stgform::variable);
+    EXPECT_EQ(dynamic_cast<STGVariable*>(CaSe->expr.get())->name, ".0");
+    ASSERT_EQ(CaSe->alts.size(), 1);
+    EXPECT_EQ(CaSe->alts[0].first.constructor_name, "Pair");
+    EXPECT_EQ(CaSe->alts[0].first.variables.size(), 2);
+    EXPECT_EQ(CaSe->alts[0].first.variables[0], ".1");
+    EXPECT_EQ(CaSe->alts[0].first.variables[1], ".2");
+    ASSERT_EQ(CaSe->alts[0].second->get_form(), stgform::algebraiccase);
+    EXPECT_EQ(CaSe->default_var, "");
+    ASSERT_EQ(CaSe->default_expr->get_form(), stgform::variable);
+    EXPECT_EQ(dynamic_cast<STGVariable*>(CaSe->default_expr.get())->name, "case_error");
+    CaSe = dynamic_cast<STGAlgebraicCase*>(CaSe->alts[0].second.get());
+    ASSERT_EQ(CaSe->expr->get_form(), stgform::variable);
+    EXPECT_EQ(dynamic_cast<STGVariable*>(CaSe->expr.get())->name, ".1");
+    ASSERT_EQ(CaSe->alts.size(), 1);
+    EXPECT_EQ(CaSe->alts[0].first.constructor_name, "Nil");
+    EXPECT_EQ(CaSe->alts[0].first.variables.size(), 0);
+    ASSERT_EQ(CaSe->alts[0].second->get_form(), stgform::variable);
+    EXPECT_EQ(dynamic_cast<STGVariable*>(CaSe->alts[0].second.get())->name, ".2");
+    EXPECT_EQ(CaSe->default_var, "");
+    ASSERT_EQ(CaSe->default_expr->get_form(), stgform::algebraiccase);
+    CaSe = dynamic_cast<STGAlgebraicCase*>(CaSe->default_expr.get());
+    ASSERT_EQ(CaSe->expr->get_form(), stgform::variable);
+    EXPECT_EQ(dynamic_cast<STGVariable*>(CaSe->expr.get())->name, ".2");
+    ASSERT_EQ(CaSe->alts.size(), 1);
+    EXPECT_EQ(CaSe->alts[0].first.constructor_name, "Nil");
+    EXPECT_EQ(CaSe->alts[0].first.variables.size(), 0);
+    ASSERT_EQ(CaSe->alts[0].second->get_form(), stgform::variable);
+    EXPECT_EQ(dynamic_cast<STGVariable*>(CaSe->alts[0].second.get())->name, ".1");
+    EXPECT_EQ(CaSe->default_var, "");
+    ASSERT_EQ(CaSe->default_expr->get_form(), stgform::algebraiccase);
+    CaSe = dynamic_cast<STGAlgebraicCase*>(CaSe->default_expr.get());
+    ASSERT_EQ(CaSe->expr->get_form(), stgform::variable);
+    EXPECT_EQ(dynamic_cast<STGVariable*>(CaSe->expr.get())->name, ".1");
+    ASSERT_EQ(CaSe->alts.size(), 1);
+    EXPECT_EQ(CaSe->alts[0].first.constructor_name, "Cons");
+    EXPECT_EQ(CaSe->alts[0].first.variables.size(), 2);
+    EXPECT_EQ(CaSe->alts[0].first.variables[0], ".3");
+    EXPECT_EQ(CaSe->alts[0].first.variables[1], ".4");
+    ASSERT_EQ(CaSe->alts[0].second->get_form(), stgform::literalcase);
+    EXPECT_EQ(CaSe->default_var, "");
+    ASSERT_EQ(CaSe->default_expr->get_form(), stgform::variable);
+    EXPECT_EQ(dynamic_cast<STGVariable*>(CaSe->default_expr.get())->name, "case_error");
+    cAsE = dynamic_cast<STGLiteralCase*>(CaSe->alts[0].second.get());
+    ASSERT_EQ(cAsE->expr->get_form(), stgform::variable);
+    EXPECT_EQ(dynamic_cast<STGVariable*>(cAsE->expr.get())->name, ".3");
+    ASSERT_EQ(cAsE->alts.size(), 1);
+    EXPECT_EQ(std::get<int>(cAsE->alts[0].first.value), 1);
+    ASSERT_EQ(cAsE->alts[0].second->get_form(), stgform::algebraiccase);
+    EXPECT_EQ(cAsE->default_var, "");
+    ASSERT_EQ(cAsE->default_expr->get_form(), stgform::variable);
+    EXPECT_EQ(dynamic_cast<STGVariable*>(cAsE->default_expr.get())->name, "case_error");
+    CaSe = dynamic_cast<STGAlgebraicCase*>(cAsE->alts[0].second.get());
+    ASSERT_EQ(CaSe->expr->get_form(), stgform::variable);
+    EXPECT_EQ(dynamic_cast<STGVariable*>(CaSe->expr.get())->name, ".2");
+    ASSERT_EQ(CaSe->alts.size(), 1);
+    EXPECT_EQ(CaSe->alts[0].first.constructor_name, "Cons");
+    EXPECT_EQ(CaSe->alts[0].first.variables.size(), 2);
+    EXPECT_EQ(CaSe->alts[0].first.variables[0], ".5");
+    EXPECT_EQ(CaSe->alts[0].first.variables[1], ".6");
+    ASSERT_EQ(CaSe->alts[0].second->get_form(), stgform::literalcase);
+    EXPECT_EQ(CaSe->default_var, "");
+    ASSERT_EQ(CaSe->default_expr->get_form(), stgform::variable);
+    EXPECT_EQ(dynamic_cast<STGVariable*>(CaSe->default_expr.get())->name, "case_error");
+    cAsE = dynamic_cast<STGLiteralCase*>(CaSe->alts[0].second.get());
+    ASSERT_EQ(cAsE->expr->get_form(), stgform::variable);
+    EXPECT_EQ(dynamic_cast<STGVariable*>(cAsE->expr.get())->name, ".5");
+    ASSERT_EQ(cAsE->alts.size(), 1);
+    EXPECT_EQ(std::get<int>(cAsE->alts[0].first.value), 2);
+    ASSERT_EQ(cAsE->alts[0].second->get_form(), stgform::variable);
+    EXPECT_EQ(dynamic_cast<STGVariable*>(cAsE->alts[0].second.get())->name, ".4");
+    EXPECT_EQ(cAsE->default_var, "");
+    ASSERT_EQ(cAsE->default_expr->get_form(), stgform::variable);
+    EXPECT_EQ(dynamic_cast<STGVariable*>(cAsE->default_expr.get())->name, "case_error");
 }

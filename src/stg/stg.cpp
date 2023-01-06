@@ -2,6 +2,7 @@
 #include <map>
 #include <memory>
 #include <algorithm>
+#include <list>
 #include "stg/stg.hpp"
 #include "parser/syntax.hpp"
 #include "types/type_check.hpp"
@@ -256,17 +257,254 @@ std::unique_ptr<STGExpression> translate_alt_expression(
     return alt_expr;
 }
 
+std::unique_ptr<STGExpression> copy(const std::unique_ptr<STGExpression> &expr);
+
+std::unique_ptr<STGLambdaForm> copy(const std::unique_ptr<STGLambdaForm> &lambda_form) {
+    return std::make_unique<STGLambdaForm>(
+            lambda_form->free_variables,
+            lambda_form->argument_variables,
+            lambda_form->updatable,
+            copy(lambda_form->expr));
+}
+
+std::unique_ptr<STGExpression> copy(const std::unique_ptr<STGExpression> &expr) {
+    switch(expr->get_form()) {
+        case stgform::variable:
+            return std::make_unique<STGVariable>(dynamic_cast<STGVariable*>(expr.get())->name);
+        case stgform::constructor:
+            return std::make_unique<STGConstructor>(
+                    dynamic_cast<STGConstructor*>(expr.get())->constructor_name,
+                    dynamic_cast<STGConstructor*>(expr.get())->arguments);
+        case stgform::literal:
+            return std::make_unique<STGLiteral>(dynamic_cast<STGLiteral*>(expr.get())->value);
+        case stgform::literalcase: {
+            auto cAsE = dynamic_cast<STGLiteralCase*>(expr.get());
+            auto default_expr = copy(cAsE->default_expr);
+            auto default_var = cAsE->default_var;
+            auto expression = copy(cAsE->expr);
+            std::vector<std::pair<STGLiteral, std::unique_ptr<STGExpression>>> alts;
+            for (const auto &[lit, e]: cAsE->alts) {
+                alts.emplace_back(lit, copy(e));
+            }
+            return std::make_unique<STGLiteralCase>(
+                    std::move(expression),
+                    std::move(alts),
+                    default_var,
+                    std::move(default_expr));
+        }
+        case stgform::algebraiccase: {
+            auto cAsE = dynamic_cast<STGAlgebraicCase*>(expr.get());
+            auto default_expr = copy(cAsE->default_expr);
+            auto default_var = cAsE->default_var;
+            auto expression = copy(cAsE->expr);
+            std::vector<std::pair<STGPattern, std::unique_ptr<STGExpression>>> alts;
+            for (const auto &[pat, e]: cAsE->alts) {
+                alts.emplace_back(pat, copy(e));
+            }
+            return std::make_unique<STGAlgebraicCase>(
+                    std::move(expression),
+                    std::move(alts),
+                    default_var,
+                    std::move(default_expr));
+        }
+        case stgform::application:
+            return std::make_unique<STGApplication>(
+                    dynamic_cast<STGApplication*>(expr.get())->lhs,
+                    dynamic_cast<STGApplication*>(expr.get())->arguments);
+        case stgform::let: {
+            auto let = dynamic_cast<STGLet*>(expr.get());
+            std::map<std::string, std::unique_ptr<STGLambdaForm>> bindings;
+            for (const auto &[name, lambda_form]: let->bindings) {
+                bindings[name] = copy(lambda_form);
+            }
+            return std::make_unique<STGLet>(
+                    std::move(bindings),
+                    copy(let->expr),
+                    let->recursive);
+        }
+        case stgform::primitiveop:
+            return std::make_unique<STGPrimitiveOp>(
+                    dynamic_cast<STGPrimitiveOp*>(expr.get())->left,
+                    dynamic_cast<STGPrimitiveOp*>(expr.get())->right,
+                    dynamic_cast<STGPrimitiveOp*>(expr.get())->op);
+    }
+}
+
 std::unique_ptr<STGExpression> translate_case(
         const std::vector<std::string> &variables,
-        const std::vector<std::tuple<std::vector<Pattern*>, std::map<std::string, std::string>, Expression*>> &alternatives,
-        const std::vector<std::string> &variables_bound_in_pattern,
+        const std::list<std::tuple<std::list<Pattern*>, std::map<std::string, std::string>, const std::unique_ptr<Expression>*>> &alternatives,
+        const std::vector<std::string> &names_bound_in_pattern,
         std::unique_ptr<STGExpression> &&default_expr,
         unsigned long *next_variable_name,
-        const std::map<std::string, std::string> &variable_renamings,
         const std::map<std::string, size_t> &data_constructor_arities,
         std::vector<std::map<std::string, std::unique_ptr<STGLambdaForm>>> &definitions,
         std::set<std::string> &free_variables) {
+    if (variables.empty()) {
+        const auto &[_, variable_renamings, expr] = *alternatives.begin();
+        return translate_alt_expression(
+                *expr,
+                next_variable_name,
+                variable_renamings,
+                data_constructor_arities,
+                names_bound_in_pattern,
+                definitions,
+                free_variables);
+    }
 
+    std::unique_ptr<STGExpression> next_group = std::move(default_expr);
+    std::list<std::tuple<
+            std::list<Pattern*>,
+            std::map<std::string, std::string>,
+            const std::unique_ptr<Expression>*>> variable_alts;
+    std::map<std::string, std::list<std::tuple<
+            std::list<Pattern*>,
+            std::map<std::string, std::string>,
+            const std::unique_ptr<Expression>*>>> constructor_alts;
+    std::map<std::variant<int, char>, std::list<std::tuple<
+            std::list<Pattern*>,
+            std::map<std::string, std::string>,
+            const std::unique_ptr<Expression>*>>> literal_alts;
+
+    for (auto it = alternatives.rbegin(); ; ++it) {
+        std::list<Pattern*> patterns;
+        std::map<std::string, std::string> variable_renamings;
+        const std::unique_ptr<Expression>* expr;
+        patternform form;
+
+        if (it != alternatives.rend()) {
+            patterns = std::get<0>(*it);
+            variable_renamings = std::get<1>(*it);
+            expr = std::get<2>(*it);
+            form = (*patterns.begin())->get_form();
+            for (const auto &as: (*patterns.begin())->as) {
+                variable_renamings[as] = variables[0];
+            }
+        }
+
+        if (!variable_alts.empty() && (it == alternatives.rend() || (form != patternform::variable && form != patternform::wild))) {
+            std::vector<std::string> new_variables;
+            for (auto vit = variables.begin()+1; vit != variables.end(); vit++) {
+                new_variables.push_back(*vit);
+            }
+            next_group = translate_case(
+                    new_variables,
+                    variable_alts,
+                    names_bound_in_pattern,
+                    std::move(next_group),
+                    next_variable_name,
+                    data_constructor_arities,
+                    definitions,
+                    free_variables);
+            variable_alts.clear();
+        } else if (!constructor_alts.empty() && (it == alternatives.rend() || form != patternform::constructor)) {
+            std::vector<std::pair<STGPattern, std::unique_ptr<STGExpression>>> translated_alts;
+            for (const auto &[constructor_name, alts]: constructor_alts) {
+                std::vector<std::string> argument_variables;
+                for (int i = 0; i < data_constructor_arities.at(constructor_name); i++) {
+                    argument_variables.push_back("." + std::to_string((*next_variable_name)++));
+                }
+
+                std::vector<std::string> bound_names = names_bound_in_pattern;
+                bound_names.insert(
+                        bound_names.end(),
+                        argument_variables.begin(),
+                        argument_variables.end());
+                std::vector<std::string> new_variables = argument_variables;
+                for (auto vit = variables.begin()+1; vit != variables.end(); vit++) {
+                    new_variables.push_back(*vit);
+                }
+                auto alt_expr = translate_case(
+                        new_variables,
+                        alts,
+                        bound_names,
+                        copy(next_group),
+                        next_variable_name,
+                        data_constructor_arities,
+                        definitions,
+                        free_variables);
+
+                translated_alts.emplace_back(
+                        STGPattern(constructor_name, argument_variables),
+                        std::move(alt_expr));
+            }
+
+            next_group = std::make_unique<STGAlgebraicCase>(
+                    std::make_unique<STGVariable>(variables[0]),
+                    std::move(translated_alts),
+                    "",
+                    std::move(next_group));
+
+            constructor_alts.clear();
+        } else if (!literal_alts.empty() && (it == alternatives.rend() || form != patternform::literal)) {
+            std::vector<std::pair<STGLiteral, std::unique_ptr<STGExpression>>> translated_alts;
+            for (const auto &[literal_value, alts]: literal_alts) {
+                std::vector<std::string> new_variables;
+                for (auto vit = variables.begin()+1; vit != variables.end(); vit++) {
+                    new_variables.push_back(*vit);
+                }
+                auto alt_expr = translate_case(
+                        new_variables,
+                        alts,
+                        names_bound_in_pattern,
+                        copy(next_group),
+                        next_variable_name,
+                        data_constructor_arities,
+                        definitions,
+                        free_variables);
+
+                translated_alts.emplace_back(
+                        STGLiteral(literal_value),
+                        std::move(alt_expr));
+            }
+
+            next_group = std::make_unique<STGLiteralCase>(
+                    std::make_unique<STGVariable>(variables[0]),
+                    std::move(translated_alts),
+                    "",
+                    std::move(next_group));
+
+            literal_alts.clear();
+        }
+
+        if (it == alternatives.rend()) {
+            break;
+        }
+
+        if (form == patternform::variable || form == patternform::wild) {
+            if (form == patternform::variable) {
+                std::string name = dynamic_cast<VariablePattern *>(*patterns.begin())->name;
+                variable_renamings[name] = variables[0];
+            }
+            patterns.pop_front();
+            variable_alts.emplace_front(patterns, variable_renamings, expr);
+        } else if (form == patternform::constructor) {
+            std::string constructor_name = dynamic_cast<ConstructorPattern*>(*patterns.begin())->name;
+            if (constructor_alts.count(constructor_name) == 0) {
+                constructor_alts[constructor_name] = std::list<std::tuple<
+                        std::list<Pattern*>,
+                        std::map<std::string, std::string>,
+                        const std::unique_ptr<Expression>*>>();
+            }
+            std::list<Pattern*> sub_patterns;
+            for (const auto &sub_pattern: dynamic_cast<ConstructorPattern*>(*patterns.begin())->args) {
+                sub_patterns.push_back(sub_pattern.get());
+            }
+            patterns.pop_front();
+            patterns.splice(patterns.begin(), sub_patterns);
+            constructor_alts[constructor_name].emplace_front(patterns, variable_renamings, expr);
+        } else if (form == patternform::literal) {
+            auto literal_value = dynamic_cast<LiteralPattern*>(*patterns.begin())->value;
+            if (literal_alts.count(literal_value) == 0) {
+                literal_alts[literal_value] = std::list<std::tuple<
+                        std::list<Pattern*>,
+                        std::map<std::string, std::string>,
+                        const std::unique_ptr<Expression>*>>();
+            }
+            patterns.pop_front();
+            literal_alts[literal_value].emplace_front(patterns, variable_renamings, expr);
+        }
+    }
+    return std::move(next_group);
 }
 
 std::pair<std::unique_ptr<STGLambdaForm>, std::vector<std::map<std::string, std::unique_ptr<STGLambdaForm>>>> translate_case(
@@ -316,16 +554,16 @@ std::pair<std::unique_ptr<STGLambdaForm>, std::vector<std::map<std::string, std:
         }
     } else if (first_alt_pattern_form == patternform::literal || first_alt_pattern_form == patternform::constructor) {
         std::string default_var;
-        std::unique_ptr<STGExpression> default_expr = std::make_unique<STGVariable>(".case_error");
+        std::unique_ptr<STGExpression> default_expr = std::make_unique<STGVariable>("case_error");
         std::set<std::string> free_variables;
 
         std::vector<std::pair<STGLiteral, std::unique_ptr<STGExpression>>> literal_alts;
         std::map<
                 std::string,
-                std::vector<std::tuple<
-                        std::vector<Pattern*>,
+                std::list<std::tuple<
+                        std::list<Pattern*>,
                         std::map<std::string, std::string>,
-                        Expression*>>> constructor_alts;
+                        const std::unique_ptr<Expression>*>>> constructor_alts;
 
         for (const auto &alt: cAsE->alts) {
             std::map<std::string, std::string> local_variable_renamings = variable_renamings;
@@ -342,48 +580,32 @@ std::pair<std::unique_ptr<STGLambdaForm>, std::vector<std::map<std::string, std:
             if (alt.first->get_form() == patternform::constructor) {
                 std::string constructor_name = dynamic_cast<ConstructorPattern*>(alt.first.get())->name;
                 if (constructor_alts.count(constructor_name) == 0) {
-                    constructor_alts[constructor_name] = std::vector<std::tuple<
-                            std::vector<Pattern*>,
+                    constructor_alts[constructor_name] = std::list<std::tuple<
+                            std::list<Pattern*>,
                             std::map<std::string, std::string>,
-                            Expression*>>();
+                            const std::unique_ptr<Expression>*>>();
                 }
-                std::vector<Pattern*> sub_patterns;
+                std::list<Pattern*> sub_patterns;
                 for (const auto &sub_pattern: dynamic_cast<ConstructorPattern*>(alt.first.get())->args) {
                     sub_patterns.push_back(sub_pattern.get());
                 }
                 constructor_alts[constructor_name].emplace_back(
                         sub_patterns,
                         local_variable_renamings,
-                        alt.second.get());
-            } else if (first_alt_pattern_form == patternform::constructor &&
-                    (alt.first->get_form() == patternform::variable || alt.first->get_form() == patternform::wild)) {
-                    if (alt.first->get_form() == patternform::variable) {
+                        &alt.second);
+            } else {
+                std::vector<std::string> names_bound_in_pattern;
+                if (alt.first->get_form() == patternform::variable) {
+                    std::string name = dynamic_cast<VariablePattern *>(alt.first.get())->name;
+                    if (first_alt_pattern_form == patternform::constructor) {
                         if (as.empty()) {
                             as = "." + std::to_string((*next_variable_name)++);
                             add_definition(as, std::move(translated.first), definitions);
                         }
-                        local_variable_renamings[dynamic_cast<VariablePattern*>(alt.first.get())->name] = as;
+                        local_variable_renamings[name] = as;
+                    } else {
+                        names_bound_in_pattern.push_back(name);
                     }
-                    auto alt_expr_translated = translate_expression(
-                            alt.second,
-                            next_variable_name,
-                            local_variable_renamings,
-                            data_constructor_arities);
-
-                    for (auto &definition: alt_expr_translated.second) {
-                        definitions.push_back(std::move(definition));
-                    }
-
-                    std::string name = "." + std::to_string((*next_variable_name)++);
-                    add_definition(name, std::move(alt_expr_translated.first), definitions);
-                    free_variables.insert(name);
-                    default_expr = std::make_unique<STGVariable>(name);
-                    break;
-            } else {
-                std::vector<std::string> names_bound_in_pattern;
-                if (alt.first->get_form() == patternform::variable) {
-                    std::string name = dynamic_cast<VariablePattern*>(alt.first.get())->name;
-                    names_bound_in_pattern.push_back(name);
                 }
 
                 auto alt_expr = translate_alt_expression(
@@ -402,7 +624,9 @@ std::pair<std::unique_ptr<STGLambdaForm>, std::vector<std::map<std::string, std:
                     default_expr = std::move(alt_expr);
                     break;
                 } else if (alt.first->get_form() == patternform::variable) {
-                    default_var = dynamic_cast<VariablePattern *>(alt.first.get())->name;
+                    if (first_alt_pattern_form != patternform::constructor) {
+                        default_var = dynamic_cast<VariablePattern *>(alt.first.get())->name;
+                    }
                     default_expr = std::move(alt_expr);
                     break;
                 }
@@ -410,7 +634,7 @@ std::pair<std::unique_ptr<STGLambdaForm>, std::vector<std::map<std::string, std:
         }
 
         std::vector<std::pair<STGPattern, std::unique_ptr<STGExpression>>> translated_alts;
-        for (const auto &[constructor_name, constructor_alts]: constructor_alts) {
+        for (const auto &[constructor_name, alts]: constructor_alts) {
             std::vector<std::string> argument_variables;
             for (int i = 0; i < data_constructor_arities.at(constructor_name); i++) {
                 argument_variables.push_back("." + std::to_string((*next_variable_name)++));
@@ -418,11 +642,10 @@ std::pair<std::unique_ptr<STGLambdaForm>, std::vector<std::map<std::string, std:
 
             auto alt_expr = translate_case(
                     argument_variables,
-                    constructor_alts,
+                    alts,
                     argument_variables,
-                    std::make_unique<STGVariable>(dynamic_cast<STGVariable*>(default_expr.get())->name),
+                    copy(default_expr),
                     next_variable_name,
-                    variable_renamings,
                     data_constructor_arities,
                     definitions,
                     free_variables);
