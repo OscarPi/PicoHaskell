@@ -1033,10 +1033,17 @@ void remove_globals_from_free_variables_list_and_mark_partial_applications_as_no
             lambda_form->updatable = false;
         }
     }
+
+    std::map<std::string, size_t> local_number_of_arguments = number_of_arguments;
+
+    for (const auto &v: lambda_form->argument_variables) {
+        local_number_of_arguments[v] = 0;
+    }
+
     remove_globals_from_free_variables_list_and_mark_partial_applications_as_non_updatable(
             lambda_form->expr,
             globals,
-            number_of_arguments);
+            local_number_of_arguments);
 }
 
 std::unique_ptr<STGProgram> translate(const std::unique_ptr<Program> &program) {
