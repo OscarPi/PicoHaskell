@@ -17,9 +17,9 @@ struct STGExpression {
 };
 
 struct STGLambdaForm {
-    const std::set<std::string> free_variables;
+    std::set<std::string> free_variables;
     const std::vector<std::string> argument_variables;
-    const bool updatable;
+    bool updatable;
     std::unique_ptr<STGExpression> expr;
     STGLambdaForm(
             const std::set<std::string> &free_variables,

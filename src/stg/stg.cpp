@@ -950,6 +950,95 @@ std::pair<std::unique_ptr<STGLambdaForm>, std::vector<std::map<std::string, std:
     }
 }
 
+void remove_globals_from_free_variables_list_and_mark_partial_applications_as_non_updatable(
+        const std::unique_ptr<STGLambdaForm> &lambda_form,
+        const std::set<std::string> &globals,
+        const std::map<std::string, size_t> &number_of_arguments);
+
+void remove_globals_from_free_variables_list_and_mark_partial_applications_as_non_updatable(
+        const std::unique_ptr<STGExpression> &expr,
+        const std::set<std::string> &globals,
+        const std::map<std::string, size_t> &number_of_arguments) {
+    if (expr->get_form() == stgform::let) {
+        auto let = dynamic_cast<STGLet*>(expr.get());
+        std::map<std::string, size_t> local_number_of_arguments = number_of_arguments;
+        for (const auto &[name, lambda_form]: let->bindings) {
+            local_number_of_arguments[name] = lambda_form->argument_variables.size();
+        }
+        for (const auto &[_, lambda_form]: let->bindings) {
+            remove_globals_from_free_variables_list_and_mark_partial_applications_as_non_updatable(
+                    lambda_form,
+                    globals,
+                    local_number_of_arguments);
+        }
+        remove_globals_from_free_variables_list_and_mark_partial_applications_as_non_updatable(
+                let->expr,
+                globals,
+                local_number_of_arguments);
+    } else if (expr->get_form() == stgform::literalcase) {
+        auto cAsE = dynamic_cast<STGLiteralCase*>(expr.get());
+        remove_globals_from_free_variables_list_and_mark_partial_applications_as_non_updatable(
+                cAsE->expr,
+                globals,
+                number_of_arguments);
+        remove_globals_from_free_variables_list_and_mark_partial_applications_as_non_updatable(
+                cAsE->default_expr,
+                globals,
+                number_of_arguments);
+        for (const auto &[_, e]: cAsE->alts) {
+            remove_globals_from_free_variables_list_and_mark_partial_applications_as_non_updatable(
+                    e,
+                    globals,
+                    number_of_arguments);
+        }
+    } else if (expr->get_form() == stgform::algebraiccase) {
+        auto cAsE = dynamic_cast<STGAlgebraicCase*>(expr.get());
+        remove_globals_from_free_variables_list_and_mark_partial_applications_as_non_updatable(
+                cAsE->expr,
+                globals,
+                number_of_arguments);
+        remove_globals_from_free_variables_list_and_mark_partial_applications_as_non_updatable(
+                cAsE->default_expr,
+                globals,
+                number_of_arguments);
+        for (const auto &[p, e]: cAsE->alts) {
+            std::map<std::string, size_t> local_number_of_arguments = number_of_arguments;
+            for (const auto &v: p.variables) {
+                local_number_of_arguments[v] = 0;
+            }
+            remove_globals_from_free_variables_list_and_mark_partial_applications_as_non_updatable(
+                    e,
+                    globals,
+                    local_number_of_arguments);
+        }
+    }
+}
+
+void remove_globals_from_free_variables_list_and_mark_partial_applications_as_non_updatable(
+        const std::unique_ptr<STGLambdaForm> &lambda_form,
+        const std::set<std::string> &globals,
+        const std::map<std::string, size_t> &number_of_arguments) {
+    if (lambda_form->expr->get_form() != stgform::constructor) {
+        for (auto it = lambda_form->free_variables.begin(); it != lambda_form->free_variables.end(); ) {
+            if (globals.count(*it)) {
+                it = lambda_form->free_variables.erase(it);
+            } else {
+                it++;
+            }
+        }
+    }
+    if (lambda_form->expr->get_form() == stgform::application) {
+        auto application = dynamic_cast<STGApplication*>(lambda_form->expr.get());
+        if (application->arguments.size() < number_of_arguments.at(application->lhs)) {
+            lambda_form->updatable = false;
+        }
+    }
+    remove_globals_from_free_variables_list_and_mark_partial_applications_as_non_updatable(
+            lambda_form->expr,
+            globals,
+            number_of_arguments);
+}
+
 std::unique_ptr<STGProgram> translate(const std::unique_ptr<Program> &program) {
     std::map<std::string, std::unique_ptr<STGLambdaForm>> bindings;
     unsigned long next_variable_name = 0;
@@ -969,6 +1058,19 @@ std::unique_ptr<STGProgram> translate(const std::unique_ptr<Program> &program) {
                 bindings[n] = std::move(lambda_form);
             }
         }
+    }
+
+    std::map<std::string, size_t> number_of_arguments;
+    std::set<std::string> globals;
+    for (const auto &[name, lambda_form]: bindings) {
+        number_of_arguments[name] = lambda_form->argument_variables.size();
+        globals.insert(name);
+    }
+    for (const auto &[_, lambda_form]: bindings) {
+        remove_globals_from_free_variables_list_and_mark_partial_applications_as_non_updatable(
+                lambda_form,
+                globals,
+                number_of_arguments);
     }
 
     return std::make_unique<STGProgram>(std::move(bindings));
