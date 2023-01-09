@@ -1073,12 +1073,29 @@ std::unique_ptr<STGProgram> translate(const std::unique_ptr<Program> &program) {
         number_of_arguments[name] = lambda_form->argument_variables.size();
         globals.insert(name);
     }
-    for (const auto &[_, lambda_form]: bindings) {
+
+    std::map<std::string, std::unique_ptr<STGLambdaForm>> used_bindings;
+    std::vector<std::string> to_add = {"main"};
+
+    while (!to_add.empty()) {
+        std::string name = to_add.back();
+        to_add.pop_back();
+        auto lambda_form = std::move(bindings.at(name));
+        for (const auto &depends_on: lambda_form->free_variables) {
+            if (
+                    used_bindings.count(depends_on) == 0 &&
+                    std::count(to_add.begin(), to_add.end(), depends_on) == 0 &&
+                    depends_on != name &&
+                    bindings.count(depends_on) > 0) {
+                to_add.push_back(depends_on);
+            }
+        }
         remove_globals_from_free_variables_list_and_mark_partial_applications_as_non_updatable(
                 lambda_form,
                 globals,
                 number_of_arguments);
+        used_bindings[name] = std::move(lambda_form);
     }
 
-    return std::make_unique<STGProgram>(std::move(bindings));
+    return std::make_unique<STGProgram>(std::move(used_bindings));
 }
