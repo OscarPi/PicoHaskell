@@ -538,3 +538,13 @@ TEST(STGTranslation, TranslatesCase) {
     ASSERT_EQ(cAsE->default_expr->get_form(), stgform::variable);
     EXPECT_EQ(dynamic_cast<STGVariable*>(cAsE->default_expr.get())->name, "case_error");
 }
+
+TEST(STGTranslation, RemovesApostrophesFromNames) {
+    std::unique_ptr<Program> program = std::make_unique<Program>();
+    int result = parse_string_no_prelude("main = t'\n;t'='a'", program.get());
+    ASSERT_EQ(result, 0);
+    auto translated = translate(program);
+    EXPECT_EQ(translated->bindings.size(), 2);
+    EXPECT_VARIABLE(translated->bindings.at("main"), "t$");
+    EXPECT_CHAR(translated->bindings.at("t$"), 'a');
+}

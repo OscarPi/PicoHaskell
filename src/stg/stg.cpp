@@ -30,7 +30,9 @@ std::pair<std::unique_ptr<STGLambdaForm>, std::vector<std::map<std::string, std:
     if (variable_renamings.count(var->name) > 0) {
         translated_var = std::make_unique<STGVariable>(variable_renamings.at(var->name));
     } else {
-        translated_var = std::make_unique<STGVariable>(var->name);
+        std::string new_name = var->name;
+        std::replace(new_name.begin(), new_name.end(), '\'', '$');
+        translated_var = std::make_unique<STGVariable>(new_name);
     }
     std::set<std::string> free_variables;
     free_variables.insert(translated_var->name);
@@ -1057,7 +1059,9 @@ std::unique_ptr<STGProgram> translate(const std::unique_ptr<Program> &program) {
                 std::map<std::string, std::string>(),
                 program->data_constructor_arities);
 
-        bindings[name] = std::move(translated.first);
+        std::string new_name = name;
+        std::replace(new_name.begin(), new_name.end(), '\'', '$');
+        bindings[new_name] = std::move(translated.first);
 
         auto definitions = std::move(translated.second);
         for (auto &definition: definitions) {
