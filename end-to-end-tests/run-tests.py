@@ -38,7 +38,7 @@ test_files = glob.glob(os.path.join(test_programs, "*.hs"))
 results = {}
 
 for f in test_files:
-    results[os.path.basename(f)[:-3]] = "Not run."
+    results[os.path.basename(f)[:-3]] = "not run"
 
 ser = serial.Serial("/dev/serial0", 115200, timeout=10)
 for f in test_files:
