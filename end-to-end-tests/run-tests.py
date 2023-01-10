@@ -5,6 +5,7 @@ import glob
 import sys
 import subprocess
 import serial
+from tabulate import tabulate
 
 def run_command(command):
     print()
@@ -81,7 +82,10 @@ for f in test_files:
         results[test_name] = "failed to read expeted result"
         continue
 
-print()
-print("Results:")
+table = []
 for name, result in results.items():
-    print(name + "\t\t" + result)
+    table.append([name, result])
+
+print()
+print()
+print(tabulate(table, headers=["Name", "Result"]))
