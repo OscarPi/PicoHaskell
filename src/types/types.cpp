@@ -959,7 +959,7 @@ std::set<std::string> find_referenced_type_constructors(std::shared_ptr<Type> t)
     }
 }
 
-void type_check(const std::unique_ptr<Program> &program) {
+void type_check(const std::unique_ptr<Program> &program, bool check_for_main) {
     std::map<std::string, std::shared_ptr<Type>> assumptions;
 
     std::map<std::string, std::shared_ptr<Kind>> type_constructor_kinds;
@@ -1040,12 +1040,32 @@ void type_check(const std::unique_ptr<Program> &program) {
         }
     }
 
-    type_inference_declarations(
+    std::map<std::string, std::shared_ptr<Type>> result = type_inference_declarations(
             assumptions,
             program->data_constructor_arities,
             type_constructor_kinds,
             program->bindings,
             program->type_signatures);
+
+    if (check_for_main) {
+        if (result.count("main") > 0) {
+            auto main_type = follow_substitution(result.at("main"));
+            if (main_type->get_form() == typeform::application) {
+                auto left = follow_substitution(
+                        std::dynamic_pointer_cast<TypeApplication>(main_type)->left);
+                auto right = follow_substitution(
+                        std::dynamic_pointer_cast<TypeApplication>(main_type)->right);
+                if (left->get_form() == typeform::constructor && right->get_form() == typeform::constructor) {
+                    auto left_id = std::dynamic_pointer_cast<TypeConstructor>(left)->id;
+                    auto right_id = std::dynamic_pointer_cast<TypeConstructor>(right)->id;
+                    if (left_id == "[]" && right_id == "Char") {
+                        return;
+                    }
+                }
+            }
+        }
+        throw TypeError("main should be defined and have type [Char].");
+    }
 }
 
 #pragma clang diagnostic pop

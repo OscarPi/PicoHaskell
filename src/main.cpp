@@ -73,7 +73,7 @@ int main (int argc, char *argv[]) {
         return 1;
     }
     try {
-        type_check(program);
+        type_check(program, true);
     } catch (const TypeError &e) {
         std::cerr << e.what() << std::endl;
         std::cerr << "Type inference failed." << std::endl;

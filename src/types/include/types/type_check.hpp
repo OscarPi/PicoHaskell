@@ -4,7 +4,7 @@
 #include <memory>
 #include "types/types.hpp"
 
-void type_check(const std::unique_ptr<Program> &program);
+void type_check(const std::unique_ptr<Program> &program, bool check_for_main);
 std::vector<std::vector<std::string>> dependency_analysis(
         std::vector<std::string> names,
         const std::map<std::string, std::set<std::string>> &dependencies);

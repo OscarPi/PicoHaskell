@@ -34,14 +34,14 @@ TEST(Types, TypeEquality) {
     std::unique_ptr<Program> program = std::make_unique<Program>(); \
     int result = parse_string((str), program.get());                \
     ASSERT_EQ(result, 0);                                           \
-    type_check(program);                                            \
+    type_check(program, false);                                     \
 }
 
 #define EXPECT_NOT_WELL_TYPED(str) {                                \
     std::unique_ptr<Program> program = std::make_unique<Program>(); \
     int result = parse_string((str), program.get());                \
     ASSERT_EQ(result, 0);                                           \
-    EXPECT_THROW(type_check(program), TypeError);                   \
+    EXPECT_THROW(type_check(program, false), TypeError);            \
 }
 
 TEST(Types, Literals) {
@@ -267,4 +267,21 @@ TEST(Types, KindInference) {
     EXPECT_WELL_TYPED(
             "data A = B C;"
             "data C = D A");
+}
+
+TEST(Types, CheckForMain) {
+    std::unique_ptr<Program> program = std::make_unique<Program>();
+    int result = parse_string("main = \"abc\"", program.get());
+    ASSERT_EQ(result, 0);
+    type_check(program, true);
+
+    program = std::make_unique<Program>();
+    result = parse_string("main = 'a'", program.get());
+    ASSERT_EQ(result, 0);
+    EXPECT_THROW(type_check(program, true), TypeError);
+
+    program = std::make_unique<Program>();
+    result = parse_string("a = \"a\"", program.get());
+    ASSERT_EQ(result, 0);
+    EXPECT_THROW(type_check(program, true), TypeError);
 }
