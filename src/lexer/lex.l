@@ -7,7 +7,7 @@
 #include "lexer/yylex.hpp"
 #include "parser/parser.hpp"
 %}
-%option noyywrap nounput noinput batch debug stack
+%option noyywrap nounput noinput batch stack
 %{
 yy::parser::symbol_type parse_integer(const std::string &s, const yy::parser::location_type &loc);
 yy::parser::symbol_type parse_character(const std::string &s, const yy::parser::location_type &loc);

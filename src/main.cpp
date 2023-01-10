@@ -58,9 +58,13 @@ int main (int argc, char *argv[]) {
     add_prelude(program.get());
     yy::location loc;
     yyin = input;
+    YY_BUFFER_STATE buffer = yy_create_buffer(yyin, YY_BUF_SIZE);
+    yy_switch_to_buffer(buffer);
     reset_start_condition();
     yy::parser parse(loc, program.get());
+    parse.set_debug_level(false);
     int result = parse();
+    yy_delete_buffer(buffer);
     if (result != 0) {
         std::cerr << "Parse error." << std::endl;
         return 1;
