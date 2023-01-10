@@ -51,6 +51,9 @@ int main (int argc, char *argv[]) {
                 print_usage_message(std::cerr);
                 return 1;
             }
+        } else {
+            print_usage_message(std::cerr);
+            return 1;
         }
     }
 
