@@ -548,3 +548,17 @@ TEST(STGTranslation, RemovesApostrophesFromNames) {
     EXPECT_VARIABLE(translated->bindings.at("main"), "t$");
     EXPECT_CHAR(translated->bindings.at("t$"), 'a');
 }
+
+TEST(STGTranslation, GeneratesDataConstructorTags) {
+    std::unique_ptr<Program> program = std::make_unique<Program>();
+    int result = parse_string_no_prelude(
+            "data Hi = A | B\n;data Bye = C | D Hi\n;main = 0",
+            program.get());
+    ASSERT_EQ(result, 0);
+    auto translated = translate(program);
+    EXPECT_EQ(translated->data_constructor_tags.size(), 4);
+    EXPECT_EQ(translated->data_constructor_tags.at("A"), 0);
+    EXPECT_EQ(translated->data_constructor_tags.at("B"), 1);
+    EXPECT_EQ(translated->data_constructor_tags.at("C"), 0);
+    EXPECT_EQ(translated->data_constructor_tags.at("D"), 1);
+}
