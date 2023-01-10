@@ -5,6 +5,6 @@
 #include <ostream>
 #include "stg/stg.hpp"
 
-void generate_target_code(std::unique_ptr<STGProgram> program, std::ostream output);
+void generate_target_code(const std::unique_ptr<STGProgram> &program, std::ostream &output);
 
 #endif //PICOHASKELL_GENERATION_HPP
