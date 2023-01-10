@@ -112,8 +112,6 @@
 %nterm <std::pair<Pattern*, Expression*>> alt
 %nterm <std::vector<std::pair<Pattern*, Expression*>>> alts
 
-//%printer { yyo << $$; } <*>;
-
 %%
 %start topdecls;
 

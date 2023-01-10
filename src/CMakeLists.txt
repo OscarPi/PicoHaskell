@@ -14,11 +14,14 @@ FLEX_TARGET(Lexer lexer/lex.l  ${CMAKE_CURRENT_BINARY_DIR}/lexer/lexer.cpp
         DEFINES_FILE ${CMAKE_CURRENT_BINARY_DIR}/lexer/lexer.hpp)
 ADD_FLEX_BISON_DEPENDENCY(Lexer Parser)
 
-add_executable(main main.cpp ${BISON_Parser_OUTPUTS} ${FLEX_Lexer_OUTPUTS})
-target_include_directories(main PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
-target_link_libraries(main lexer parser types stg prelude generation ${FLEX_LIBRARIES})
+target_sources(lexer INTERFACE ${FLEX_Lexer_OUTPUTS})
+target_include_directories(lexer INTERFACE ${CMAKE_CURRENT_BINARY_DIR})
+target_link_libraries(lexer INTERFACE ${FLEX_LIBRARIES})
+target_sources(parser INTERFACE ${BISON_Parser_OUTPUTS})
+target_include_directories(parser INTERFACE ${CMAKE_CURRENT_BINARY_DIR})
+
+add_executable(picohaskell main.cpp)
+target_link_libraries(picohaskell lexer parser types stg prelude generation)
 
 add_library(PicoHaskell INTERFACE)
-target_include_directories(PicoHaskell INTERFACE ${CMAKE_CURRENT_BINARY_DIR})
-target_sources(PicoHaskell INTERFACE ${BISON_Parser_OUTPUTS} ${FLEX_Lexer_OUTPUTS})
-target_link_libraries(PicoHaskell INTERFACE lexer parser types stg prelude generation ${FLEX_LIBRARIES})
+target_link_libraries(PicoHaskell INTERFACE lexer parser types stg prelude generation)
