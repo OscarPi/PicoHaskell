@@ -1105,7 +1105,17 @@ std::unique_ptr<STGProgram> translate(const std::unique_ptr<Program> &program) {
 
     for (const auto &[_, type_constructor]: program->type_constructors) {
         for (unsigned int i = 0; i < type_constructor->data_constructors.size(); i++) {
-            data_constructor_tags[type_constructor->data_constructors[i]] = i;
+            if (type_constructor->data_constructors[i] == "[]") {
+                data_constructor_tags[type_constructor->data_constructors[i]] = 0;
+            } else if (type_constructor->data_constructors[i] == ":") {
+                data_constructor_tags[type_constructor->data_constructors[i]] = 1;
+            } else if (type_constructor->data_constructors[i] == "False") {
+                data_constructor_tags[type_constructor->data_constructors[i]] = 0;
+            } else if (type_constructor->data_constructors[i] == "True") {
+                data_constructor_tags[type_constructor->data_constructors[i]] = 1;
+            } else {
+                data_constructor_tags[type_constructor->data_constructors[i]] = i;
+            }
         }
     }
 
