@@ -488,10 +488,10 @@ std::shared_ptr<Type> type_inference_expression(
                                 std::to_string(expression->line) +
                                 ": invalid arguments to built in operator.");
                     }
-                case builtinop::equality:
-                case builtinop::inequality:
+                case builtinop::charequality:
                     try {
-                        unify(left_type, right_type);
+                        unify(left_type, std::make_shared<TypeConstructor>("Char"));
+                        unify(right_type, std::make_shared<TypeConstructor>("Char"));
                         return std::make_shared<TypeConstructor>("Bool");
                     } catch (const TypeError &e) {
                         throw TypeError(
@@ -499,6 +499,7 @@ std::shared_ptr<Type> type_inference_expression(
                                 std::to_string(expression->line) +
                                 ": invalid arguments to built in operator.");
                     }
+                case builtinop::intequality:
                 case builtinop::lt:
                 case builtinop::lte:
                 case builtinop::gt:

@@ -92,14 +92,14 @@ TEST(Types, BuiltInOperators) {
     EXPECT_NOT_WELL_TYPED("a = -x\n;x = 'a'");
 
     EXPECT_WELL_TYPED("a :: Bool\n;a = 1==2");
-    EXPECT_WELL_TYPED("a :: Bool\n;a = True==False");
-    EXPECT_WELL_TYPED("a :: Bool\n;a = 'a'=='b'");
+    EXPECT_NOT_WELL_TYPED("a :: Bool\n;a = True==False");
+    EXPECT_NOT_WELL_TYPED("a :: Bool\n;a = 'a'=='b'");
     EXPECT_NOT_WELL_TYPED("a :: Bool\n;a = True=='b'");
 
-    EXPECT_WELL_TYPED("a :: Bool\n;a = 1/=2");
-    EXPECT_WELL_TYPED("a :: Bool\n;a = True/=False");
-    EXPECT_WELL_TYPED("a :: Bool\n;a = 'a'/='b'");
-    EXPECT_NOT_WELL_TYPED("a :: Bool\n;a = True/='b'");
+    EXPECT_NOT_WELL_TYPED("a :: Bool\n;a = 1==.2");
+    EXPECT_NOT_WELL_TYPED("a :: Bool\n;a = True==.False");
+    EXPECT_WELL_TYPED("a :: Bool\n;a = 'a'==.'b'");
+    EXPECT_NOT_WELL_TYPED("a :: Bool\n;a = True==.'b'");
 
     EXPECT_WELL_TYPED("a :: Bool\n;a = 1 < 2");
     EXPECT_NOT_WELL_TYPED("a = 1 < False");
@@ -120,16 +120,6 @@ TEST(Types, BuiltInOperators) {
     EXPECT_NOT_WELL_TYPED("a = 1 >= False");
     EXPECT_NOT_WELL_TYPED("a = 'b' >= 3");
     EXPECT_NOT_WELL_TYPED("a = 'b' >= 'a'");
-
-    EXPECT_WELL_TYPED("a :: Bool\n;a = True && False");
-    EXPECT_NOT_WELL_TYPED("a = 1 && False");
-    EXPECT_NOT_WELL_TYPED("a = 'b' && 3");
-    EXPECT_NOT_WELL_TYPED("a = 1 && 2");
-
-    EXPECT_WELL_TYPED("a :: Bool\n;a = True || False");
-    EXPECT_NOT_WELL_TYPED("a = 1 || False");
-    EXPECT_NOT_WELL_TYPED("a = 'b' || 3");
-    EXPECT_NOT_WELL_TYPED("a = 1 || 2");
 }
 
 TEST(Types, Functions) {

@@ -266,7 +266,9 @@ TEST(Parser, ParsesInfix) {
     TESTINFIXOP("*");
     TESTINFIXOP("/");
     TESTINFIXOP("==");
+    TESTINFIXOP("==.");
     TESTINFIXOP("/=");
+    TESTINFIXOP("/=.");
     TESTINFIXOP("<");
     TESTINFIXOP("<=");
     TESTINFIXOP(">");

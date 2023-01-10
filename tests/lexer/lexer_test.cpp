@@ -89,7 +89,9 @@ TEST(Lexer, RecognisesOps) {
     EXPECT_SYMBOL("*", yy::parser::symbol_kind_type::S_TIMES);
     EXPECT_SYMBOL("/", yy::parser::symbol_kind_type::S_DIVIDE);
     EXPECT_SYMBOL("==", yy::parser::symbol_kind_type::S_EQUALITY);
+    EXPECT_SYMBOL("==.", yy::parser::symbol_kind_type::S_CHAREQUALITY);
     EXPECT_SYMBOL("/=", yy::parser::symbol_kind_type::S_INEQUALITY);
+    EXPECT_SYMBOL("/=.", yy::parser::symbol_kind_type::S_CHARINEQUALITY);
     EXPECT_SYMBOL("<", yy::parser::symbol_kind_type::S_LT);
     EXPECT_SYMBOL("<=", yy::parser::symbol_kind_type::S_LTE);
     EXPECT_SYMBOL(">", yy::parser::symbol_kind_type::S_GT);

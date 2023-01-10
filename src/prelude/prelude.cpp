@@ -13,6 +13,18 @@ data Bool = True | False
 ;
 (||) a b = case a of { True -> True ; False -> b }
 ;
+not :: Bool -> Bool
+;
+not b = case b of { True -> False ; False -> True }
+;
+(/=) :: Int -> Int -> Bool
+;
+(/=) a b = not (a == b)
+;
+(/=.) :: Char -> Char -> Bool
+;
+(/=.) a b = not (a ==. b)
+;
 (.) :: (b -> c) -> (a -> b) -> a -> c
 ;
 (.) f g = \x -> f (g x)
@@ -81,8 +93,8 @@ void add_prelude(Program *program) {
     bind_built_in_op(program, "-", builtinop::subtract);
     bind_built_in_op(program, "*", builtinop::times);
     bind_built_in_op(program, "/", builtinop::divide);
-    bind_built_in_op(program, "==", builtinop::equality);
-    bind_built_in_op(program, "/=", builtinop::inequality);
+    bind_built_in_op(program, "==", builtinop::intequality);
+    bind_built_in_op(program, "==.", builtinop::charequality);
     bind_built_in_op(program, "<", builtinop::lt);
     bind_built_in_op(program, "<=", builtinop::lte);
     bind_built_in_op(program, ">", builtinop::gt);

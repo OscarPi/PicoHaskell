@@ -22,63 +22,65 @@
 }
 %define api.token.prefix {TOK_}
 %token
-    CASE          "case"
-    CLASS         "class"
-    DATA          "data"
-    DEFAULT       "default"
-    DERIVING      "deriving"
-    DO            "do"
-    ELSE          "else"
-    FOREIGN       "foreign"
-    IF            "if"
-    IMPORT        "import"
-    IN            "in"
-    INFIX         "infix"
-    INFIXL        "infixl"
-    INFIXR        "infixr"
-    INSTANCE      "instance"
-    LET           "let"
-    MODULE        "module"
-    NEWTYPE       "newtype"
-    OF            "of"
-    THEN          "then"
-    TYPE          "type"
-    WHERE         "where"
-    _             "_"
-    DOTDOT        ".."
-    COLON         ":"
-    HASTYPE       "::"
-    EQUALS        "="
-    BACKSLASH     "\\"
-    PIPE          "|"
-    LEFTARROW     "<-"
-    RIGHTARROW    "->"
-    AT            "@"
-    TILDE         "~"
-    IMPLIES       "=>"
-    LEFTBRACKET   "("
-    RIGHTBRACKET  ")"
-    COMMA         ","
-    SEMICOLON     ";"
-    LEFTCROTCHET  "["
-    RIGHTCROTCHET "]"
-    BACKTICK      "`"
-    LEFTBRACE     "{"
-    RIGHTBRACE    "}"
-    PLUS          "+"
-    MINUS         "-"
-    TIMES         "*"
-    DIVIDE        "/"
-    EQUALITY      "=="
-    INEQUALITY    "/="
-    LT            "<"
-    LTE           "<="
-    GT            ">"
-    GTE           ">="
-    AND           "&&"
-    OR            "||"
-    DOT           "."
-    APPEND        "++"
+    CASE           "case"
+    CLASS          "class"
+    DATA           "data"
+    DEFAULT        "default"
+    DERIVING       "deriving"
+    DO             "do"
+    ELSE           "else"
+    FOREIGN        "foreign"
+    IF             "if"
+    IMPORT         "import"
+    IN             "in"
+    INFIX          "infix"
+    INFIXL         "infixl"
+    INFIXR         "infixr"
+    INSTANCE       "instance"
+    LET            "let"
+    MODULE         "module"
+    NEWTYPE        "newtype"
+    OF             "of"
+    THEN           "then"
+    TYPE           "type"
+    WHERE          "where"
+    _              "_"
+    DOTDOT         ".."
+    COLON          ":"
+    HASTYPE        "::"
+    EQUALS         "="
+    BACKSLASH      "\\"
+    PIPE           "|"
+    LEFTARROW      "<-"
+    RIGHTARROW     "->"
+    AT             "@"
+    TILDE          "~"
+    IMPLIES        "=>"
+    LEFTBRACKET    "("
+    RIGHTBRACKET   ")"
+    COMMA          ","
+    SEMICOLON      ";"
+    LEFTCROTCHET   "["
+    RIGHTCROTCHET  "]"
+    BACKTICK       "`"
+    LEFTBRACE      "{"
+    RIGHTBRACE     "}"
+    PLUS           "+"
+    MINUS          "-"
+    TIMES          "*"
+    DIVIDE         "/"
+    EQUALITY       "=="
+    CHAREQUALITY   "==."
+    INEQUALITY     "/="
+    CHARINEQUALITY "/=."
+    LT             "<"
+    LTE            "<="
+    GT             ">"
+    GTE            ">="
+    AND            "&&"
+    OR             "||"
+    DOT            "."
+    APPEND         "++"
 ;
 %token <std::string> VARID CONID STRING
 %token <int> INTEGER
@@ -87,7 +89,7 @@
 
 %right "||"
 %right "&&"
-%precedence "==" "/=" "<" "<=" ">=" ">"
+%precedence "==" "==." "/=" "/=." "<" "<=" ">=" ">"
 %right ":" "++"
 %left "+" "-"
 %left "*" "/"
@@ -146,23 +148,25 @@ exp:
   ;
 
 infixexp:
-    infixexp "+" infixexp  { $$ = new Application(@2.begin.line, new Application(@2.begin.line, new Variable(@2.begin.line, "+"), $1), $3); }
-  | infixexp "-" infixexp  { $$ = new Application(@2.begin.line, new Application(@2.begin.line, new Variable(@2.begin.line, "-"), $1), $3); }
-  | "-" infixexp           { $$ = new BuiltInOp(@1.begin.line, nullptr, $2, builtinop::negate); }
-  | infixexp "*" infixexp  { $$ = new Application(@2.begin.line, new Application(@2.begin.line, new Variable(@2.begin.line, "*"), $1), $3); }
-  | infixexp "/" infixexp  { $$ = new Application(@2.begin.line, new Application(@2.begin.line, new Variable(@2.begin.line, "/"), $1), $3); }
-  | infixexp "==" infixexp { $$ = new Application(@2.begin.line, new Application(@2.begin.line, new Variable(@2.begin.line, "=="), $1), $3); }
-  | infixexp "/=" infixexp { $$ = new Application(@2.begin.line, new Application(@2.begin.line, new Variable(@2.begin.line, "/="), $1), $3); }
-  | infixexp "<" infixexp  { $$ = new Application(@2.begin.line, new Application(@2.begin.line, new Variable(@2.begin.line, "<"), $1), $3); }
-  | infixexp "<=" infixexp { $$ = new Application(@2.begin.line, new Application(@2.begin.line, new Variable(@2.begin.line, "<="), $1), $3); }
-  | infixexp ">" infixexp  { $$ = new Application(@2.begin.line, new Application(@2.begin.line, new Variable(@2.begin.line, ">"), $1), $3); }
-  | infixexp ">=" infixexp { $$ = new Application(@2.begin.line, new Application(@2.begin.line, new Variable(@2.begin.line, ">="), $1), $3); }
-  | infixexp "&&" infixexp { $$ = new Application(@2.begin.line, new Application(@2.begin.line, new Variable(@2.begin.line, "&&"), $1), $3); }
-  | infixexp "||" infixexp { $$ = new Application(@2.begin.line, new Application(@2.begin.line, new Variable(@2.begin.line, "||"), $1), $3); }
-  | infixexp "." infixexp  { $$ = new Application(@2.begin.line, new Application(@2.begin.line, new Variable(@2.begin.line, "."), $1), $3); }
-  | infixexp ":" infixexp  { $$ = new Application(@2.begin.line, new Application(@2.begin.line, new Constructor(@2.begin.line, ":"), $1), $3); }
-  | infixexp "++" infixexp { $$ = new Application(@2.begin.line, new Application(@2.begin.line, new Variable(@2.begin.line, "++"), $1), $3); }
-  | lexp                   { $$ = $1; }
+    infixexp "+" infixexp   { $$ = new Application(@2.begin.line, new Application(@2.begin.line, new Variable(@2.begin.line, "+"), $1), $3); }
+  | infixexp "-" infixexp   { $$ = new Application(@2.begin.line, new Application(@2.begin.line, new Variable(@2.begin.line, "-"), $1), $3); }
+  | "-" infixexp            { $$ = new BuiltInOp(@1.begin.line, nullptr, $2, builtinop::negate); }
+  | infixexp "*" infixexp   { $$ = new Application(@2.begin.line, new Application(@2.begin.line, new Variable(@2.begin.line, "*"), $1), $3); }
+  | infixexp "/" infixexp   { $$ = new Application(@2.begin.line, new Application(@2.begin.line, new Variable(@2.begin.line, "/"), $1), $3); }
+  | infixexp "==" infixexp  { $$ = new Application(@2.begin.line, new Application(@2.begin.line, new Variable(@2.begin.line, "=="), $1), $3); }
+  | infixexp "==." infixexp { $$ = new Application(@2.begin.line, new Application(@2.begin.line, new Variable(@2.begin.line, "==."), $1), $3); }
+  | infixexp "/=" infixexp  { $$ = new Application(@2.begin.line, new Application(@2.begin.line, new Variable(@2.begin.line, "/="), $1), $3); }
+  | infixexp "/=." infixexp { $$ = new Application(@2.begin.line, new Application(@2.begin.line, new Variable(@2.begin.line, "/=."), $1), $3); }
+  | infixexp "<" infixexp   { $$ = new Application(@2.begin.line, new Application(@2.begin.line, new Variable(@2.begin.line, "<"), $1), $3); }
+  | infixexp "<=" infixexp  { $$ = new Application(@2.begin.line, new Application(@2.begin.line, new Variable(@2.begin.line, "<="), $1), $3); }
+  | infixexp ">" infixexp   { $$ = new Application(@2.begin.line, new Application(@2.begin.line, new Variable(@2.begin.line, ">"), $1), $3); }
+  | infixexp ">=" infixexp  { $$ = new Application(@2.begin.line, new Application(@2.begin.line, new Variable(@2.begin.line, ">="), $1), $3); }
+  | infixexp "&&" infixexp  { $$ = new Application(@2.begin.line, new Application(@2.begin.line, new Variable(@2.begin.line, "&&"), $1), $3); }
+  | infixexp "||" infixexp  { $$ = new Application(@2.begin.line, new Application(@2.begin.line, new Variable(@2.begin.line, "||"), $1), $3); }
+  | infixexp "." infixexp   { $$ = new Application(@2.begin.line, new Application(@2.begin.line, new Variable(@2.begin.line, "."), $1), $3); }
+  | infixexp ":" infixexp   { $$ = new Application(@2.begin.line, new Application(@2.begin.line, new Constructor(@2.begin.line, ":"), $1), $3); }
+  | infixexp "++" infixexp  { $$ = new Application(@2.begin.line, new Application(@2.begin.line, new Variable(@2.begin.line, "++"), $1), $3); }
+  | lexp                    { $$ = $1; }
   ;
 
 lexp:
@@ -307,21 +311,23 @@ pats:
   ;
 
 var:
-    VARID        { $$ = $1; }
-  | "(" "." ")"  { $$ = "."; }
-  | "(" "+" ")"  { $$ = "+"; }
-  | "(" "-" ")"  { $$ = "-"; }
-  | "(" "*" ")"  { $$ = "*"; }
-  | "(" "/" ")"  { $$ = "/"; }
-  | "(" "==" ")" { $$ = "=="; }
-  | "(" "/=" ")" { $$ = "/="; }
-  | "(" "<" ")"  { $$ = "<"; }
-  | "(" "<=" ")" { $$ = "<="; }
-  | "(" ">" ")"  { $$ = ">"; }
-  | "(" ">=" ")" { $$ = ">="; }
-  | "(" "&&" ")" { $$ = "&&"; }
-  | "(" "||" ")" { $$ = "||"; }
-  | "(" "++" ")" { $$ = "++"; }
+    VARID         { $$ = $1; }
+  | "(" "." ")"   { $$ = "."; }
+  | "(" "+" ")"   { $$ = "+"; }
+  | "(" "-" ")"   { $$ = "-"; }
+  | "(" "*" ")"   { $$ = "*"; }
+  | "(" "/" ")"   { $$ = "/"; }
+  | "(" "==" ")"  { $$ = "=="; }
+  | "(" "==." ")" { $$ = "==."; }
+  | "(" "/=" ")"  { $$ = "/="; }
+  | "(" "/=." ")" { $$ = "/=."; }
+  | "(" "<" ")"   { $$ = "<"; }
+  | "(" "<=" ")"  { $$ = "<="; }
+  | "(" ">" ")"   { $$ = ">"; }
+  | "(" ">=" ")"  { $$ = ">="; }
+  | "(" "&&" ")"  { $$ = "&&"; }
+  | "(" "||" ")"  { $$ = "||"; }
+  | "(" "++" ")"  { $$ = "++"; }
   ;
 
 optsemicolon: %empty | ";";
