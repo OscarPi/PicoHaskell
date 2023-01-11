@@ -136,12 +136,15 @@ struct STGPrimitiveOp : public STGExpression {
 
 struct STGProgram {
     const std::map<std::string, std::unique_ptr<STGLambdaForm>> bindings;
-    const std::map<std::string, unsigned int> data_constructor_tags;
+    const std::map<std::string, size_t> data_constructor_tags;
+    const std::map<std::string, size_t> data_constructor_arities;
     explicit STGProgram(
             std::map<std::string, std::unique_ptr<STGLambdaForm>> &&bindings,
-            const std::map<std::string, unsigned int> &data_constructor_tags):
+            const std::map<std::string, size_t> &data_constructor_tags,
+            const std::map<std::string, size_t> &data_constructor_arities):
             bindings(std::move(bindings)),
-            data_constructor_tags(data_constructor_tags) {}
+            data_constructor_tags(data_constructor_tags),
+            data_constructor_arities(data_constructor_arities) {}
 };
 
 std::unique_ptr<STGProgram> translate(const std::unique_ptr<Program> &program);

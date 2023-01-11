@@ -1101,7 +1101,8 @@ std::unique_ptr<STGProgram> translate(const std::unique_ptr<Program> &program) {
         used_bindings[name] = std::move(lambda_form);
     }
 
-    std::map<std::string, unsigned int> data_constructor_tags;
+    std::map<std::string, size_t> data_constructor_tags;
+    std::map<std::string, size_t> data_constructor_arities = program->data_constructor_arities;
 
     for (const auto &[_, type_constructor]: program->type_constructors) {
         for (unsigned int i = 0; i < type_constructor->data_constructors.size(); i++) {
@@ -1119,5 +1120,8 @@ std::unique_ptr<STGProgram> translate(const std::unique_ptr<Program> &program) {
         }
     }
 
-    return std::make_unique<STGProgram>(std::move(used_bindings), data_constructor_tags);
+    return std::make_unique<STGProgram>(
+            std::move(used_bindings),
+            data_constructor_tags,
+            data_constructor_arities);
 }
