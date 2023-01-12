@@ -11,6 +11,16 @@
 
 enum class stgform {let, literal, variable, application, constructor, literalcase, algebraiccase, primitiveop};
 
+struct STGDataConstructor {
+    const size_t tag;
+    const size_t arity;
+    const size_t number_of_siblings;
+    STGDataConstructor(
+            const size_t &tag,
+            const size_t &arity,
+            const size_t &number_of_siblings): tag(tag), arity(arity), number_of_siblings(number_of_siblings) {}
+};
+
 struct STGExpression {
     virtual stgform get_form() = 0;
     virtual ~STGExpression() = default;
@@ -136,15 +146,12 @@ struct STGPrimitiveOp : public STGExpression {
 
 struct STGProgram {
     const std::map<std::string, std::unique_ptr<STGLambdaForm>> bindings;
-    const std::map<std::string, size_t> data_constructor_tags;
-    const std::map<std::string, size_t> data_constructor_arities;
+    const std::map<std::string, STGDataConstructor> data_constructors;
     explicit STGProgram(
             std::map<std::string, std::unique_ptr<STGLambdaForm>> &&bindings,
-            const std::map<std::string, size_t> &data_constructor_tags,
-            const std::map<std::string, size_t> &data_constructor_arities):
+            const std::map<std::string, STGDataConstructor> &data_constructors):
             bindings(std::move(bindings)),
-            data_constructor_tags(data_constructor_tags),
-            data_constructor_arities(data_constructor_arities) {}
+            data_constructors(data_constructors) {}
 };
 
 std::unique_ptr<STGProgram> translate(const std::unique_ptr<Program> &program);

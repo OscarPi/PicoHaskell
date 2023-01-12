@@ -109,20 +109,10 @@ TEST(STGTranslation, TranslatesConstructors) {
     EXPECT_EQ(translated->bindings.at("main")->argument_variables.size(), 1);
     EXPECT_EQ(translated->bindings.at("main")->argument_variables[0], ".0");
     EXPECT_EQ(translated->bindings.at("main")->updatable, false);
-    ASSERT_EQ(translated->bindings.at("main")->expr->get_form(), stgform::let);
-    auto let = dynamic_cast<STGLet*>(translated->bindings.at("main")->expr.get());
-    EXPECT_EQ(let->recursive, false);
-    EXPECT_EQ(let->bindings.size(), 1);
-    EXPECT_EQ(let->bindings.at(".1")->free_variables.size(), 1);
-    EXPECT_EQ(let->bindings.at(".1")->free_variables.count(".0"), 1);
-    EXPECT_EQ(let->bindings.at(".1")->argument_variables.size(), 0);
-    EXPECT_EQ(let->bindings.at(".1")->updatable, false);
-    ASSERT_EQ(let->bindings.at(".1")->expr->get_form(), stgform::constructor);
-    EXPECT_EQ(dynamic_cast<STGConstructor*>(let->bindings.at(".1")->expr.get())->arguments.size(), 1);
-    EXPECT_EQ(dynamic_cast<STGConstructor*>(let->bindings.at(".1")->expr.get())->arguments[0], ".0");
-    EXPECT_EQ(dynamic_cast<STGConstructor*>(let->bindings.at(".1")->expr.get())->constructor_name, "Test");
-    ASSERT_EQ(let->expr->get_form(), stgform::variable);
-    EXPECT_EQ(dynamic_cast<STGVariable*>(let->expr.get())->name, ".1");
+    ASSERT_EQ(translated->bindings.at("main")->expr->get_form(), stgform::constructor);
+    EXPECT_EQ(dynamic_cast<STGConstructor*>(translated->bindings.at("main")->expr.get())->arguments.size(), 1);
+    EXPECT_EQ(dynamic_cast<STGConstructor*>(translated->bindings.at("main")->expr.get())->arguments[0], ".0");
+    EXPECT_EQ(dynamic_cast<STGConstructor*>(translated->bindings.at("main")->expr.get())->constructor_name, "Test");
 }
 
 TEST(STGTranslation, TranslatesApplications) {
@@ -140,22 +130,11 @@ TEST(STGTranslation, TranslatesApplications) {
     EXPECT_EQ(translated->bindings.at("main")->argument_variables.size(), 1);
     EXPECT_EQ(translated->bindings.at("main")->argument_variables[0], ".1");
     EXPECT_EQ(translated->bindings.at("main")->updatable, false);
-    ASSERT_EQ(translated->bindings.at("main")->expr->get_form(), stgform::let);
-    auto let = dynamic_cast<STGLet*>(translated->bindings.at("main")->expr.get());
-    EXPECT_EQ(let->recursive, false);
-    EXPECT_EQ(let->bindings.size(), 1);
-    EXPECT_EQ(let->bindings.at(".2")->free_variables.size(), 2);
-    EXPECT_EQ(let->bindings.at(".2")->free_variables.count(".0"), 1);
-    EXPECT_EQ(let->bindings.at(".2")->free_variables.count(".1"), 1);
-    EXPECT_EQ(let->bindings.at(".2")->argument_variables.size(), 0);
-    EXPECT_EQ(let->bindings.at(".2")->updatable, false);
-    ASSERT_EQ(let->bindings.at(".2")->expr->get_form(), stgform::constructor);
-    EXPECT_EQ(dynamic_cast<STGConstructor*>(let->bindings.at(".2")->expr.get())->arguments.size(), 2);
-    EXPECT_EQ(dynamic_cast<STGConstructor*>(let->bindings.at(".2")->expr.get())->arguments[0], ".0");
-    EXPECT_EQ(dynamic_cast<STGConstructor*>(let->bindings.at(".2")->expr.get())->arguments[1], ".1");
-    EXPECT_EQ(dynamic_cast<STGConstructor*>(let->bindings.at(".2")->expr.get())->constructor_name, "Test");
-    ASSERT_EQ(let->expr->get_form(), stgform::variable);
-    EXPECT_EQ(dynamic_cast<STGVariable*>(let->expr.get())->name, ".2");
+    ASSERT_EQ(translated->bindings.at("main")->expr->get_form(), stgform::constructor);
+    EXPECT_EQ(dynamic_cast<STGConstructor*>(translated->bindings.at("main")->expr.get())->arguments.size(), 2);
+    EXPECT_EQ(dynamic_cast<STGConstructor*>(translated->bindings.at("main")->expr.get())->arguments[0], ".0");
+    EXPECT_EQ(dynamic_cast<STGConstructor*>(translated->bindings.at("main")->expr.get())->arguments[1], ".1");
+    EXPECT_EQ(dynamic_cast<STGConstructor*>(translated->bindings.at("main")->expr.get())->constructor_name, "Test");
 
     program = std::make_unique<Program>();
     result = parse_string_no_prelude("data T = Test T | Nil | Nill\n;main = Test Nil Nill", program.get());
@@ -539,16 +518,6 @@ TEST(STGTranslation, TranslatesCase) {
     EXPECT_EQ(dynamic_cast<STGVariable*>(cAsE->default_expr.get())->name, "case_error");
 }
 
-TEST(STGTranslation, RemovesApostrophesFromNames) {
-    std::unique_ptr<Program> program = std::make_unique<Program>();
-    int result = parse_string_no_prelude("main = t'\n;t'='a'", program.get());
-    ASSERT_EQ(result, 0);
-    auto translated = translate(program);
-    EXPECT_EQ(translated->bindings.size(), 2);
-    EXPECT_VARIABLE(translated->bindings.at("main"), "t$");
-    EXPECT_CHAR(translated->bindings.at("t$"), 'a');
-}
-
 TEST(STGTranslation, GeneratesDataConstructorTags) {
     std::unique_ptr<Program> program = std::make_unique<Program>();
     int result = parse_string(
@@ -556,12 +525,12 @@ TEST(STGTranslation, GeneratesDataConstructorTags) {
             program.get());
     ASSERT_EQ(result, 0);
     auto translated = translate(program);
-    EXPECT_EQ(translated->data_constructor_tags.at("A"), 0);
-    EXPECT_EQ(translated->data_constructor_tags.at("B"), 1);
-    EXPECT_EQ(translated->data_constructor_tags.at("C"), 0);
-    EXPECT_EQ(translated->data_constructor_tags.at("D"), 1);
-    EXPECT_EQ(translated->data_constructor_tags.at("[]"), 0);
-    EXPECT_EQ(translated->data_constructor_tags.at(":"), 1);
-    EXPECT_EQ(translated->data_constructor_tags.at("False"), 0);
-    EXPECT_EQ(translated->data_constructor_tags.at("True"), 1);
+    EXPECT_EQ(translated->data_constructors.at("A").tag, 0);
+    EXPECT_EQ(translated->data_constructors.at("B").tag, 1);
+    EXPECT_EQ(translated->data_constructors.at("C").tag, 0);
+    EXPECT_EQ(translated->data_constructors.at("D").tag, 1);
+    EXPECT_EQ(translated->data_constructors.at("[]").tag, 0);
+    EXPECT_EQ(translated->data_constructors.at(":").tag, 1);
+    EXPECT_EQ(translated->data_constructors.at("False").tag, 0);
+    EXPECT_EQ(translated->data_constructors.at("True").tag, 1);
 }

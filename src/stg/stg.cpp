@@ -30,9 +30,7 @@ std::pair<std::unique_ptr<STGLambdaForm>, std::vector<std::map<std::string, std:
     if (variable_renamings.count(var->name) > 0) {
         translated_var = std::make_unique<STGVariable>(variable_renamings.at(var->name));
     } else {
-        std::string new_name = var->name;
-        std::replace(new_name.begin(), new_name.end(), '\'', '$');
-        translated_var = std::make_unique<STGVariable>(new_name);
+        translated_var = std::make_unique<STGVariable>(var->name);
     }
     std::set<std::string> free_variables;
     free_variables.insert(translated_var->name);
@@ -65,37 +63,19 @@ std::pair<std::unique_ptr<STGLambdaForm>, std::vector<std::map<std::string, std:
         const std::map<std::string, size_t> &data_constructor_arities) {
     auto constructor = dynamic_cast<Constructor*>(expr.get());
 
-    if (data_constructor_arities.at(constructor->name) == 0) {
-        return std::make_pair(
-                std::make_unique<STGLambdaForm>(
-                        std::set<std::string>(),
-                        std::vector<std::string>(),
-                        false,
-                        std::make_unique<STGConstructor>(constructor->name)),
-                std::vector<std::map<std::string, std::unique_ptr<STGLambdaForm>>>());
-    } else {
-        std::vector<std::string> argument_variables;
-        for (int i = 0; i < data_constructor_arities.at(constructor->name); i++) {
-            argument_variables.push_back("." + std::to_string((*next_variable_name)++));
-        }
-        std::string var_name = "." + std::to_string((*next_variable_name)++);
-        std::map<std::string, std::unique_ptr<STGLambdaForm>> bindings;
-        bindings[var_name] = std::make_unique<STGLambdaForm>(
-                std::set<std::string>(argument_variables.begin(), argument_variables.end()),
-                std::vector<std::string>(),
-                false,
-                std::make_unique<STGConstructor>(constructor->name, argument_variables));
-        return std::make_pair(
-                std::make_unique<STGLambdaForm>(
-                        std::set<std::string>(),
-                        argument_variables,
-                        false,
-                        std::make_unique<STGLet>(
-                                std::move(bindings),
-                                std::make_unique<STGVariable>(var_name),
-                                false)),
-                std::vector<std::map<std::string, std::unique_ptr<STGLambdaForm>>>());
+    std::vector<std::string> argument_variables;
+    for (int i = 0; i < data_constructor_arities.at(constructor->name); i++) {
+        argument_variables.push_back("." + std::to_string((*next_variable_name)++));
     }
+    return std::make_pair(
+            std::make_unique<STGLambdaForm>(
+                    std::set<std::string>(),
+                    argument_variables,
+                    false,
+                    std::make_unique<STGConstructor>(
+                            constructor->name,
+                            argument_variables)),
+            std::vector<std::map<std::string, std::unique_ptr<STGLambdaForm>>>());
 }
 
 std::pair<std::unique_ptr<STGLambdaForm>, std::vector<std::map<std::string, std::unique_ptr<STGLambdaForm>>>> translate_built_in_op(
@@ -730,42 +710,22 @@ std::pair<std::unique_ptr<STGLambdaForm>, std::vector<std::map<std::string, std:
 
     if ((*expression)->get_form() == expform::constructor) {
         std::string constructor_name = dynamic_cast<Constructor*>(expression->get())->name;
-        if (argument_variables.size() < data_constructor_arities.at(constructor_name)) {
-            std::vector<std::string> additional_argument_variables;
-            for (int i = argument_variables.size(); i < data_constructor_arities.at(constructor_name); i++) {
-                additional_argument_variables.push_back("." + std::to_string((*next_variable_name)++));
-            }
-            std::vector<std::string> combined_argument_variables = argument_variables;
-            combined_argument_variables.insert(
-                    combined_argument_variables.end(),
-                    additional_argument_variables.begin(),
-                    additional_argument_variables.end());
-            std::string var_name = "." + std::to_string((*next_variable_name)++);
-            std::map<std::string, std::unique_ptr<STGLambdaForm>> bindings;
-            bindings[var_name] = std::make_unique<STGLambdaForm>(
-                    std::set<std::string>(combined_argument_variables.begin(), combined_argument_variables.end()),
-                    std::vector<std::string>(),
-                    false,
-                    std::make_unique<STGConstructor>(constructor_name, combined_argument_variables));
-            return std::make_pair(
-                    std::make_unique<STGLambdaForm>(
-                            std::set<std::string>(argument_variables.begin(), argument_variables.end()),
-                            additional_argument_variables,
-                            false,
-                            std::make_unique<STGLet>(
-                                    std::move(bindings),
-                                    std::make_unique<STGVariable>(var_name),
-                                    false)),
-                    std::move(definitions));
-        } else {
-            return std::make_pair(
-                    std::make_unique<STGLambdaForm>(
-                            std::set<std::string>(argument_variables.begin(), argument_variables.end()),
-                            std::vector<std::string>(),
-                            false,
-                            std::make_unique<STGConstructor>(constructor_name, argument_variables)),
-                    std::move(definitions));
+        std::vector<std::string> additional_argument_variables;
+        for (int i = argument_variables.size(); i < data_constructor_arities.at(constructor_name); i++) {
+            additional_argument_variables.push_back("." + std::to_string((*next_variable_name)++));
         }
+        std::vector<std::string> combined_argument_variables = argument_variables;
+        combined_argument_variables.insert(
+                combined_argument_variables.end(),
+                additional_argument_variables.begin(),
+                additional_argument_variables.end());
+        return std::make_pair(
+                std::make_unique<STGLambdaForm>(
+                        std::set<std::string>(argument_variables.begin(), argument_variables.end()),
+                        additional_argument_variables,
+                        false,
+                        std::make_unique<STGConstructor>(constructor_name, combined_argument_variables)),
+                std::move(definitions));
     }
 
     auto translated = translate_expression(
@@ -1020,7 +980,7 @@ void remove_globals_from_free_variables_list_and_mark_partial_applications_as_no
         const std::unique_ptr<STGLambdaForm> &lambda_form,
         const std::set<std::string> &globals,
         const std::map<std::string, size_t> &number_of_arguments) {
-    if (lambda_form->expr->get_form() != stgform::constructor) {
+    if (lambda_form->expr->get_form() != stgform::constructor || !lambda_form->argument_variables.empty()) {
         for (auto it = lambda_form->free_variables.begin(); it != lambda_form->free_variables.end(); ) {
             if (globals.count(*it)) {
                 it = lambda_form->free_variables.erase(it);
@@ -1059,9 +1019,7 @@ std::unique_ptr<STGProgram> translate(const std::unique_ptr<Program> &program) {
                 std::map<std::string, std::string>(),
                 program->data_constructor_arities);
 
-        std::string new_name = name;
-        std::replace(new_name.begin(), new_name.end(), '\'', '$');
-        bindings[new_name] = std::move(translated.first);
+        bindings[name] = std::move(translated.first);
 
         auto definitions = std::move(translated.second);
         for (auto &definition: definitions) {
@@ -1101,27 +1059,28 @@ std::unique_ptr<STGProgram> translate(const std::unique_ptr<Program> &program) {
         used_bindings[name] = std::move(lambda_form);
     }
 
-    std::map<std::string, size_t> data_constructor_tags;
-    std::map<std::string, size_t> data_constructor_arities = program->data_constructor_arities;
+    std::map<std::string, STGDataConstructor> data_constructors;
 
     for (const auto &[_, type_constructor]: program->type_constructors) {
         for (unsigned int i = 0; i < type_constructor->data_constructors.size(); i++) {
-            if (type_constructor->data_constructors[i] == "[]") {
-                data_constructor_tags[type_constructor->data_constructors[i]] = 0;
-            } else if (type_constructor->data_constructors[i] == ":") {
-                data_constructor_tags[type_constructor->data_constructors[i]] = 1;
-            } else if (type_constructor->data_constructors[i] == "False") {
-                data_constructor_tags[type_constructor->data_constructors[i]] = 0;
-            } else if (type_constructor->data_constructors[i] == "True") {
-                data_constructor_tags[type_constructor->data_constructors[i]] = 1;
-            } else {
-                data_constructor_tags[type_constructor->data_constructors[i]] = i;
+            std::string name = type_constructor->data_constructors.at(i);
+            size_t tag = i;
+            if (name == "[]") {
+                tag = 0;
+            } else if (name == ":") {
+                tag = 1;
+            } else if (name == "False") {
+                tag = 0;
+            } else if (name == "True") {
+                tag = 1;
             }
+            size_t arity = program->data_constructor_arities.at(name);
+            size_t number_of_siblings = type_constructor->data_constructors.size() - 1;
+            data_constructors.emplace(name,STGDataConstructor(tag, arity, number_of_siblings));
         }
     }
 
     return std::make_unique<STGProgram>(
             std::move(used_bindings),
-            data_constructor_tags,
-            data_constructor_arities);
+            data_constructors);
 }
