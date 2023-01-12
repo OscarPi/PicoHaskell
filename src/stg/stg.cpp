@@ -912,15 +912,17 @@ std::pair<std::unique_ptr<STGLambdaForm>, std::vector<std::map<std::string, std:
     }
 }
 
-void remove_globals_from_free_variables_list_and_mark_partial_applications_as_non_updatable(
+void remove_globals_from_free_variables_list_and_mark_partial_applications_as_non_updatable_and_collect_used_data_constructors(
         const std::unique_ptr<STGLambdaForm> &lambda_form,
         const std::set<std::string> &globals,
-        const std::map<std::string, size_t> &number_of_arguments);
+        const std::map<std::string, size_t> &number_of_arguments,
+        std::set<std::string> &used_data_constructors);
 
-void remove_globals_from_free_variables_list_and_mark_partial_applications_as_non_updatable(
+void remove_globals_from_free_variables_list_and_mark_partial_applications_as_non_updatable_and_collect_used_data_constructors(
         const std::unique_ptr<STGExpression> &expr,
         const std::set<std::string> &globals,
-        const std::map<std::string, size_t> &number_of_arguments) {
+        const std::map<std::string, size_t> &number_of_arguments,
+        std::set<std::string> &used_data_constructors) {
     if (expr->get_form() == stgform::let) {
         auto let = dynamic_cast<STGLet*>(expr.get());
         std::map<std::string, size_t> local_number_of_arguments = number_of_arguments;
@@ -928,58 +930,70 @@ void remove_globals_from_free_variables_list_and_mark_partial_applications_as_no
             local_number_of_arguments[name] = lambda_form->argument_variables.size();
         }
         for (const auto &[_, lambda_form]: let->bindings) {
-            remove_globals_from_free_variables_list_and_mark_partial_applications_as_non_updatable(
+            remove_globals_from_free_variables_list_and_mark_partial_applications_as_non_updatable_and_collect_used_data_constructors(
                     lambda_form,
                     globals,
-                    local_number_of_arguments);
+                    local_number_of_arguments,
+                    used_data_constructors);
         }
-        remove_globals_from_free_variables_list_and_mark_partial_applications_as_non_updatable(
+        remove_globals_from_free_variables_list_and_mark_partial_applications_as_non_updatable_and_collect_used_data_constructors(
                 let->expr,
                 globals,
-                local_number_of_arguments);
+                local_number_of_arguments,
+                used_data_constructors);
     } else if (expr->get_form() == stgform::literalcase) {
         auto cAsE = dynamic_cast<STGLiteralCase*>(expr.get());
-        remove_globals_from_free_variables_list_and_mark_partial_applications_as_non_updatable(
+        remove_globals_from_free_variables_list_and_mark_partial_applications_as_non_updatable_and_collect_used_data_constructors(
                 cAsE->expr,
                 globals,
-                number_of_arguments);
-        remove_globals_from_free_variables_list_and_mark_partial_applications_as_non_updatable(
+                number_of_arguments,
+                used_data_constructors);
+        remove_globals_from_free_variables_list_and_mark_partial_applications_as_non_updatable_and_collect_used_data_constructors(
                 cAsE->default_expr,
                 globals,
-                number_of_arguments);
+                number_of_arguments,
+                used_data_constructors);
         for (const auto &[_, e]: cAsE->alts) {
-            remove_globals_from_free_variables_list_and_mark_partial_applications_as_non_updatable(
+            remove_globals_from_free_variables_list_and_mark_partial_applications_as_non_updatable_and_collect_used_data_constructors(
                     e,
                     globals,
-                    number_of_arguments);
+                    number_of_arguments,
+                    used_data_constructors);
         }
     } else if (expr->get_form() == stgform::algebraiccase) {
         auto cAsE = dynamic_cast<STGAlgebraicCase*>(expr.get());
-        remove_globals_from_free_variables_list_and_mark_partial_applications_as_non_updatable(
+        remove_globals_from_free_variables_list_and_mark_partial_applications_as_non_updatable_and_collect_used_data_constructors(
                 cAsE->expr,
                 globals,
-                number_of_arguments);
-        remove_globals_from_free_variables_list_and_mark_partial_applications_as_non_updatable(
+                number_of_arguments,
+                used_data_constructors);
+        remove_globals_from_free_variables_list_and_mark_partial_applications_as_non_updatable_and_collect_used_data_constructors(
                 cAsE->default_expr,
                 globals,
-                number_of_arguments);
+                number_of_arguments,
+                used_data_constructors);
         for (const auto &[p, e]: cAsE->alts) {
+            used_data_constructors.insert(p.constructor_name);
             std::map<std::string, size_t> local_number_of_arguments = number_of_arguments;
             for (const auto &v: p.variables) {
                 local_number_of_arguments[v] = 0;
             }
-            remove_globals_from_free_variables_list_and_mark_partial_applications_as_non_updatable(
+            remove_globals_from_free_variables_list_and_mark_partial_applications_as_non_updatable_and_collect_used_data_constructors(
                     e,
                     globals,
-                    local_number_of_arguments);
+                    local_number_of_arguments,
+                    used_data_constructors);
         }
+    } else if (expr->get_form() == stgform::constructor) {
+        used_data_constructors.insert(dynamic_cast<STGConstructor*>(expr.get())->constructor_name);
     }
 }
 
-void remove_globals_from_free_variables_list_and_mark_partial_applications_as_non_updatable(
+void remove_globals_from_free_variables_list_and_mark_partial_applications_as_non_updatable_and_collect_used_data_constructors(
         const std::unique_ptr<STGLambdaForm> &lambda_form,
         const std::set<std::string> &globals,
-        const std::map<std::string, size_t> &number_of_arguments) {
+        const std::map<std::string, size_t> &number_of_arguments,
+        std::set<std::string> &used_data_constructors) {
     if (lambda_form->expr->get_form() != stgform::constructor || !lambda_form->argument_variables.empty()) {
         for (auto it = lambda_form->free_variables.begin(); it != lambda_form->free_variables.end(); ) {
             if (globals.count(*it)) {
@@ -1002,10 +1016,11 @@ void remove_globals_from_free_variables_list_and_mark_partial_applications_as_no
         local_number_of_arguments[v] = 0;
     }
 
-    remove_globals_from_free_variables_list_and_mark_partial_applications_as_non_updatable(
+    remove_globals_from_free_variables_list_and_mark_partial_applications_as_non_updatable_and_collect_used_data_constructors(
             lambda_form->expr,
             globals,
-            local_number_of_arguments);
+            local_number_of_arguments,
+            used_data_constructors);
 }
 
 std::unique_ptr<STGProgram> translate(const std::unique_ptr<Program> &program) {
@@ -1038,6 +1053,7 @@ std::unique_ptr<STGProgram> translate(const std::unique_ptr<Program> &program) {
 
     std::map<std::string, std::unique_ptr<STGLambdaForm>> used_bindings;
     std::vector<std::string> to_add = {"main"};
+    std::set<std::string> used_data_constructors;
 
     while (!to_add.empty()) {
         std::string name = to_add.back();
@@ -1052,10 +1068,11 @@ std::unique_ptr<STGProgram> translate(const std::unique_ptr<Program> &program) {
                 to_add.push_back(depends_on);
             }
         }
-        remove_globals_from_free_variables_list_and_mark_partial_applications_as_non_updatable(
+        remove_globals_from_free_variables_list_and_mark_partial_applications_as_non_updatable_and_collect_used_data_constructors(
                 lambda_form,
                 globals,
-                number_of_arguments);
+                number_of_arguments,
+                used_data_constructors);
         used_bindings[name] = std::move(lambda_form);
     }
 
@@ -1064,19 +1081,21 @@ std::unique_ptr<STGProgram> translate(const std::unique_ptr<Program> &program) {
     for (const auto &[_, type_constructor]: program->type_constructors) {
         for (unsigned int i = 0; i < type_constructor->data_constructors.size(); i++) {
             std::string name = type_constructor->data_constructors.at(i);
-            size_t tag = i;
-            if (name == "[]") {
-                tag = 0;
-            } else if (name == ":") {
-                tag = 1;
-            } else if (name == "False") {
-                tag = 0;
-            } else if (name == "True") {
-                tag = 1;
+            if (used_data_constructors.count(name)) {
+                size_t tag = i;
+                if (name == "[]") {
+                    tag = 0;
+                } else if (name == ":") {
+                    tag = 1;
+                } else if (name == "False") {
+                    tag = 0;
+                } else if (name == "True") {
+                    tag = 1;
+                }
+                size_t arity = program->data_constructor_arities.at(name);
+                size_t number_of_siblings = type_constructor->data_constructors.size() - 1;
+                data_constructors.emplace(name, STGDataConstructor(tag, arity, number_of_siblings));
             }
-            size_t arity = program->data_constructor_arities.at(name);
-            size_t number_of_siblings = type_constructor->data_constructors.size() - 1;
-            data_constructors.emplace(name,STGDataConstructor(tag, arity, number_of_siblings));
         }
     }
 

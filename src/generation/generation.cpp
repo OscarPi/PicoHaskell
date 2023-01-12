@@ -48,9 +48,11 @@ std::string sanitise_name(std::string name) {
     return name;
 }
 
-void generate_standard_constructors(const std::unique_ptr<STGProgram> &program, std::ostream &output) {
+void generate_standard_constructor_info_tables_and_closures(
+        const std::unique_ptr<STGProgram> &program,
+        std::ostream &output) {
     for (const auto &[name, constructor]: program->data_constructors) {
-        output << ".align 4 @ info table" << std::endl;
+        output << ".align 4 @ info table for " << name << std::endl;
         output << ".word 0 @ evacuation code" << std::endl;
         output << ".word 0 @ scavenge code" << std::endl;
         output << ".word " << constructor.arity << " @ number of pointer words" << std::endl;
@@ -63,7 +65,7 @@ void generate_standard_constructors(const std::unique_ptr<STGProgram> &program, 
         output << "    BX R6 @ jump to return address" << std::endl;
 
         if (constructor.arity == 0) {
-            output << ".align 4 @ closure" << std::endl;
+            output << ".align 4" << std::endl;
             output << sanitise_name(name) << "_closure:" << std::endl;
             output << ".word " << sanitise_name(name) << "_standard_entry_code @ info pointer" << std::endl;
         }
@@ -84,7 +86,7 @@ void generate_code_for_bindings(const std::unique_ptr<STGProgram> &program, std:
                 if (constructor->arguments.empty()) {
                     output << sanitise_name(name) << "_closure = " << sanitise_name(constructor->constructor_name) << "_closure" << std::endl;
                 } else {
-                    output << ".align 4 @ closure" << std::endl;
+                    output << ".align 4" << std::endl;
                     output << sanitise_name(name) << "_closure:" << std::endl;
                     output << ".word " << sanitise_name(constructor->constructor_name) << "_standard_entry_code @ info pointer" << std::endl;
                     for (const std::string &arg: constructor->arguments) {
@@ -93,7 +95,7 @@ void generate_code_for_bindings(const std::unique_ptr<STGProgram> &program, std:
                 }
             } else if (lambda_form->expr->get_form() == stgform::literal) {
                 auto literal = dynamic_cast<STGLiteral*>(lambda_form->expr.get());
-                output << ".align 4 @ closure" << std::endl;
+                output << ".align 4" << std::endl;
                 output << sanitise_name(name) << "_closure:" << std::endl;
                 output << ".word .literal_standard_entry_code @ info pointer" << std::endl;
                 if (std::holds_alternative<int>(literal->value)) {
@@ -118,9 +120,9 @@ void generate_target_code(const std::unique_ptr<STGProgram> &program, std::ostre
     output << "    MOV R6, R10" << std::endl;
     output << "    MOV R7, R11" << std::endl;
     output << "    PUSH {R4, R5, R6, R7} @ we will use lots of registers" << std::endl;
-    output << "    LDR R6, =.main_return @ push return address on B stack" << std::endl;
+    output << "    LDR R6, =.main_return" << std::endl;
     output << "    STR R6, [R1]" << std::endl;
-    output << "    SUB R1, #4" << std::endl;
+    output << "    SUB R1, #4 @ push return address on B stack" << std::endl;
     output << "    LDR R4, =main_closure @ put address of main closure in Node register" << std::endl;
     output << "    LDR R5, [R4] @ load address of standard entry code into R5" << std::endl;
     output << "    BX R5 @ jump to standard entry code" << std::endl;
@@ -129,11 +131,11 @@ void generate_target_code(const std::unique_ptr<STGProgram> &program, std::ostre
     output << "    CMP R5, #0 @ inspect returned tag" << std::endl;
     output << "    BEQ .handle_nil" << std::endl;
     output << "    LDR R6, [R4, #8] @ load address of tail closure into R6" << std::endl;
-    output << "    STR R6, [R0] @ push tail closure onto A stack so it is preserved" << std::endl;
-    output << "    ADD R0, #4" << std::endl;
-    output << "    LDR R6, =.char_return @ push return address on B stack" << std::endl;
+    output << "    STR R6, [R0]" << std::endl;
+    output << "    ADD R0, #4 @ push tail closure onto A stack so it is preserved" << std::endl;
+    output << "    LDR R6, =.char_return" << std::endl;
     output << "    STR R6, [R1]" << std::endl;
-    output << "    SUB R1, #4" << std::endl;
+    output << "    SUB R1, #4 @ push return address on B stack" << std::endl;
     output << "    LDR R4, [R4, #4] @ load address of char closure into Node register" << std::endl;
     output << "    LDR R5, [R4] @ load address of standard entry code into R5" << std::endl;
     output << "    BX R5 @ jump to standard entry code" << std::endl;
@@ -158,6 +160,6 @@ void generate_target_code(const std::unique_ptr<STGProgram> &program, std::ostre
     output << "    MOV R11, R7" << std::endl;
     output << "    POP {R4, R5, R6, R7, PC} @ restore final registers and return" << std::endl;
     output << ".ltorg @ tell the assembler to stick a literal pool here" << std::endl;
-    generate_standard_constructors(program, output);
+    generate_standard_constructor_info_tables_and_closures(program, output);
     generate_code_for_bindings(program, output);
 };

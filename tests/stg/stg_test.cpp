@@ -521,7 +521,7 @@ TEST(STGTranslation, TranslatesCase) {
 TEST(STGTranslation, GeneratesDataConstructorTags) {
     std::unique_ptr<Program> program = std::make_unique<Program>();
     int result = parse_string(
-            "data Hi = A | B\n;data Bye = C | D Hi\n;main = 0",
+            "data Hi = A | B\n;data Bye = C | D Hi\n;main = A B C D [] : False True",
             program.get());
     ASSERT_EQ(result, 0);
     auto translated = translate(program);
