@@ -112,8 +112,8 @@ void generate_target_code(const std::unique_ptr<STGProgram> &program, std::ostre
     output << ".main_return:" << std::endl;
     output << "    CMP R5, #0 @ inspect returned tag" << std::endl;
     output << "    BEQ .handle_nil" << std::endl;
-    output << "    LDR R6 [R4, #8] @ load address of tail closure into R6" << std::endl;
-    output << "    STR R6 [R0] @ push tail closure onto A stack so it is preserved" << std::endl;
+    output << "    LDR R6, [R4, #8] @ load address of tail closure into R6" << std::endl;
+    output << "    STR R6, [R0] @ push tail closure onto A stack so it is preserved" << std::endl;
     output << "    ADD R0, R0, #4" << std::endl;
     output << "    LDR R6, =.char_return @ push return address on B stack" << std::endl;
     output << "    SUB R1, R1, #4" << std::endl;
@@ -128,7 +128,7 @@ void generate_target_code(const std::unique_ptr<STGProgram> &program, std::ostre
     output << "    POP {R0, R1, R2, R3} @ restore registers" << std::endl;
     output << "    LDR R6, =.main_return @ push return address on B stack" << std::endl;
     output << "    SUB R1, R1, #4" << std::endl;
-    output << "    LDR R4 [R0] @ pop address of tail closure from A stack to Node register" << std::endl;
+    output << "    LDR R4, [R0] @ pop address of tail closure from A stack to Node register" << std::endl;
     output << "    SUB R0, R0, #4" << std::endl;
     output << "    LDR R5, [R4] @ load address of standard entry code into R5" << std::endl;
     output << "    BX R5 @ jump to standard entry code" << std::endl;
