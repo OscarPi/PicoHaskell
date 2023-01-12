@@ -97,9 +97,9 @@ void generate_code_for_bindings(const std::unique_ptr<STGProgram> &program, std:
                 output << ".align 4 @ closure" << std::endl;
                 output << ".word literal_standard_entry_code @ info pointer" << std::endl;
                 if (std::holds_alternative<int>(literal->value)) {
-                    output << ".word " << std::get<int>(literal->value);
+                    output << ".word " << std::get<int>(literal->value) << std::endl;
                 } else if (std::holds_alternative<char>(literal->value)) {
-                    output << ".word " << ((int) std::get<char>(literal->value));
+                    output << ".word " << ((int) std::get<char>(literal->value)) << std::endl;
                 }
             }
         } else {
