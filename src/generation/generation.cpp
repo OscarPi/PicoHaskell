@@ -157,7 +157,7 @@ void generate_target_code(const std::unique_ptr<STGProgram> &program, std::ostre
     output << "    MOV R10, R6" << std::endl;
     output << "    MOV R11, R7" << std::endl;
     output << "    POP {R4, R5, R6, R7, PC} @ restore final registers and return" << std::endl;
-
+    output << ".ltorg @ tell the assembler to stick a literal pool here" << std::endl;
     generate_standard_constructors(program, output);
     generate_code_for_bindings(program, output);
 };
