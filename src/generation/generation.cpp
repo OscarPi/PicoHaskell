@@ -86,7 +86,7 @@ void generate_code_for_bindings(const std::unique_ptr<STGProgram> &program, std:
                 } else {
                     output << sanitise_name(name) << "_closure:" << std::endl;
                     output << ".align 4 @ closure" << std::endl;
-                    output << ".word " << sanitise_name(name) << "_standard_entry_code @ info pointer" << std::endl;
+                    output << ".word " << sanitise_name(constructor->constructor_name) << "_standard_entry_code @ info pointer" << std::endl;
                     for (const std::string &arg: constructor->arguments) {
                         output << ".word " << sanitise_name(arg) << "_closure @ arg" << std::endl;
                     }
@@ -118,15 +118,10 @@ void generate_target_code(const std::unique_ptr<STGProgram> &program, std::ostre
     output << "    MOV R6, R10" << std::endl;
     output << "    MOV R7, R11" << std::endl;
     output << "    PUSH {R4, R5, R6, R7} @ we will use lots of registers" << std::endl;
-
     output << "    LDR R6, =.main_return @ push return address on B stack" << std::endl;
     output << "    STR R6, [R1]" << std::endl;
     output << "    SUB R1, R1, #4" << std::endl;
-    output << "    B 0f" << std::endl;
-    output << "1:" << std::endl;
-    output << ".word main_closure" << std::endl;
-    output << "0:" << std::endl;
-    output << "    LDR R4, 1b @ put address of main closure in Node register" << std::endl;
+    output << "    LDR R4, =main_closure @ put address of main closure in Node register" << std::endl;
     output << "    LDR R5, [R4] @ load address of standard entry code into R5" << std::endl;
     output << "    BX R5 @ jump to standard entry code" << std::endl;
     output << ".thumb_func" << std::endl;
@@ -155,7 +150,6 @@ void generate_target_code(const std::unique_ptr<STGProgram> &program, std::ostre
     output << "    SUB R0, R0, #4" << std::endl;
     output << "    LDR R5, [R4] @ load address of standard entry code into R5" << std::endl;
     output << "    BX R5 @ jump to standard entry code" << std::endl;
-
     output << ".handle_nil:" << std::endl;
     output << "    POP {R4, R5, R6, R7} @ restore some registers" << std::endl;
     output << "    MOV R8, R4" << std::endl;
