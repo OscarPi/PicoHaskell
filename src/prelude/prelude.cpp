@@ -5,39 +5,39 @@
 const char *prelude = R"##(
 data Bool = True | False
 ;
-(&&) :: Bool -> Bool -> Bool
+--(&&) :: Bool -> Bool -> Bool
 ;
-(&&) a b = case a of { False -> False ; True -> b }
+--(&&) a b = case a of { False -> False ; True -> b }
 ;
-(||) :: Bool -> Bool -> Bool
+--(||) :: Bool -> Bool -> Bool
 ;
-(||) a b = case a of { True -> True ; False -> b }
+--(||) a b = case a of { True -> True ; False -> b }
 ;
-not :: Bool -> Bool
+--not :: Bool -> Bool
 ;
-not b = case b of { True -> False ; False -> True }
+--not b = case b of { True -> False ; False -> True }
 ;
-(/=) :: Int -> Int -> Bool
+--(/=) :: Int -> Int -> Bool
 ;
-(/=) a b = not (a == b)
+--(/=) a b = not (a == b)
 ;
-(/=.) :: Char -> Char -> Bool
+--(/=.) :: Char -> Char -> Bool
 ;
-(/=.) a b = not (a ==. b)
+--(/=.) a b = not (a ==. b)
 ;
-(.) :: (b -> c) -> (a -> b) -> a -> c
+--(.) :: (b -> c) -> (a -> b) -> a -> c
 ;
-(.) f g = \x -> f (g x)
+--(.) f g = \x -> f (g x)
 ;
-(++) :: [a] -> [a] -> [a]
+--(++) :: [a] -> [a] -> [a]
 ;
-(++) a b = case a of { [] -> b ; (x:xs) -> x : (xs ++ b) }
+--(++) a b = case a of { [] -> b ; (x:xs) -> x : (xs ++ b) }
 ;
-error :: [Char] -> a
+--error :: [Char] -> a
 ;
-error msg = error msg
+--error msg = error msg
 ;
-case_error = error "Non-exhaustive patterns in case"
+--case_error = error "Non-exhaustive patterns in case"
 )##";
 
 void bind_built_in_op(Program *program, const std::string &function_name, builtinop op) {
@@ -89,16 +89,16 @@ void add_prelude(Program *program) {
                 {new DConstructor(0, name, types)});
     }
 
-    bind_built_in_op(program, "+", builtinop::add);
-    bind_built_in_op(program, "-", builtinop::subtract);
-    bind_built_in_op(program, "*", builtinop::times);
-    bind_built_in_op(program, "/", builtinop::divide);
-    bind_built_in_op(program, "==", builtinop::intequality);
-    bind_built_in_op(program, "==.", builtinop::charequality);
-    bind_built_in_op(program, "<", builtinop::lt);
-    bind_built_in_op(program, "<=", builtinop::lte);
-    bind_built_in_op(program, ">", builtinop::gt);
-    bind_built_in_op(program, ">=", builtinop::gte);
+    //bind_built_in_op(program, "+", builtinop::add);
+    //bind_built_in_op(program, "-", builtinop::subtract);
+    //bind_built_in_op(program, "*", builtinop::times);
+    //bind_built_in_op(program, "/", builtinop::divide);
+    //bind_built_in_op(program, "==", builtinop::intequality);
+    //bind_built_in_op(program, "==.", builtinop::charequality);
+    //bind_built_in_op(program, "<", builtinop::lt);
+    //bind_built_in_op(program, "<=", builtinop::lte);
+    //bind_built_in_op(program, ">", builtinop::gt);
+    //bind_built_in_op(program, ">=", builtinop::gte);
 
     yy::location loc;
     YY_BUFFER_STATE buffer = yy_scan_string(prelude);
