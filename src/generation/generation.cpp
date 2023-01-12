@@ -57,7 +57,7 @@ void generate_standard_constructors(const std::unique_ptr<STGProgram> &program, 
         output << ".word 0 @ number of non-pointer words" << std::endl;
         output << ".thumb_func" << std::endl;
         output << sanitise_name(name) << "_standard_entry_code:" << std::endl;
-        output << "    SUBS R1, R1, #4" << std::endl;
+        output << "    SUB R1, R1, #4" << std::endl;
         output << "    LDR R6, [R1] @ pop return address from B stack to R6" << std::endl;
         output << "    MOVS R5, #" << constructor.tag << " @ put tag in R5" << std::endl;
         output << "    BX R6 @ jump to return address" << std::endl;
@@ -76,7 +76,7 @@ void generate_code_for_bindings(const std::unique_ptr<STGProgram> &program, std:
             if (lambda_form->expr->get_form() == stgform::constructor) {
                 auto constructor = dynamic_cast<STGConstructor*>(lambda_form->expr.get());
                 if (constructor->arguments.empty()) {
-                    output << sanitise_name(name) << "_closure = " << constructor->constructor_name << "_closure" << std::endl;
+                    output << sanitise_name(name) << "_closure = " << sanitise_name(constructor->constructor_name) << "_closure" << std::endl;
                 } else {
                     output << sanitise_name(name) << "_closure:" << std::endl;
                     output << ".align 4 @ closure" << std::endl;
@@ -104,7 +104,7 @@ void generate_target_code(const std::unique_ptr<STGProgram> &program, std::ostre
     output << "    PUSH {R4, R5, R6, R7} @ we will use lots of registers" << std::endl;
 
     output << "    LDR R6, =.main_return @ push return address on B stack" << std::endl;
-    output << "    SUBS R1, R1, #4" << std::endl;
+    output << "    SUB R1, R1, #4" << std::endl;
     output << "    LDR R4, =main_closure @ put address of main closure in Node register" << std::endl;
     output << "    LDR R5, [R4] @ load address of standard entry code into R5" << std::endl;
     output << "    BX R5 @ jump to standard entry code" << std::endl;
@@ -114,9 +114,9 @@ void generate_target_code(const std::unique_ptr<STGProgram> &program, std::ostre
     output << "    BEQ .handle_nil" << std::endl;
     output << "    LDR R6 [R4, #8] @ load address of tail closure into R6" << std::endl;
     output << "    STR R6 [R0] @ push tail closure onto A stack so it is preserved" << std::endl;
-    output << "    ADDS R0, R0, #4" << std::endl;
+    output << "    ADD R0, R0, #4" << std::endl;
     output << "    LDR R6, =.char_return @ push return address on B stack" << std::endl;
-    output << "    SUBS R1, R1, #4" << std::endl;
+    output << "    SUB R1, R1, #4" << std::endl;
     output << "    LDR R4, [R4, #4] @ load address of char closure into Node register" << std::endl;
     output << "    LDR R5, [R4] @ load address of standard entry code into R5" << std::endl;
     output << "    BX R5 @ jump to standard entry code" << std::endl;
@@ -127,9 +127,9 @@ void generate_target_code(const std::unique_ptr<STGProgram> &program, std::ostre
     output << "    BL putchar" << std::endl;
     output << "    POP {R0, R1, R2, R3} @ restore registers" << std::endl;
     output << "    LDR R6, =.main_return @ push return address on B stack" << std::endl;
-    output << "    SUBS R1, R1, #4" << std::endl;
+    output << "    SUB R1, R1, #4" << std::endl;
     output << "    LDR R4 [R0] @ pop address of tail closure from A stack to Node register" << std::endl;
-    output << "    SUBS R0, R0, #4" << std::endl;
+    output << "    SUB R0, R0, #4" << std::endl;
     output << "    LDR R5, [R4] @ load address of standard entry code into R5" << std::endl;
     output << "    BX R5 @ jump to standard entry code" << std::endl;
 
