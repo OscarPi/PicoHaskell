@@ -119,10 +119,14 @@ void generate_target_code(const std::unique_ptr<STGProgram> &program, std::ostre
     output << "    MOV R7, R11" << std::endl;
     output << "    PUSH {R4, R5, R6, R7} @ we will use lots of registers" << std::endl;
 
-    output << "    ADR R6, .main_return @ push return address on B stack" << std::endl;
+    output << "    LDR R6, =.main_return @ push return address on B stack" << std::endl;
     output << "    STR R6, [R1]" << std::endl;
     output << "    SUB R1, R1, #4" << std::endl;
-    output << "    ADR R4, main_closure @ put address of main closure in Node register" << std::endl;
+    output << "    B 0f" << std::endl;
+    output << "1:" << std::endl;
+    output << ".word main_closure" << std::endl;
+    output << "0:" << std::endl;
+    output << "    LDR R4, 1b @ put address of main closure in Node register" << std::endl;
     output << "    LDR R5, [R4] @ load address of standard entry code into R5" << std::endl;
     output << "    BX R5 @ jump to standard entry code" << std::endl;
     output << ".thumb_func" << std::endl;
@@ -132,7 +136,7 @@ void generate_target_code(const std::unique_ptr<STGProgram> &program, std::ostre
     output << "    LDR R6, [R4, #8] @ load address of tail closure into R6" << std::endl;
     output << "    STR R6, [R0] @ push tail closure onto A stack so it is preserved" << std::endl;
     output << "    ADD R0, R0, #4" << std::endl;
-    output << "    ADR R6, .char_return @ push return address on B stack" << std::endl;
+    output << "    LDR R6, =.char_return @ push return address on B stack" << std::endl;
     output << "    STR R6, [R1]" << std::endl;
     output << "    SUB R1, R1, #4" << std::endl;
     output << "    LDR R4, [R4, #4] @ load address of char closure into Node register" << std::endl;
@@ -144,7 +148,7 @@ void generate_target_code(const std::unique_ptr<STGProgram> &program, std::ostre
     output << "    LDR R0, [R4, #4] @ put char in R0 (first argument to putchar)" << std::endl;
     output << "    BL putchar" << std::endl;
     output << "    POP {R0, R1, R2, R3} @ restore registers" << std::endl;
-    output << "    ADR R6, .main_return @ push return address on B stack" << std::endl;
+    output << "    LDR R6, =.main_return @ push return address on B stack" << std::endl;
     output << "    STR R6, [R1]" << std::endl;
     output << "    SUB R1, R1, #4" << std::endl;
     output << "    LDR R4, [R0] @ pop address of tail closure from A stack to Node register" << std::endl;
