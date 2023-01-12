@@ -68,6 +68,12 @@ void generate_standard_constructors(const std::unique_ptr<STGProgram> &program, 
             output << ".word " << sanitise_name(name) << "_standard_entry_code @ info pointer" << std::endl;
         }
     }
+
+    output << ".thumb_func" << std::endl;
+    output << ".literal_standard_entry_code:" << std::endl;
+    output << "    SUB R1, R1, #4" << std::endl;
+    output << "    LDR R6, [R1] @ pop return address from B stack to R6" << std::endl;
+    output << "    BX R6 @ jump to return address" << std::endl;
 }
 
 void generate_code_for_bindings(const std::unique_ptr<STGProgram> &program, std::ostream &output) {
@@ -84,6 +90,16 @@ void generate_code_for_bindings(const std::unique_ptr<STGProgram> &program, std:
                     for (const std::string &arg: constructor->arguments) {
                         output << ".word " << sanitise_name(arg) << "_closure @ arg" << std::endl;
                     }
+                }
+            } else if (lambda_form->expr->get_form() == stgform::literal) {
+                auto literal = dynamic_cast<STGLiteral*>(lambda_form->expr.get());
+                output << sanitise_name(name) << "_closure:" << std::endl;
+                output << ".align 4 @ closure" << std::endl;
+                output << ".word literal_standard_entry_code @ info pointer" << std::endl;
+                if (std::holds_alternative<int>(literal->value)) {
+                    output << ".word " << std::get<int>(literal->value);
+                } else if (std::holds_alternative<char>(literal->value)) {
+                    output << ".word " << ((int) std::get<char>(literal->value));
                 }
             }
         } else {
