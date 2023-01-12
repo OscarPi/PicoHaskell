@@ -4,39 +4,39 @@
 
 const char *prelude = R"##(
 data Bool = True | False
-;
+--;
 --(&&) :: Bool -> Bool -> Bool
-;
+--;
 --(&&) a b = case a of { False -> False ; True -> b }
-;
+--;
 --(||) :: Bool -> Bool -> Bool
-;
+--;
 --(||) a b = case a of { True -> True ; False -> b }
-;
+--;
 --not :: Bool -> Bool
-;
+--;
 --not b = case b of { True -> False ; False -> True }
-;
+--;
 --(/=) :: Int -> Int -> Bool
-;
+--;
 --(/=) a b = not (a == b)
-;
+--;
 --(/=.) :: Char -> Char -> Bool
-;
+--;
 --(/=.) a b = not (a ==. b)
-;
+--;
 --(.) :: (b -> c) -> (a -> b) -> a -> c
-;
+--;
 --(.) f g = \x -> f (g x)
-;
+--;
 --(++) :: [a] -> [a] -> [a]
-;
+--;
 --(++) a b = case a of { [] -> b ; (x:xs) -> x : (xs ++ b) }
-;
+--;
 --error :: [Char] -> a
-;
+--;
 --error msg = error msg
-;
+--;
 --case_error = error "Non-exhaustive patterns in case"
 )##";
 
