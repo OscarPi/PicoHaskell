@@ -1,1 +1,1 @@
-main = "Hello, World! I am a fairly long string. Lalalalalalalalalalalalalala."
+main = "Hello, World! I am a fairly long string. Lalalalalalalalalalalalalala.\n"
